@@ -1,20 +1,20 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { DashboardLayout } from './components/DashboardLayout';
-import { LandingPage } from './pages/LandingPage';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { ApplicantDashboard } from './pages/ApplicantDashboard';
-import { NewSubmissionPage } from './pages/NewSubmissionPage';
-import { SupervisorDashboard } from './pages/SupervisorDashboard';
-import { EvaluatorDashboard } from './pages/EvaluatorDashboard';
-import { AdminDashboard } from './pages/AdminDashboard';
-import { UserManagement } from './pages/UserManagement';
-import { SubmissionDetailPage } from './pages/SubmissionDetailPage';
-import { AllRecordsPage } from './pages/AllRecordsPage';
-import { AssignmentManagementPage } from './pages/AssignmentManagementPage';
-import { SettingsPage } from './pages/SettingsPage';
+import { AuthProvider, useAuth } from '@contexts/AuthContext';
+import { ProtectedRoute } from '@components/ProtectedRoute';
+import { DashboardLayout } from '@components/DashboardLayout';
+import { LandingPage } from '@pages/LandingPage';
+import { LoginPage } from '@pages/LoginPage';
+import { RegisterPage } from '@pages/RegisterPage';
+import { ApplicantDashboard } from '@pages/ApplicantDashboard';
+import { NewSubmissionPage } from '@pages/NewSubmissionPage';
+import { SupervisorDashboard } from '@pages/SupervisorDashboard';
+import { EvaluatorDashboard } from '@pages/EvaluatorDashboard';
+import { AdminDashboard } from '@pages/AdminDashboard';
+import { UserManagement } from '@pages/UserManagement';
+import { SubmissionDetailPage } from '@pages/SubmissionDetailPage';
+import { AllRecordsPage } from '@pages/AllRecordsPage';
+import { AssignmentManagementPage } from '@pages/AssignmentManagementPage';
+import { SettingsPage } from '@pages/SettingsPage';
 
 function DashboardRouter() {
   const { profile } = useAuth();
