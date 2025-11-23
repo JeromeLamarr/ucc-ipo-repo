@@ -19,9 +19,7 @@ supabase functions deploy register-user
 
 ### Step 2: Push Code to GitHub
 ```powershell
-git add .
-git commit -m "fix: Fix 401 Unauthorized error - use supabase.functions.invoke and verify_jwt=false"
-git push
+git add .; git commit -m "fix: Fix 401 Unauthorized error - use supabase.functions.invoke and verify_jwt=false"; git push
 ```
 
 ### Step 3: Test Registration
@@ -65,7 +63,7 @@ git push
 
 After deployment:
 
-```bash
+```powershell
 # Check function is deployed
 supabase functions list
 

@@ -3,7 +3,7 @@
 ## Quick Start
 
 ### 1. Install Dependencies
-```bash
+```powershell
 npm install
 ```
 
@@ -11,6 +11,12 @@ npm install
 
 Copy `.env.example` to `.env.local` and fill in your Supabase credentials:
 
+**Windows PowerShell:**
+```powershell
+Copy-Item .env.example -Destination .env.local
+```
+
+**Git Bash / Command Line:**
 ```bash
 cp .env.example .env.local
 ```
@@ -31,14 +37,13 @@ In your Bolt.new project settings, add these environment variables:
    - `VITE_SUPABASE_ANON_KEY` - Your Supabase anon key
 
 ### 4. Development
-```bash
+```powershell
 npm run dev
 ```
 
 ### 5. Build & Deploy
-```bash
-npm run build
-npm run preview
+```powershell
+npm run build; npm run preview
 ```
 
 ## Project Structure
@@ -72,17 +77,17 @@ src/
 ## Code Quality
 
 ### Type Checking
-```bash
+```powershell
 npm run typecheck
 ```
 
 ### Linting
-```bash
+```powershell
 npm run lint
 ```
 
 ### Build
-```bash
+```powershell
 npm run build
 ```
 
