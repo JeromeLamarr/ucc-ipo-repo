@@ -324,11 +324,12 @@ export function NewSubmissionPage() {
           }
         }
       } else if (categoryEvaluator) {
+        // Auto-assign evaluator by category
         await supabase.from('evaluator_assignments').insert({
           ip_record_id: ipRecord.id,
           evaluator_id: categoryEvaluator.id,
+          category: formData.category as any,
           assigned_by: profile.id,
-          status: 'pending',
         });
 
         await supabase.from('ip_records').update({
@@ -339,8 +340,19 @@ export function NewSubmissionPage() {
           user_id: categoryEvaluator.id,
           type: 'assignment',
           title: 'New IP Submission for Evaluation',
-          message: `A ${formData.category} submission "${formData.title}" has been assigned to you`,
+          message: `A ${formData.category} submission "${formData.title}" has been assigned to you automatically based on your specialization`,
           payload: { ip_record_id: ipRecord.id },
+        });
+
+        await supabase.from('activity_logs').insert({
+          user_id: profile.id,
+          ip_record_id: ipRecord.id,
+          action: 'evaluator_auto_assigned',
+          details: {
+            evaluator_id: categoryEvaluator.id,
+            category: formData.category,
+            method: 'automatic',
+          },
         });
       }
 

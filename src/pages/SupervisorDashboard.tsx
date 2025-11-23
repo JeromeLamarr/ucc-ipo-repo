@@ -195,6 +195,18 @@ export function SupervisorDashboard() {
             payload: { ip_record_id: selectedRecord.id },
           });
 
+          // Track the assignment
+          await supabase.from('activity_logs').insert({
+            user_id: profile.id,
+            ip_record_id: selectedRecord.id,
+            action: 'evaluator_auto_assigned',
+            details: {
+              evaluator_id: categoryEvaluator.id,
+              category: selectedRecord.category,
+              method: 'supervisor_approval',
+            },
+          });
+
           console.log(`Assigned ${selectedRecord.category} submission to evaluator ID: ${categoryEvaluator.id}`);
         } else {
           console.warn(`No evaluator found for category: ${selectedRecord.category}`);
