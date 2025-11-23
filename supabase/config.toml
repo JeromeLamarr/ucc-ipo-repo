@@ -42,3 +42,6 @@ verify_jwt = true
 
 [functions.initialize-evaluators]
 verify_jwt = true
+
+[functions.send-certificate]
+verify_jwt = true
