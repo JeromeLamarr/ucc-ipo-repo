@@ -63,6 +63,31 @@ export function CompletionButton({
 
       const { data: { session } } = await supabase.auth.getSession();
 
+      // Send status notification email
+      try {
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-status-notification`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            applicantEmail,
+            applicantName,
+            recordTitle: title,
+            referenceNumber,
+            oldStatus: currentStatus,
+            newStatus: 'ready_for_filing',
+            currentStage: 'Completed - Ready for IPO Philippines Filing',
+            remarks: 'Your submission has been completed and is now ready for IPO Philippines filing. You can request your official certificate from your dashboard.',
+            actorRole: 'Admin',
+          }),
+        });
+      } catch (emailError) {
+        console.error('Error sending status notification email:', emailError);
+      }
+
+      // Also send completion notification for backwards compatibility
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-completion-notification`;
       const headers = {
         Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,

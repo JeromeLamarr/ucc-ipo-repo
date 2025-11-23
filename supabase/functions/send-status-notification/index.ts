@@ -63,6 +63,14 @@ Deno.serve(async (req: Request) => {
         subject: "Submission Decision",
         message: "After careful review, your submission has been declined.",
       },
+      preparing_legal: {
+        subject: "Legal Preparation in Progress",
+        message: "Your submission has progressed to the legal preparation stage. We are preparing the necessary documents for IPO Philippines filing.",
+      },
+      ready_for_filing: {
+        subject: "Ready for IPO Philippines Filing",
+        message: "Your intellectual property submission is now complete and ready to be filed with the IPO Philippines. You can now request your official certificate!",
+      },
       completed: {
         subject: "Process Completed",
         message: "Your intellectual property submission process has been completed successfully!",
