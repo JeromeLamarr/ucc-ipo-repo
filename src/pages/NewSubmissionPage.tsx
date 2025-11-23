@@ -274,7 +274,7 @@ export function NewSubmissionPage() {
 
       const { data: categoryEvaluator } = await supabase
         .from('users')
-        .select('id')
+        .select('id, full_name')
         .eq('role', 'evaluator')
         .eq('category_specialization', formData.category)
         .maybeSingle();
@@ -334,6 +334,8 @@ export function NewSubmissionPage() {
 
         await supabase.from('ip_records').update({
           evaluator_id: categoryEvaluator.id,
+          status: 'waiting_evaluation',
+          current_stage: 'Waiting for Evaluation',
         }).eq('id', ipRecord.id);
 
         await supabase.from('notifications').insert({
@@ -353,6 +355,18 @@ export function NewSubmissionPage() {
             category: formData.category,
             method: 'automatic',
           },
+        });
+
+        await supabase.from('process_tracking').insert({
+          ip_record_id: ipRecord.id,
+          stage: 'Waiting for Evaluation',
+          status: 'waiting_evaluation',
+          actor_id: categoryEvaluator.id,
+          actor_name: categoryEvaluator.full_name || 'System',
+          actor_role: 'Evaluator',
+          action: 'evaluator_assigned',
+          description: `Evaluator assigned automatically based on ${formData.category} specialization`,
+          metadata: { category: formData.category, method: 'automatic' },
         });
       }
 

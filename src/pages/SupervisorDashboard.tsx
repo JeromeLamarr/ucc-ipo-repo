@@ -185,6 +185,8 @@ export function SupervisorDashboard() {
 
           await supabase.from('ip_records').update({
             evaluator_id: categoryEvaluator.id,
+            status: 'waiting_evaluation',
+            current_stage: 'Approved by Supervisor - Waiting for Evaluation',
           }).eq('id', selectedRecord.id);
 
           await supabase.from('notifications').insert({
