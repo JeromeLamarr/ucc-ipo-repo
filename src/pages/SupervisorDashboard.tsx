@@ -141,12 +141,34 @@ export function SupervisorDashboard() {
           return;
       }
 
+      // Prepare the initial update data
+      const updatePayload: any = {
+        status: newStatus,
+        current_stage: currentStage,
+      };
+
+      // If approving, check for evaluator BEFORE updating ip_records
+      let evaluatorId: string | null = null;
+      if (action === 'approve') {
+        const { data: evaluators } = await supabase
+          .from('users')
+          .select('id, full_name')
+          .eq('role', 'evaluator')
+          .eq('category_specialization', selectedRecord.category)
+          .limit(1);
+
+        const categoryEvaluator = evaluators && evaluators.length > 0 ? evaluators[0] : null;
+
+        if (categoryEvaluator) {
+          evaluatorId = categoryEvaluator.id;
+          updatePayload.evaluator_id = categoryEvaluator.id;
+        }
+      }
+
+      // Single update to ip_records with all necessary fields
       const { data: updateData, error: updateError } = await supabase
         .from('ip_records')
-        .update({
-          status: newStatus,
-          current_stage: currentStage,
-        })
+        .update(updatePayload)
         .eq('id', selectedRecord.id)
         .select()
         .single();
@@ -165,55 +187,39 @@ export function SupervisorDashboard() {
         remarks: remarks,
       }).eq('ip_record_id', selectedRecord.id).eq('supervisor_id', profile.id);
 
-      if (action === 'approve') {
-        const { data: evaluators } = await supabase
-          .from('users')
-          .select('id')
-          .eq('role', 'evaluator')
-          .eq('category_specialization', selectedRecord.category)
-          .limit(1);
+      if (action === 'approve' && evaluatorId) {
+        // Create evaluator assignment record
+        await supabase.from('evaluator_assignments').insert({
+          ip_record_id: selectedRecord.id,
+          evaluator_id: evaluatorId,
+          category: selectedRecord.category,
+          assigned_by: profile.id,
+        });
 
-        const categoryEvaluator = evaluators && evaluators.length > 0 ? evaluators[0] : null;
+        await supabase.from('notifications').insert({
+          user_id: evaluatorId,
+          type: 'assignment',
+          title: 'New IP Submission for Evaluation',
+          message: `A ${selectedRecord.category} submission "${selectedRecord.title}" has been approved by supervisor and assigned to you`,
+          payload: { ip_record_id: selectedRecord.id },
+        });
 
-        if (categoryEvaluator) {
-          await supabase.from('evaluator_assignments').insert({
-            ip_record_id: selectedRecord.id,
-            evaluator_id: categoryEvaluator.id,
+        // Track the assignment
+        await supabase.from('activity_logs').insert({
+          user_id: profile.id,
+          ip_record_id: selectedRecord.id,
+          action: 'evaluator_auto_assigned',
+          details: {
+            evaluator_id: evaluatorId,
             category: selectedRecord.category,
-            assigned_by: profile.id,
-          });
+            method: 'supervisor_approval',
+          },
+        });
 
-          await supabase.from('ip_records').update({
-            evaluator_id: categoryEvaluator.id,
-            status: 'waiting_evaluation',
-            current_stage: 'Approved by Supervisor - Waiting for Evaluation',
-          }).eq('id', selectedRecord.id);
-
-          await supabase.from('notifications').insert({
-            user_id: categoryEvaluator.id,
-            type: 'assignment',
-            title: 'New IP Submission for Evaluation',
-            message: `A ${selectedRecord.category} submission "${selectedRecord.title}" has been approved by supervisor and assigned to you`,
-            payload: { ip_record_id: selectedRecord.id },
-          });
-
-          // Track the assignment
-          await supabase.from('activity_logs').insert({
-            user_id: profile.id,
-            ip_record_id: selectedRecord.id,
-            action: 'evaluator_auto_assigned',
-            details: {
-              evaluator_id: categoryEvaluator.id,
-              category: selectedRecord.category,
-              method: 'supervisor_approval',
-            },
-          });
-
-          console.log(`Assigned ${selectedRecord.category} submission to evaluator ID: ${categoryEvaluator.id}`);
-        } else {
-          console.warn(`No evaluator found for category: ${selectedRecord.category}`);
-          alert(`Warning: No evaluator available for category "${selectedRecord.category}". The submission has been approved but not assigned to an evaluator. Please contact an administrator.`);
-        }
+        console.log(`Assigned ${selectedRecord.category} submission to evaluator ID: ${evaluatorId}`);
+      } else if (action === 'approve') {
+        console.warn(`No evaluator found for category: ${selectedRecord.category}`);
+        alert(`Warning: No evaluator available for category "${selectedRecord.category}". The submission has been approved but not assigned to an evaluator. Please contact an administrator.`);
       }
 
       await supabase.from('notifications').insert({
