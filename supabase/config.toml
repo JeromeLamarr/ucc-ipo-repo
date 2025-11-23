@@ -1,0 +1,48 @@
+# Supabase Configuration
+
+# Database
+[db]
+major_version = 15
+# Connection string: used by migrations and local PostgreSQL connection
+# For production, these are configured in Supabase dashboard
+
+# Edge Functions
+[functions.register-user]
+# Allow unauthenticated access for user registration
+# This function is called by new users who don't have a session yet
+verify_jwt = false
+
+[functions.send-notification-email]
+# Email service may require authentication
+verify_jwt = false
+
+[functions.generate-certificate]
+verify_jwt = true
+
+[functions.generate-pdf]
+verify_jwt = true
+
+[functions.send-certificate-email]
+verify_jwt = true
+
+[functions.send-completion-notification]
+verify_jwt = true
+
+[functions.send-status-notification]
+verify_jwt = true
+
+[functions.send-verification-code]
+verify_jwt = false
+
+[functions.verify-code]
+verify_jwt = false
+
+[functions.create-user]
+verify_jwt = true
+
+[functions.initialize-evaluators]
+verify_jwt = true
+
+# CORS Configuration
+[cors]
+allowed_origins = ["*"]

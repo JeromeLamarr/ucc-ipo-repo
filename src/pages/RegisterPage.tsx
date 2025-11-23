@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { GraduationCap, Mail, Lock, User, Building, AlertCircle, CheckCircle, Shield, Mail as MailIcon } from 'lucide-react';
+import { GraduationCap, Mail, Lock, User, Building, AlertCircle, CheckCircle, Mail as MailIcon } from 'lucide-react';
+import { supabase } from '@lib/supabase';
 
 export function RegisterPage() {
   const [step, setStep] = useState<'form' | 'email-sent' | 'success'>('form');
@@ -30,26 +31,21 @@ export function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-user`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email,
-            fullName,
-            password,
-            affiliation: affiliation || undefined,
-          }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('register-user', {
+        body: {
+          email,
+          fullName,
+          password,
+          affiliation: affiliation || undefined,
+        },
+      });
 
-      const result = await response.json();
+      if (error) {
+        throw new Error(error.message || 'Failed to create account');
+      }
 
-      if (!result.success) {
-        throw new Error(result.error);
+      if (!data?.success) {
+        throw new Error(data?.error || 'Registration failed. Please try again.');
       }
 
       setStep('email-sent');
@@ -65,29 +61,25 @@ export function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-user`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email,
-            fullName,
-            password,
-            affiliation: affiliation || undefined,
-            resend: true,
-          }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('register-user', {
+        body: {
+          email,
+          fullName,
+          password,
+          affiliation: affiliation || undefined,
+          resend: true,
+        },
+      });
 
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error);
+      if (error) {
+        throw new Error(error.message || 'Failed to resend email');
       }
 
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to resend email. Please try again.');
+      }
+
+      // Clear error on success
       setError('');
     } catch (err: any) {
       setError(err.message || 'Failed to resend email. Please try again.');

@@ -12,9 +12,11 @@ interface RegisterUserRequest {
   fullName: string;
   password: string;
   affiliation?: string;
+  resend?: boolean;
 }
 
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -22,22 +24,114 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  // Only accept POST requests
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Method not allowed",
+      }),
+      {
+        status: 405,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  }
+
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Missing Supabase configuration");
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { email, fullName, password, affiliation }: RegisterUserRequest = await req.json();
+    // Parse request body
+    let requestData: RegisterUserRequest;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid request body. Please provide valid JSON.",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    const { email, fullName, password, affiliation } = requestData;
+
+    // Validate input
+    if (!email || !fullName || !password) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Missing required fields: email, fullName, password",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    // Validate password strength
+    if (password.length < 6) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Password must be at least 6 characters long",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
 
     // Check if user already exists in profiles table
-    const { data: existingUser } = await supabase
+    const { data: existingUser, error: checkError } = await supabase
       .from("users")
       .select("id")
       .eq("email", email)
       .maybeSingle();
 
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
     if (existingUser) {
-      throw new Error("An account with this email already exists. Please sign in or use a different email.");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "An account with this email already exists. Please sign in or use a different email.",
+        }),
+        {
+          status: 409,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     // Create auth user with email_confirm=false (requires email verification)
@@ -52,11 +146,36 @@ Deno.serve(async (req: Request) => {
     });
 
     if (authError) {
-      throw new Error(authError.message);
+      console.error("Auth error:", authError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: authError.message || "Failed to create account",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     if (!authData.user) {
-      throw new Error("Failed to create account");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Failed to create account",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     // Store temporary registration data
@@ -71,6 +190,7 @@ Deno.serve(async (req: Request) => {
 
     if (tempRegError) {
       console.error("Warning: Could not store temp registration data:", tempRegError);
+      // Don't fail - user is created, just tracking is missing
     }
 
     // Generate magic link
@@ -83,14 +203,39 @@ Deno.serve(async (req: Request) => {
     });
 
     if (signInError) {
-      throw new Error("Failed to generate verification link: " + signInError.message);
+      console.error("Generate link error:", signInError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Failed to generate verification link. Please try again.",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
-    // The magic link is already in signInData
+    // The magic link is in signInData
     const magicLink = signInData?.properties?.action_link;
 
     if (!magicLink) {
-      throw new Error("Failed to create verification link");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Failed to create verification link",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     // Send verification email
@@ -165,11 +310,39 @@ Deno.serve(async (req: Request) => {
 
       if (!emailResult.success) {
         console.error("Email service error:", emailResult.error);
-        throw new Error("Failed to send verification email. Please contact support.");
+        // User is created but email failed - still return success so user can retry
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Account created but email delivery failed. Please try resending.",
+            warning: "Email delivery issue - you may not receive the verification link",
+          }),
+          {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
       }
     } catch (emailError: any) {
       console.error("Failed to send email:", emailError);
-      throw new Error("Failed to send verification email. Please try again.");
+      // User is created but email failed - still return success
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Account created but email delivery failed. Please try resending.",
+          warning: "Email service unavailable - you may not receive the verification link",
+        }),
+        {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     return new Response(
@@ -193,7 +366,7 @@ Deno.serve(async (req: Request) => {
         error: error.message || "Registration failed. Please try again.",
       }),
       {
-        status: 400,
+        status: 500,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
