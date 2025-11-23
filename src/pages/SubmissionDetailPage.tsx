@@ -148,17 +148,37 @@ export function SubmissionDetailPage() {
 
     setSaving(true);
     try {
-      const newStatus = record.status.includes('supervisor') ? 'waiting_supervisor' : 'waiting_evaluation';
-      const newStage = record.status.includes('supervisor')
-        ? 'Resubmitted - Waiting for Supervisor'
-        : 'Resubmitted - Waiting for Evaluation';
+      // Determine next status based on current status - be specific to avoid false matches
+      let newStatus: 'waiting_supervisor' | 'waiting_evaluation';
+      let newStage: string;
+
+      // Check if record is currently in a supervisor revision state
+      if (record.status === 'supervisor_revision') {
+        newStatus = 'waiting_supervisor';
+        newStage = 'Resubmitted - Waiting for Supervisor';
+      } else if (record.status === 'evaluator_revision') {
+        newStatus = 'waiting_evaluation';
+        newStage = 'Resubmitted - Waiting for Evaluation';
+      } else {
+        // Fallback: if no supervisor assigned, go to evaluation; otherwise supervisor
+        newStatus = record.supervisor_id ? 'waiting_supervisor' : 'waiting_evaluation';
+        newStage = record.supervisor_id
+          ? 'Resubmitted - Waiting for Supervisor'
+          : 'Resubmitted - Waiting for Evaluation';
+      }
+
+      // Merge details object to preserve existing fields
+      const updatedDetails = {
+        ...(record.details || {}),
+        description: editData.description,
+      };
 
       const { error: updateError } = await supabase
         .from('ip_records')
         .update({
           title: editData.title,
           abstract: editData.abstract,
-          details: { description: editData.description },
+          details: updatedDetails,
           status: newStatus,
           current_stage: newStage,
           updated_at: new Date().toISOString(),
@@ -167,9 +187,11 @@ export function SubmissionDetailPage() {
 
       if (updateError) throw updateError;
 
-      const notifyUserId = record.status.includes('supervisor')
+      const notifyUserId = record.status === 'supervisor_revision'
         ? record.supervisor_id
-        : record.evaluator_id;
+        : record.status === 'evaluator_revision'
+        ? record.evaluator_id
+        : record.supervisor_id || record.evaluator_id;
 
       if (notifyUserId) {
         await supabase.from('notifications').insert({
@@ -185,7 +207,20 @@ export function SubmissionDetailPage() {
         user_id: profile.id,
         ip_record_id: record.id,
         action: 'submission_updated',
-        details: { changes: 'Applicant revised submission' },
+        details: { changes: 'Applicant revised submission', oldStatus: record.status, newStatus },
+      });
+
+      // Track the resubmission in process_tracking
+      await supabase.from('process_tracking').insert({
+        ip_record_id: record.id,
+        stage: newStage,
+        status: newStatus,
+        actor_id: profile.id,
+        actor_name: profile.full_name,
+        actor_role: 'Applicant',
+        action: 'submission_resubmitted',
+        description: `Applicant resubmitted with revisions for ${newStatus.replace('_', ' ')}`,
+        metadata: { previousStatus: record.status },
       });
 
       try {
