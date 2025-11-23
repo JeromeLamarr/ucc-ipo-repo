@@ -36,6 +36,18 @@ interface UploadedFile {
   preview?: string;
 }
 
+interface Keyword {
+  id: string;
+  value: string;
+}
+
+interface Collaborator {
+  id: string;
+  name: string;
+  role: string;
+  affiliation: string;
+}
+
 export function NewSubmissionPage() {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -62,9 +74,9 @@ export function NewSubmissionPage() {
     dateConceived: '',
     dateReduced: '',
     priorArt: '',
-    keywords: '',
+    keywords: [{ id: '1', value: '' }],
     funding: '',
-    collaborators: '',
+    collaborators: [{ id: '1', name: '', role: '', affiliation: '' }],
     commercialPotential: '',
     targetMarket: '',
     competitiveAdvantage: '',
@@ -110,6 +122,54 @@ export function NewSubmissionPage() {
     setFormData({ ...formData, inventors: newInventors });
   };
 
+  const addKeyword = () => {
+    setFormData({
+      ...formData,
+      keywords: [...formData.keywords, { id: Date.now().toString(), value: '' }],
+    });
+  };
+
+  const removeKeyword = (id: string) => {
+    if (formData.keywords.length > 1) {
+      setFormData({
+        ...formData,
+        keywords: formData.keywords.filter(k => k.id !== id),
+      });
+    }
+  };
+
+  const updateKeyword = (id: string, value: string) => {
+    setFormData({
+      ...formData,
+      keywords: formData.keywords.map(k => k.id === id ? { ...k, value } : k),
+    });
+  };
+
+  const addCollaborator = () => {
+    setFormData({
+      ...formData,
+      collaborators: [...formData.collaborators, { id: Date.now().toString(), name: '', role: '', affiliation: '' }],
+    });
+  };
+
+  const removeCollaborator = (id: string) => {
+    if (formData.collaborators.length > 1) {
+      setFormData({
+        ...formData,
+        collaborators: formData.collaborators.filter(c => c.id !== id),
+      });
+    }
+  };
+
+  const updateCollaborator = (id: string, field: string, value: string) => {
+    setFormData({
+      ...formData,
+      collaborators: formData.collaborators.map(c =>
+        c.id === id ? { ...c, [field]: value } : c
+      ),
+    });
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -149,9 +209,9 @@ export function NewSubmissionPage() {
         dateConceived: formData.dateConceived,
         dateReduced: formData.dateReduced,
         priorArt: formData.priorArt,
-        keywords: formData.keywords,
+        keywords: formData.keywords.map(k => k.value).filter(k => k.trim()),
         funding: formData.funding,
-        collaborators: formData.collaborators,
+        collaborators: formData.collaborators.filter(c => c.name.trim()),
         commercialPotential: formData.commercialPotential,
         targetMarket: formData.targetMarket,
         competitiveAdvantage: formData.competitiveAdvantage,
@@ -500,13 +560,36 @@ export function NewSubmissionPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Keywords
                 </label>
-                <input
-                  type="text"
-                  value={formData.keywords}
-                  onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter keywords separated by commas"
-                />
+                <div className="space-y-2">
+                  {formData.keywords.map((keyword, index) => (
+                    <div key={keyword.id} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={keyword.value}
+                        onChange={(e) => updateKeyword(keyword.id, e.target.value)}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder={`Keyword ${index + 1}`}
+                      />
+                      {formData.keywords.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeKeyword(keyword.id)}
+                          className="px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                          title="Remove keyword"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addKeyword}
+                  className="mt-2 px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 text-sm font-medium"
+                >
+                  + Add Keyword
+                </button>
               </div>
 
               <div>
@@ -707,10 +790,11 @@ export function NewSubmissionPage() {
                     Date Conceived
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={formData.dateConceived}
                     onChange={(e) => setFormData({ ...formData, dateConceived: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    title="Date and time when the IP was conceived"
                   />
                 </div>
 
@@ -719,10 +803,11 @@ export function NewSubmissionPage() {
                     Date Reduced to Practice
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={formData.dateReduced}
                     onChange={(e) => setFormData({ ...formData, dateReduced: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    title="Date and time when the IP was reduced to practice"
                   />
                 </div>
               </div>
@@ -741,16 +826,61 @@ export function NewSubmissionPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Collaborators / Partners
-                </label>
-                <textarea
-                  value={formData.collaborators}
-                  onChange={(e) => setFormData({ ...formData, collaborators: e.target.value })}
-                  rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="List any external collaborators or partner institutions"
-                />
+                <div className="flex justify-between items-center mb-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Collaborators / Partners
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addCollaborator}
+                    className="px-3 py-1 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 text-sm font-medium"
+                    title="Add collaborator"
+                  >
+                    + Add
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {formData.collaborators.map((collaborator, index) => (
+                    <div key={collaborator.id} className="border border-gray-200 rounded-lg p-3 relative">
+                      {formData.collaborators.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeCollaborator(collaborator.id)}
+                          className="absolute top-2 right-2 text-red-600 hover:text-red-700"
+                          title="Remove collaborator"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      )}
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={collaborator.name}
+                          onChange={(e) => updateCollaborator(collaborator.id, 'name', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="Name"
+                          title="Collaborator name"
+                        />
+                        <input
+                          type="text"
+                          value={collaborator.role}
+                          onChange={(e) => updateCollaborator(collaborator.id, 'role', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="Role/Position"
+                          title="Collaborator role"
+                        />
+                        <input
+                          type="text"
+                          value={collaborator.affiliation}
+                          onChange={(e) => updateCollaborator(collaborator.id, 'affiliation', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="Institution/Organization"
+                          title="Collaborator affiliation"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -865,13 +995,13 @@ export function NewSubmissionPage() {
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="h-8 w-8 text-gray-400 mb-2" />
                       <p className="text-sm text-gray-600">Upload Disclosure Form</p>
-                      <p className="text-xs text-gray-500">PDF, DOC, or DOCX</p>
+                      <p className="text-xs text-gray-500">Any file type</p>
                     </div>
                     <input
                       type="file"
                       className="hidden"
-                      accept=".pdf,.doc,.docx"
                       onChange={(e) => handleFileUpload(e, 'disclosure')}
+                      title="Upload disclosure form"
                     />
                   </label>
                 </div>
@@ -884,14 +1014,14 @@ export function NewSubmissionPage() {
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="h-8 w-8 text-gray-400 mb-2" />
                       <p className="text-sm text-gray-600">Upload Drawings</p>
-                      <p className="text-xs text-gray-500">PDF, PNG, JPG, or DWG</p>
+                      <p className="text-xs text-gray-500">Any file type</p>
                     </div>
                     <input
                       type="file"
                       className="hidden"
                       multiple
-                      accept=".pdf,.png,.jpg,.jpeg,.dwg"
                       onChange={(e) => handleFileUpload(e, 'drawing')}
+                      title="Upload technical drawings"
                     />
                   </label>
                 </div>
@@ -911,6 +1041,7 @@ export function NewSubmissionPage() {
                       className="hidden"
                       multiple
                       onChange={(e) => handleFileUpload(e, 'attachment')}
+                      title="Upload supporting documents"
                     />
                   </label>
                 </div>
@@ -938,6 +1069,7 @@ export function NewSubmissionPage() {
                           type="button"
                           onClick={() => removeFile(index)}
                           className="text-red-600 hover:text-red-700"
+                          title="Remove file"
                         >
                           <X className="h-5 w-5" />
                         </button>
