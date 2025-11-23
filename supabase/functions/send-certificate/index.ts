@@ -320,10 +320,13 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error: any) {
     console.error("Certificate send error:", error);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message || "Failed to send certificate",
+        details: error.message,
       }),
       {
         status: 500,
