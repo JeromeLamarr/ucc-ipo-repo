@@ -24,6 +24,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      // Check if user's email is verified in auth
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) throw authError;
+
+      // If email is not confirmed, prevent access
+      if (!user?.email_confirmed_at && !user?.user_metadata?.email_verified) {
+        console.warn('User email not verified');
+        setProfile(null);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -31,7 +43,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (error) throw error;
-      setProfile(data);
+
+      // If user profile doesn't exist but auth is verified, create it
+      if (!data && user?.email_confirmed_at) {
+        // User completed email verification but profile wasn't created yet
+        const { data: newProfile, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            auth_user_id: userId,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+            affiliation: user.user_metadata?.affiliation || null,
+            role: 'applicant',
+            is_verified: true,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating user profile:', insertError);
+          setProfile(null);
+          return;
+        }
+
+        setProfile(newProfile);
+      } else {
+        setProfile(data);
+      }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setProfile(null);

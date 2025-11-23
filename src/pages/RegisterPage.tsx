@@ -1,18 +1,16 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { GraduationCap, Mail, Lock, User, Building, AlertCircle, CheckCircle, Shield } from 'lucide-react';
+import { GraduationCap, Mail, Lock, User, Building, AlertCircle, CheckCircle, Shield, Mail as MailIcon } from 'lucide-react';
 
 export function RegisterPage() {
-  const [step, setStep] = useState<'form' | 'verification' | 'success'>('form');
+  const [step, setStep] = useState<'form' | 'email-sent' | 'success'>('form');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [affiliation, setAffiliation] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [devCode, setDevCode] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -33,7 +31,7 @@ export function RegisterPage() {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-code`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-user`,
         {
           method: 'POST',
           headers: {
@@ -54,63 +52,21 @@ export function RegisterPage() {
         throw new Error(result.error);
       }
 
-      if (result.devCode) {
-        setDevCode(result.devCode);
-        alert(`DEVELOPMENT MODE: Your verification code is ${result.devCode}`);
-      }
-
-      setStep('verification');
+      setStep('email-sent');
     } catch (err: any) {
-      setError(err.message || 'Failed to send verification code');
+      setError(err.message || 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyCode = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleResendEmail = async () => {
     setError('');
     setLoading(true);
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-code`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email,
-            code: verificationCode,
-          }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      setStep('success');
-      setTimeout(() => {
-        navigate('/login');
-      }, 3000);
-    } catch (err: any) {
-      setError(err.message || 'Invalid verification code');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    setError('');
-    setLoading(true);
-
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-code`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-user`,
         {
           method: 'POST',
           headers: {
@@ -121,6 +77,7 @@ export function RegisterPage() {
             fullName,
             password,
             affiliation: affiliation || undefined,
+            resend: true,
           }),
         }
       );
@@ -131,14 +88,9 @@ export function RegisterPage() {
         throw new Error(result.error);
       }
 
-      if (result.devCode) {
-        setDevCode(result.devCode);
-        alert(`DEVELOPMENT MODE: Your verification code is ${result.devCode}`);
-      } else {
-        alert('Verification code resent to your email!');
-      }
+      setError('');
     } catch (err: any) {
-      setError(err.message || 'Failed to resend verification code');
+      setError(err.message || 'Failed to resend email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -259,26 +211,24 @@ export function RegisterPage() {
             </form>
           )}
 
-          {step === 'verification' && (
-            <form onSubmit={handleVerifyCode} className="space-y-5">
-              <div className="text-center mb-6">
-                <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield className="h-8 w-8 text-blue-600" />
+          {step === 'email-sent' && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MailIcon className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Verify Your Email</h3>
-                <p className="text-gray-600 text-sm">
-                  We've sent a 6-digit verification code to
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Check Your Email</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  A verification link has been sent to
                   <br />
                   <span className="font-medium text-gray-900">{email}</span>
                 </p>
-              </div>
-
-              {devCode && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm font-medium text-yellow-800 mb-1">Development Mode</p>
-                  <p className="text-sm text-yellow-700">Email service not configured. Your code: <span className="font-bold text-lg tracking-wider">{devCode}</span></p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-blue-800">
+                    <strong>Next step:</strong> Click the verification link in the email to activate your account. You'll be able to log in after verification.
+                  </p>
                 </div>
-              )}
+              </div>
 
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
@@ -287,52 +237,35 @@ export function RegisterPage() {
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
-                  Enter Verification Code
-                </label>
-                <input
-                  type="text"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  required
-                  maxLength={6}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-2xl tracking-widest font-semibold"
-                  placeholder="000000"
-                />
-                <p className="text-xs text-gray-500 text-center mt-2">Code expires in 10 minutes</p>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || verificationCode.length !== 6}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Verifying...' : 'Verify Email'}
-              </button>
-
-              <div className="text-center">
+              <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={handleResendCode}
+                  onClick={handleResendEmail}
                   disabled={loading}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+                  className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  Didn't receive code? Resend
+                  {loading ? 'Sending...' : 'Resend Email'}
                 </button>
-              </div>
-
-              <div className="text-center">
+                
                 <button
                   type="button"
                   onClick={() => setStep('form')}
                   disabled={loading}
-                  className="text-sm text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                  className="w-full bg-gray-100 text-gray-700 py-2.5 rounded-lg hover:bg-gray-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  ← Change email address
+                  Use Different Email
                 </button>
               </div>
-            </form>
+
+              <div className="text-center pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600">
+                  Already verified?{' '}
+                  <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                    Sign in here
+                  </Link>
+                </p>
+              </div>
+            </div>
           )}
 
           {step === 'success' && (

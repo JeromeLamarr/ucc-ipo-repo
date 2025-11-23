@@ -12,6 +12,8 @@
       "@pages/*": ["src/pages/*"],
       "@contexts/*": ["src/contexts/*"],
       "@lib/*": ["src/lib/*"]
-    }
+    },
+    "strict": true,
+    "forceConsistentCasingInFileNames": true
   }
 }
