@@ -2,7 +2,7 @@
 
 # Database
 [db]
-major_version = 15
+major_version = 17
 # Connection string: used by migrations and local PostgreSQL connection
 # For production, these are configured in Supabase dashboard
 
@@ -42,7 +42,3 @@ verify_jwt = true
 
 [functions.initialize-evaluators]
 verify_jwt = true
-
-# CORS Configuration
-[cors]
-allowed_origins = ["*"]
