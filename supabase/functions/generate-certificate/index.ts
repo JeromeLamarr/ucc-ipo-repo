@@ -41,13 +41,18 @@ function isValidUUID(uuid: string): boolean {
 
 // Validate input payload
 function validateCertificateRequest(payload: any): { valid: boolean; error?: string } {
+  // record_id can be UUID string or numeric ID
   if (typeof payload.record_id !== 'number' && typeof payload.record_id !== 'string') {
-    return { valid: false, error: 'record_id must be a number' };
+    return { valid: false, error: 'record_id must be a string or number' };
   }
 
   if (typeof payload.record_id === 'string') {
-    if (isNaN(parseInt(payload.record_id))) {
-      return { valid: false, error: 'record_id must be a valid number' };
+    // Check if it's a valid UUID or numeric string
+    const isUUID = isValidUUID(payload.record_id);
+    const isNumeric = !isNaN(parseInt(payload.record_id));
+    
+    if (!isUUID && !isNumeric) {
+      return { valid: false, error: 'record_id must be a valid UUID or number' };
     }
   }
 
