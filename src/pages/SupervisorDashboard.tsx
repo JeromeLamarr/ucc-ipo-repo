@@ -78,7 +78,7 @@ export function SupervisorDashboard() {
           applicant:users!ip_records_applicant_id_fkey(*)
         `)
         .eq('supervisor_id', profile.id)
-        .in('status', ['supervisor_approved', 'rejected', 'evaluator_approved', 'evaluator_revision', 'waiting_evaluation'])
+        .in('status', ['supervisor_approved', 'rejected', 'evaluator_approved', 'evaluator_revision', 'waiting_evaluation', 'completed', 'preparing_legal', 'ready_for_filing'])
         .order('updated_at', { ascending: false });
 
       if (error) throw error;

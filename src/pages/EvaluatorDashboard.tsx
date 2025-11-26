@@ -90,7 +90,7 @@ export function EvaluatorDashboard() {
           supervisor:users!ip_records_supervisor_id_fkey(*)
         `)
         .eq('evaluator_id', profile.id)
-        .in('status', ['evaluator_approved', 'rejected'])
+        .in('status', ['evaluator_approved', 'rejected', 'completed', 'preparing_legal', 'ready_for_filing'])
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
