@@ -18,6 +18,7 @@ import {
   Save,
   X,
 } from 'lucide-react';
+import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
 import { CompletionButton } from '../components/CompletionButton';
 import { CertificateManager } from '../components/CertificateManager';
@@ -300,22 +301,6 @@ export function SubmissionDetailPage() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      submitted: 'bg-blue-100 text-blue-800',
-      waiting_supervisor: 'bg-yellow-100 text-yellow-800',
-      supervisor_revision: 'bg-orange-100 text-orange-800',
-      supervisor_approved: 'bg-green-100 text-green-800',
-      waiting_evaluation: 'bg-purple-100 text-purple-800',
-      evaluator_revision: 'bg-orange-100 text-orange-800',
-      evaluator_approved: 'bg-green-100 text-green-800',
-      preparing_legal: 'bg-indigo-100 text-indigo-800',
-      ready_for_filing: 'bg-emerald-100 text-emerald-800',
-      rejected: 'bg-red-100 text-red-800',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
   const getStatusIcon = (status: string) => {
     if (status.includes('approved') || status === 'ready_for_filing') {
       return <CheckCircle className="h-5 w-5" />;
@@ -429,7 +414,7 @@ export function SubmissionDetailPage() {
           </div>
           <div className={`px-4 py-2 rounded-lg font-semibold flex items-center gap-2 ${getStatusColor(record.status)}`}>
             {getStatusIcon(record.status)}
-            <span className="capitalize">{record.current_stage}</span>
+            <span>{getStatusLabel(record.status)}</span>
           </div>
         </div>
 

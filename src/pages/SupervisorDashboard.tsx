@@ -16,6 +16,7 @@ import {
   History,
   ListChecks
 } from 'lucide-react';
+import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
 import type { Database } from '../lib/database.types';
 
@@ -550,20 +551,14 @@ export function SupervisorDashboard() {
                       </div>
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          record.status === 'waiting_evaluation'
-                            ? 'bg-green-100 text-green-800'
-                            : record.status === 'rejected'
-                            ? 'bg-red-100 text-red-800'
-                            : record.status === 'evaluator_approved'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-blue-100 text-blue-800'
+                          getStatusColor(record.status)
                         }`}
                       >
                         {record.status === 'waiting_evaluation'
                           ? 'Approved - In Evaluation'
                           : record.status === 'rejected'
                           ? 'Rejected'
-                          : record.current_stage}
+                          : getStatusLabel(record.status)}
                       </span>
                     </div>
 
@@ -628,7 +623,7 @@ export function SupervisorDashboard() {
                   </div>
                   <div>
                     <span className="font-semibold text-blue-700">Status:</span>
-                    <span className="text-blue-900 ml-2 capitalize">{selectedRecord.current_stage}</span>
+                    <span className="text-blue-900 ml-2">{getStatusLabel(selectedRecord.status)}</span>
                   </div>
                   <div>
                     <span className="font-semibold text-blue-700">Reference:</span>

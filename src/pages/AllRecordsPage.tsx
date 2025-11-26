@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { FileText, Search, Filter, Eye, Download } from 'lucide-react';
+import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -12,20 +13,6 @@ type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
 
 type IpStatus = Database['public']['Tables']['ip_records']['Row']['status'];
 type IpCategory = Database['public']['Tables']['ip_records']['Row']['category'];
-
-const statusColors: Record<string, string> = {
-  submitted: 'bg-blue-100 text-blue-800',
-  waiting_supervisor: 'bg-yellow-100 text-yellow-800',
-  supervisor_revision: 'bg-orange-100 text-orange-800',
-  supervisor_approved: 'bg-green-100 text-green-800',
-  waiting_evaluation: 'bg-purple-100 text-purple-800',
-  evaluator_revision: 'bg-orange-100 text-orange-800',
-  evaluator_approved: 'bg-green-100 text-green-800',
-  preparing_legal: 'bg-indigo-100 text-indigo-800',
-  ready_for_filing: 'bg-emerald-100 text-emerald-800',
-  rejected: 'bg-red-100 text-red-800',
-  completed: 'bg-green-100 text-green-800',
-};
 
 export function AllRecordsPage() {
   const [records, setRecords] = useState<IpRecord[]>([]);
@@ -118,13 +105,6 @@ export function AllRecordsPage() {
       month: 'short',
       day: 'numeric',
     });
-  };
-
-  const formatStatus = (status: string) => {
-    return status
-      .split('_')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
   };
 
   if (loading) {
@@ -256,10 +236,10 @@ export function AllRecordsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          statusColors[record.status]
+                          getStatusColor(record.status)
                         }`}
                       >
-                        {formatStatus(record.status)}
+                        {getStatusLabel(record.status)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

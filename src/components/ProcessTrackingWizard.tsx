@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, Circle, Clock, XCircle } from 'lucide-react';
+import { getStatusLabel, getStatusDescription } from '../lib/statusLabels';
 
 interface ProcessStep {
   stage: string;
@@ -50,31 +51,31 @@ export function ProcessTrackingWizard({
       {
         stage: 'submission',
         label: 'Submitted',
-        description: 'Application submitted',
+        description: getStatusDescription('submitted'),
         status: 'completed',
       },
       {
         stage: 'supervisor_review',
         label: 'Supervisor Review',
-        description: 'Under supervisor review',
+        description: getStatusDescription('waiting_supervisor'),
         status: 'pending',
       },
       {
         stage: 'evaluation',
         label: 'Evaluation',
-        description: 'Technical evaluation',
+        description: getStatusDescription('waiting_evaluation'),
         status: 'pending',
       },
       {
         stage: 'legal_preparation',
         label: 'Legal Preparation',
-        description: 'Preparing for legal filing',
+        description: getStatusDescription('preparing_legal'),
         status: 'pending',
       },
       {
         stage: 'completion',
-        label: 'Completed',
-        description: 'Process completed',
+        label: 'Ready for Filing',
+        description: getStatusDescription('ready_for_filing'),
         status: 'pending',
       },
     ];
