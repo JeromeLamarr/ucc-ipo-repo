@@ -534,7 +534,6 @@ Deno.serve(async (req: Request) => {
       .from("ip_records")
       .select("*")
       .eq("id", record_id)
-      .in("status", ["evaluator_approved", "ready_for_filing", "preparing_legal", "completed"])
       .single();
 
     if (ipError || !ipRecord) {
@@ -545,10 +544,45 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           success: false,
+          error: "IP record not found",
+        }),
+        {
+          status: 404,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    // Get the latest status from process_tracking table (most recent status change)
+    const { data: latestTracking, error: trackingError } = await supabase
+      .from("process_tracking")
+      .select("status")
+      .eq("ip_record_id", record_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    // Use latest tracking status if available, otherwise fall back to ip_records.status
+    const currentStatus = latestTracking?.status || ipRecord.status;
+    const validStatuses = ["evaluator_approved", "ready_for_filing", "preparing_legal", "completed"];
+
+    if (!validStatuses.includes(currentStatus)) {
+      console.error('[generate-certificate] Invalid status for certificate generation', {
+        record_id,
+        currentStatus,
+        validStatuses,
+      });
+      return new Response(
+        JSON.stringify({
+          success: false,
           error: "IP record not found or not approved for certificate generation",
           details: {
             message: "Only records with approved status can generate certificates",
-            validStatuses: ["evaluator_approved", "ready_for_filing", "preparing_legal", "completed"],
+            validStatuses: validStatuses,
+            currentStatus: currentStatus,
           },
         }),
         {
