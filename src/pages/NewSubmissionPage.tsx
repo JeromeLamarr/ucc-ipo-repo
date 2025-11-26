@@ -325,12 +325,26 @@ export function NewSubmissionPage() {
         }
       } else if (categoryEvaluator) {
         // Auto-assign evaluator by category
-        await supabase.from('evaluator_assignments').insert({
-          ip_record_id: ipRecord.id,
-          evaluator_id: categoryEvaluator.id,
-          category: formData.category as any,
-          assigned_by: profile.id,
-        });
+        const { data: assignmentData, error: assignmentError } = await supabase
+          .from('evaluator_assignments')
+          .insert({
+            ip_record_id: ipRecord.id,
+            evaluator_id: categoryEvaluator.id,
+            category: formData.category as any,
+            assigned_by: profile.id,
+          })
+          .select()
+          .single();
+
+        if (assignmentError) {
+          console.error('Failed to create evaluator assignment:', assignmentError);
+        } else {
+          console.log('Evaluator assignment created:', { 
+            submission_id: ipRecord.id, 
+            evaluator_id: categoryEvaluator.id,
+            assignment: assignmentData 
+          });
+        }
 
         await supabase.from('ip_records').update({
           evaluator_id: categoryEvaluator.id,

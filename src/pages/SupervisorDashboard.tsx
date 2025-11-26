@@ -189,12 +189,27 @@ export function SupervisorDashboard() {
 
       if (action === 'approve' && evaluatorId) {
         // Create evaluator assignment record
-        await supabase.from('evaluator_assignments').insert({
-          ip_record_id: selectedRecord.id,
-          evaluator_id: evaluatorId,
-          category: selectedRecord.category,
-          assigned_by: profile.id,
-        });
+        const { data: assignmentData, error: assignmentError } = await supabase
+          .from('evaluator_assignments')
+          .insert({
+            ip_record_id: selectedRecord.id,
+            evaluator_id: evaluatorId,
+            category: selectedRecord.category,
+            assigned_by: profile.id,
+          })
+          .select()
+          .single();
+
+        if (assignmentError) {
+          console.error('Failed to create evaluator assignment:', assignmentError);
+          alert(`Warning: Evaluator assignment failed: ${assignmentError.message}`);
+        } else {
+          console.log('Evaluator assignment created:', { 
+            submission_id: selectedRecord.id, 
+            evaluator_id: evaluatorId,
+            assignment: assignmentData 
+          });
+        }
 
         await supabase.from('notifications').insert({
           user_id: evaluatorId,
