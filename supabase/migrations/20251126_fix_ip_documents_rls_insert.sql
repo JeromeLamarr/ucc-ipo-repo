@@ -18,6 +18,7 @@ WITH CHECK (
 );
 
 -- Also allow admins to insert documents (for system operations)
+DROP POLICY IF EXISTS "Admins insert documents" ON ip_documents;
 CREATE POLICY "Admins insert documents" ON ip_documents
 FOR INSERT TO authenticated
 WITH CHECK (
