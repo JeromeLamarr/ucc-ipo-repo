@@ -129,13 +129,14 @@ export function CertificateManager({
         method: 'POST',
         headers,
         body: JSON.stringify({
-          ipRecordId: recordId,
-          applicantName,
+          record_id: recordId,
+          user_id: profile?.id,
+          applicant_name: applicantName,
           title: recordTitle,
           category: recordCategory,
-          referenceNumber,
-          coCreators,
-          evaluationScore,
+          reference_number: referenceNumber,
+          co_creators: coCreators,
+          evaluation_score: evaluationScore,
         }),
       });
 
