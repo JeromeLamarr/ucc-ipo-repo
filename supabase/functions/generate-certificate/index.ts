@@ -11,8 +11,10 @@ const corsHeaders = {
 };
 
 interface CertificateRequest {
-  record_id: number;
+  record_id: number | string;
   user_id: string;
+  requester_id?: string;
+  requester_role?: string;
 }
 
 interface IPRecord {
@@ -29,6 +31,39 @@ interface UserData {
   id: string;
   full_name: string;
   email: string;
+}
+
+// Validate UUID format
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
+// Validate input payload
+function validateCertificateRequest(payload: any): { valid: boolean; error?: string } {
+  if (typeof payload.record_id !== 'number' && typeof payload.record_id !== 'string') {
+    return { valid: false, error: 'record_id must be a number' };
+  }
+
+  if (typeof payload.record_id === 'string') {
+    if (isNaN(parseInt(payload.record_id))) {
+      return { valid: false, error: 'record_id must be a valid number' };
+    }
+  }
+
+  if (!payload.user_id || typeof payload.user_id !== 'string') {
+    return { valid: false, error: 'user_id must be a non-empty string' };
+  }
+
+  if (!isValidUUID(payload.user_id)) {
+    return { valid: false, error: 'user_id must be a valid UUID' };
+  }
+
+  if (payload.requester_id && !isValidUUID(payload.requester_id)) {
+    return { valid: false, error: 'requester_id must be a valid UUID' };
+  }
+
+  return { valid: true };
 }
 
 // Generate SHA-256 checksum
@@ -394,11 +429,13 @@ Deno.serve(async (req: Request) => {
     let requestData: CertificateRequest;
     try {
       requestData = await req.json();
-    } catch {
+    } catch (e) {
+      console.error('[generate-certificate] JSON parse error:', String(e));
       return new Response(
         JSON.stringify({
           success: false,
           error: "Invalid request body. Please provide valid JSON.",
+          details: { parseError: String(e) },
         }),
         {
           status: 400,
@@ -410,14 +447,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { record_id, user_id } = requestData;
-
-    // Validate input
-    if (!record_id || !user_id) {
+    // Validate input payload
+    const validation = validateCertificateRequest(requestData);
+    if (!validation.valid) {
+      console.error('[generate-certificate] Validation failed:', validation.error);
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing required fields: record_id, user_id",
+          error: "Validation failed",
+          details: { validation: validation.error },
         }),
         {
           status: 400,
@@ -429,19 +467,119 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`Generating certificate for record ${record_id}...`);
+    const record_id = typeof requestData.record_id === 'string' 
+      ? parseInt(requestData.record_id, 10) 
+      : requestData.record_id;
+    const { user_id, requester_id, requester_role } = requestData;
+
+    console.log(`[generate-certificate] Generating certificate for record ${record_id}`, {
+      record_id,
+      user_id,
+      requester_id,
+      requester_role,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Authorization check: Only the applicant, supervisors, evaluators, and admins can generate certificates
+    if (requester_id && requester_id !== user_id) {
+      // Verify requester has authorization
+      const { data: requesterUser, error: requesterError } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", requester_id)
+        .single();
+
+      if (requesterError || !requesterUser) {
+        console.error('[generate-certificate] Requester not found:', requester_id);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "User not found",
+          }),
+          {
+            status: 404,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+
+      const allowedRoles = ["supervisor", "evaluator", "admin"];
+      if (!allowedRoles.includes(requesterUser.role)) {
+        console.error('[generate-certificate] Unauthorized access attempt', {
+          requester_id,
+          role: requesterUser.role,
+          record_id,
+        });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "You do not have permission to generate certificates",
+          }),
+          {
+            status: 403,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+    }
 
     // Fetch IP record
     const { data: ipRecord, error: ipError } = await supabase
       .from("ip_records")
       .select("*")
       .eq("id", record_id)
-      .in("status", ["evaluator_approved", "ready_for_filing", "preparing_legal"])
+      .in("status", ["evaluator_approved", "ready_for_filing", "preparing_legal", "completed"])
       .single();
 
     if (ipError || !ipRecord) {
-      throw new Error(
-        `IP record not found or not approved: ${ipError?.message || "Unknown error"}`
+      console.error('[generate-certificate] IP record fetch error', {
+        record_id,
+        error: ipError?.message || "Record not found",
+      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "IP record not found or not approved for certificate generation",
+          details: {
+            message: "Only records with approved status can generate certificates",
+            validStatuses: ["evaluator_approved", "ready_for_filing", "preparing_legal", "completed"],
+          },
+        }),
+        {
+          status: 404,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    // Verify the user_id in request matches the record owner
+    if (ipRecord.user_id !== user_id) {
+      console.error('[generate-certificate] User ID mismatch', {
+        record_id,
+        expected_user: ipRecord.user_id,
+        provided_user: user_id,
+      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "This record does not belong to the specified user",
+        }),
+        {
+          status: 403,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
 
@@ -453,7 +591,27 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (creatorError || !creator) {
-      throw new Error(`Creator not found: ${creatorError?.message}`);
+      console.error('[generate-certificate] Creator fetch error', {
+        user_id: ipRecord.user_id,
+        error: creatorError?.message || "Creator not found",
+      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Creator user not found",
+          details: {
+            message: "The creator profile for this record could not be found",
+            userId: ipRecord.user_id,
+          },
+        }),
+        {
+          status: 404,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     // Fetch co-creators

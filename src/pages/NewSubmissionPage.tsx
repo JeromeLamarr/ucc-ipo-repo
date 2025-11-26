@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
+  validateFile,
+  validateRequiredDocuments,
+  ALLOWED_DOCUMENT_TYPES,
+  MAX_FILE_SIZE,
+  ErrorResponse,
+} from '../lib/validation';
+import {
   FileText,
   Upload,
   User,
@@ -176,12 +183,41 @@ export function NewSubmissionPage() {
     const files = e.target.files;
     if (!files) return;
 
-    const newFiles: UploadedFile[] = Array.from(files).map((file) => ({
-      file,
-      type,
-    }));
+    const newFiles: UploadedFile[] = [];
+    const errors: string[] = [];
+
+    Array.from(files).forEach((file) => {
+      // Validate file
+      const validation = validateFile(file);
+      if (!validation.valid) {
+        errors.push(`${file.name}: ${validation.error}`);
+        return;
+      }
+
+      newFiles.push({
+        file,
+        type,
+      });
+    });
+
+    // Show errors if any
+    if (errors.length > 0) {
+      setError(errors.join('\n'));
+      setTimeout(() => setError(''), 5000);
+      return;
+    }
+
+    // Check total size
+    const totalSize = (uploadedFiles.reduce((sum, f) => sum + f.file.size, 0) + 
+                      newFiles.reduce((sum, f) => sum + f.file.size, 0));
+    if (totalSize > 50 * 1024 * 1024) { // 50MB
+      setError('Total upload size exceeds 50MB limit');
+      setTimeout(() => setError(''), 5000);
+      return;
+    }
 
     setUploadedFiles([...uploadedFiles, ...newFiles]);
+    setError(''); // Clear any previous errors
   };
 
   const removeFile = (index: number) => {
@@ -197,6 +233,15 @@ export function NewSubmissionPage() {
     setUploading(true);
 
     try {
+      // Validate required documents are present
+      const docValidation = validateRequiredDocuments(uploadedFiles.map(f => f.type));
+      if (!docValidation.valid) {
+        setError(docValidation.error || 'Missing required documents');
+        setLoading(false);
+        setUploading(false);
+        return;
+      }
+
       const ipDetails = {
         description: formData.description,
         technicalField: formData.technicalField,
@@ -239,12 +284,15 @@ export function NewSubmissionPage() {
 
       if (ipError) throw ipError;
 
+      // Upload all files with proper error handling
+      const uploadedDocuments: Array<{ type: string; name: string }> = [];
       for (const uploadedFile of uploadedFiles) {
         try {
           const fileExt = uploadedFile.file.name.split('.').pop();
           const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}_${uploadedFile.file.name}`;
           const filePath = `${ipRecord.id}/${fileName}`;
 
+          // Upload to storage
           const { error: uploadError } = await supabase.storage
             .from('ip-documents')
             .upload(filePath, uploadedFile.file, {
@@ -253,11 +301,12 @@ export function NewSubmissionPage() {
             });
 
           if (uploadError) {
-            console.error(`Failed to upload ${uploadedFile.file.name}:`, uploadError);
+            console.error(`[NewSubmission] Storage upload failed for ${uploadedFile.file.name}:`, uploadError);
             throw new Error(`Failed to upload ${uploadedFile.file.name}: ${uploadError.message}`);
           }
 
-          await supabase.from('ip_documents').insert({
+          // Record in database
+          const { error: dbError } = await supabase.from('ip_documents').insert({
             ip_record_id: ipRecord.id,
             uploader_id: profile.id,
             file_name: uploadedFile.file.name,
@@ -266,11 +315,30 @@ export function NewSubmissionPage() {
             size_bytes: uploadedFile.file.size,
             doc_type: uploadedFile.type as any,
           });
+
+          if (dbError) {
+            console.error(`[NewSubmission] Database insert failed for ${uploadedFile.file.name}:`, dbError);
+            // Try to clean up the uploaded file
+            await supabase.storage
+              .from('ip-documents')
+              .remove([filePath])
+              .catch(e => console.warn('File cleanup failed:', e));
+            throw new Error(`Failed to record ${uploadedFile.file.name}: ${dbError.message}`);
+          }
+
+          uploadedDocuments.push({ type: uploadedFile.type, name: uploadedFile.file.name });
+          console.log(`[NewSubmission] Successfully uploaded: ${uploadedFile.file.name} (${uploadedFile.type})`);
         } catch (fileError: any) {
-          console.error(`Error processing file ${uploadedFile.file.name}:`, fileError);
+          console.error(`[NewSubmission] Error processing file ${uploadedFile.file.name}:`, fileError);
           throw fileError;
         }
       }
+
+      if (uploadedDocuments.length === 0) {
+        throw new Error('No documents were uploaded successfully');
+      }
+
+      console.log(`[NewSubmission] All ${uploadedDocuments.length} documents uploaded successfully`);
 
       const { data: categoryEvaluator } = await supabase
         .from('users')
@@ -465,9 +533,17 @@ export function NewSubmissionPage() {
       setError('Please fill in all inventor names');
       return;
     }
-    if (step === 5 && uploadedFiles.length === 0) {
-      setError('Please upload at least one document');
-      return;
+    if (step === 5) {
+      // Validate required documents
+      const docValidation = validateRequiredDocuments(uploadedFiles.map(f => f.type));
+      if (!docValidation.valid) {
+        setError(docValidation.error || 'Missing required documents');
+        return;
+      }
+      if (uploadedFiles.length === 0) {
+        setError('Please upload at least one document');
+        return;
+      }
     }
     setStep(step + 1);
   };
@@ -1018,12 +1094,36 @@ export function NewSubmissionPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <h4 className="font-medium text-blue-900 mb-2">Required Documents:</h4>
                 <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                  <li>Disclosure Form (if applicable)</li>
-                  <li>Technical Drawings / Diagrams</li>
-                  <li>Supporting Documentation</li>
-                  <li>Research Data / Results</li>
-                  <li>Any other relevant files</li>
+                  <li>✓ Disclosure Form (Required)</li>
+                  <li>✓ Technical Drawings / Diagrams (Required)</li>
+                  <li>✓ Supporting Documentation (Required)</li>
                 </ul>
+                <p className="text-xs text-blue-700 mt-3 font-medium">
+                  Allowed file types: {ALLOWED_DOCUMENT_TYPES.join(', ')}
+                </p>
+                <p className="text-xs text-blue-700">Max file size: {MAX_FILE_SIZE / 1024 / 1024}MB per file</p>
+              </div>
+
+              {/* Document Status */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className={`p-3 rounded-lg border-2 ${uploadedFiles.some(f => f.type === 'disclosure') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                  <p className="text-sm font-medium text-gray-900">Disclosure Form</p>
+                  <p className={`text-xs ${uploadedFiles.some(f => f.type === 'disclosure') ? 'text-green-700' : 'text-red-700'}`}>
+                    {uploadedFiles.some(f => f.type === 'disclosure') ? '✓ Uploaded' : '✗ Missing'}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-lg border-2 ${uploadedFiles.some(f => f.type === 'drawing') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                  <p className="text-sm font-medium text-gray-900">Technical Drawings</p>
+                  <p className={`text-xs ${uploadedFiles.some(f => f.type === 'drawing') ? 'text-green-700' : 'text-red-700'}`}>
+                    {uploadedFiles.some(f => f.type === 'drawing') ? '✓ Uploaded' : '✗ Missing'}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-lg border-2 ${uploadedFiles.some(f => f.type === 'attachment') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                  <p className="text-sm font-medium text-gray-900">Supporting Docs</p>
+                  <p className={`text-xs ${uploadedFiles.some(f => f.type === 'attachment') ? 'text-green-700' : 'text-red-700'}`}>
+                    {uploadedFiles.some(f => f.type === 'attachment') ? '✓ Uploaded' : '✗ Missing'}
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -1035,12 +1135,25 @@ export function NewSubmissionPage() {
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="h-8 w-8 text-gray-400 mb-2" />
                       <p className="text-sm text-gray-600">Upload Disclosure Form</p>
-                      <p className="text-xs text-gray-500">Any file type</p>
+                      <p className="text-xs text-gray-500">PDF, DOCX, or XLSX</p>
                     </div>
                     <input
                       type="file"
                       className="hidden"
                       multiple
+                      accept={ALLOWED_DOCUMENT_TYPES.map(t => {
+                        const mimeMap: Record<string, string> = {
+                          'pdf': '.pdf',
+                          'doc': '.doc',
+                          'docx': '.docx',
+                          'xls': '.xls',
+                          'xlsx': '.xlsx',
+                          'png': '.png',
+                          'jpg': '.jpg',
+                          'jpeg': '.jpeg',
+                        };
+                        return mimeMap[t] || '';
+                      }).filter(Boolean).join(',')}
                       onChange={(e) => handleFileUpload(e, 'disclosure')}
                       title="Upload disclosure form"
                     />
@@ -1049,18 +1162,19 @@ export function NewSubmissionPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Technical Drawings / Diagrams
+                    Technical Drawings / Diagrams <span className="text-red-500">*</span>
                   </label>
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="h-8 w-8 text-gray-400 mb-2" />
                       <p className="text-sm text-gray-600">Upload Drawings</p>
-                      <p className="text-xs text-gray-500">Any file type</p>
+                      <p className="text-xs text-gray-500">PDF, PNG, or JPG</p>
                     </div>
                     <input
                       type="file"
                       className="hidden"
                       multiple
+                      accept=".pdf,.png,.jpg,.jpeg"
                       onChange={(e) => handleFileUpload(e, 'drawing')}
                       title="Upload technical drawings"
                     />
@@ -1069,18 +1183,19 @@ export function NewSubmissionPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Supporting Documents
+                    Supporting Documents <span className="text-red-500">*</span>
                   </label>
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="h-8 w-8 text-gray-400 mb-2" />
                       <p className="text-sm text-gray-600">Upload Supporting Files</p>
-                      <p className="text-xs text-gray-500">Any file type</p>
+                      <p className="text-xs text-gray-500">PDF, DOCX, PNG, JPG</p>
                     </div>
                     <input
                       type="file"
                       className="hidden"
                       multiple
+                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.xlsx,.xls"
                       onChange={(e) => handleFileUpload(e, 'attachment')}
                       title="Upload supporting documents"
                     />
