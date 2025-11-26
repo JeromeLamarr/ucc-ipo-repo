@@ -234,9 +234,9 @@ export function NewSubmissionPage() {
 
     try {
       // Validate required documents are present
-      const docValidation = validateRequiredDocuments(uploadedFiles.map(f => f.type));
-      if (!docValidation.valid) {
-        setError(docValidation.error || 'Missing required documents');
+      const docValidation = validateRequiredDocuments(uploadedFiles.map(f => ({ type: f.type, file: f.file })));
+      if (docValidation !== null) {
+        setError(docValidation.message || 'Missing required documents');
         setLoading(false);
         setUploading(false);
         return;
