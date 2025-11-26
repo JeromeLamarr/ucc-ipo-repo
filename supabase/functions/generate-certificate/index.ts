@@ -436,7 +436,7 @@ Deno.serve(async (req: Request) => {
       .from("ip_records")
       .select("*")
       .eq("id", record_id)
-      .eq("status", "approved")
+      .in("status", ["evaluator_approved", "ready_for_filing", "preparing_legal"])
       .single();
 
     if (ipError || !ipRecord) {

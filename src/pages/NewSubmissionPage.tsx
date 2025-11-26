@@ -1040,6 +1040,7 @@ export function NewSubmissionPage() {
                     <input
                       type="file"
                       className="hidden"
+                      multiple
                       onChange={(e) => handleFileUpload(e, 'disclosure')}
                       title="Upload disclosure form"
                     />
