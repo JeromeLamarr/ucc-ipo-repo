@@ -47,6 +47,16 @@ export function ProcessTrackingWizard({
     }
   };
 
+  /**
+   * Get the latest tracking record to determine current status
+   * This ensures we use the most recent status change, not old historical ones
+   */
+  const getLatestTrackingStatus = (): string | null => {
+    if (tracking.length === 0) return null;
+    // Get the most recent record
+    return tracking[tracking.length - 1]?.status || null;
+  };
+
   const updateSteps = () => {
     const allSteps: ProcessStep[] = [
       {
@@ -96,16 +106,18 @@ export function ProcessTrackingWizard({
       rejected: -1,
     };
 
-    const currentStepIndex = statusMap[currentStatus] ?? 0;
+    // Use the latest status from process_tracking table, not from ip_records
+    const latestStatus = getLatestTrackingStatus() || currentStatus;
+    const currentStepIndex = statusMap[latestStatus] ?? 0;
 
     const updatedSteps = allSteps.map((step, index) => {
       let status: 'completed' | 'current' | 'pending' | 'rejected' = 'pending';
 
-      if (currentStatus === 'rejected') {
+      if (latestStatus === 'rejected') {
         if (index <= currentStepIndex || (currentStepIndex === -1 && index <= 1)) {
           status = 'rejected';
         }
-      } else if (currentStatus === 'completed' || currentStatus === 'ready_for_filing') {
+      } else if (latestStatus === 'completed' || latestStatus === 'ready_for_filing') {
         // If completed or ready for filing, mark all steps as completed
         status = 'completed';
       } else if (index < currentStepIndex) {
