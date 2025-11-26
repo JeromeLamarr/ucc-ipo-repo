@@ -18,12 +18,12 @@ interface CertificateRequest {
 }
 
 interface IPRecord {
-  id: number;
+  id: string;  // UUID, not number
   title: string;
-  type: string;
+  category: string;
   status: string;
+  applicant_id: string;  // Changed from user_id to applicant_id
   created_at: string;
-  user_id: string;
   tracking_id?: string;
 }
 
@@ -226,7 +226,7 @@ async function generateCertificatePDF(
   // Details table
   const detailsX = margin + 50;
   page.drawText(
-    `Type: ${ipRecord.type.charAt(0).toUpperCase() + ipRecord.type.slice(1)}`,
+    `Category: ${ipRecord.category.charAt(0).toUpperCase() + ipRecord.category.slice(1)}`,
     {
       x: detailsX,
       y: yPosition,
@@ -473,8 +473,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const record_id = typeof requestData.record_id === 'string' 
-      ? parseInt(requestData.record_id, 10) 
-      : requestData.record_id;
+      ? requestData.record_id  // Keep UUID strings as-is, don't try to parse as int
+      : String(requestData.record_id);
     const { user_id, requester_id, requester_role } = requestData;
 
     console.log(`[generate-certificate] Generating certificate for record ${record_id}`, {
@@ -600,11 +600,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verify the user_id in request matches the record owner
-    if (ipRecord.user_id !== user_id) {
+    // Verify the user_id in request matches the record owner (applicant_id in ip_records)
+    if (ipRecord.applicant_id !== user_id) {
       console.error('[generate-certificate] User ID mismatch', {
         record_id,
-        expected_user: ipRecord.user_id,
+        expected_user: ipRecord.applicant_id,
         provided_user: user_id,
       });
       return new Response(
@@ -626,12 +626,12 @@ Deno.serve(async (req: Request) => {
     const { data: creator, error: creatorError } = await supabase
       .from("users")
       .select("id, full_name, email")
-      .eq("id", ipRecord.user_id)
+      .eq("id", ipRecord.applicant_id)
       .single();
 
     if (creatorError || !creator) {
       console.error('[generate-certificate] Creator fetch error', {
-        user_id: ipRecord.user_id,
+        applicant_id: ipRecord.applicant_id,
         error: creatorError?.message || "Creator not found",
       });
       return new Response(
@@ -640,7 +640,7 @@ Deno.serve(async (req: Request) => {
           error: "Creator user not found",
           details: {
             message: "The creator profile for this record could not be found",
-            userId: ipRecord.user_id,
+            userId: ipRecord.applicant_id,
           },
         }),
         {
