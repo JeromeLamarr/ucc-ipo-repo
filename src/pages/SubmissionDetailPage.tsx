@@ -12,7 +12,6 @@ import {
   Tag,
   AlertCircle,
   CheckCircle,
-  Clock,
   MessageSquare,
   Edit,
   Save,
@@ -41,8 +40,6 @@ export function SubmissionDetailPage() {
   const [record, setRecord] = useState<IpRecord | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-  const [processHistory, setProcessHistory] = useState<any[]>([]);
-  const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -112,34 +109,6 @@ export function SubmissionDetailPage() {
 
       if (evalsError) throw evalsError;
       setEvaluations(evalsData || []);
-
-      // Fetch process tracking history
-      const { data: historyData, error: historyError } = await supabase
-        .from('process_tracking')
-        .select('*')
-        .eq('ip_record_id', id)
-        .order('created_at', { ascending: false });
-
-      if (historyError) {
-        console.warn('Could not fetch process history:', historyError);
-        setProcessHistory([]);
-      } else {
-        setProcessHistory(historyData || []);
-      }
-
-      // Fetch activity logs
-      const { data: logsData, error: logsError } = await supabase
-        .from('activity_logs')
-        .select('*')
-        .eq('ip_record_id', id)
-        .order('created_at', { ascending: false });
-
-      if (logsError) {
-        console.warn('Could not fetch activity logs:', logsError);
-        setActivityLogs([]);
-      } else {
-        setActivityLogs(logsData || []);
-      }
     } catch (error) {
       console.error('Error fetching submission details:', error);
     } finally {
@@ -684,39 +653,6 @@ export function SubmissionDetailPage() {
                   >
                     {evaluation.decision.toUpperCase()}
                   </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {(processHistory.length > 0 || activityLogs.length > 0) && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Submission History</h2>
-          <div className="space-y-4">
-            {processHistory.map((event: any, index: number) => (
-              <div key={`process-${event.id}`} className="flex gap-4">
-                <div className="flex flex-col items-center">
-                  <Clock className="h-5 w-5 text-blue-600" />
-                  {index < processHistory.length - 1 && (
-                    <div className="w-1 h-8 bg-blue-200 mt-2" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-semibold text-gray-900">{event.action.replace(/_/g, ' ').toUpperCase()}</p>
-                      <p className="text-sm text-gray-600">{event.actor_name} ({event.actor_role})</p>
-                      <p className="text-xs text-gray-500 mt-1">{formatDate(event.created_at)}</p>
-                    </div>
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                      {event.status}
-                    </span>
-                  </div>
-                  {event.description && (
-                    <p className="text-sm text-gray-700 mt-2">{event.description}</p>
-                  )}
                 </div>
               </div>
             ))}

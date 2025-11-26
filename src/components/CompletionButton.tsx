@@ -111,6 +111,31 @@ export function CompletionButton({
         console.error('Failed to send completion notification:', errorText);
       }
 
+      // Get admin user info for process tracking
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const { data: adminProfile } = await supabase
+        .from('users')
+        .select('full_name')
+        .eq('auth_user_id', currentUser?.id)
+        .single();
+
+      // Insert process tracking entry
+      const { error: trackingError } = await supabase.from('process_tracking').insert({
+        ip_record_id: recordId,
+        stage: 'Completion',
+        status: 'ready_for_filing',
+        actor_id: recordData.applicant_id,
+        actor_name: adminProfile?.full_name || 'Admin',
+        actor_role: 'Admin',
+        action: 'completion_marked',
+        description: 'Admin marked submission as completed and ready for IPO Philippines filing',
+        metadata: { previousStatus: currentStatus },
+      });
+
+      if (trackingError) {
+        console.error('Failed to create process tracking entry:', trackingError);
+      }
+
       if (recordData?.applicant_id) {
         const { error: notificationError } = await supabase.from('notifications').insert({
           user_id: recordData.applicant_id,

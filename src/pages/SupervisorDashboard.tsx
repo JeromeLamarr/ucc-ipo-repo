@@ -274,7 +274,7 @@ export function SupervisorDashboard() {
 
       if (selectedRecord.applicant?.email) {
         try {
-          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-status-notification`, {
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-status-notification`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -293,6 +293,13 @@ export function SupervisorDashboard() {
               actorRole: 'Supervisor',
             }),
           });
+
+          if (!response.ok) {
+            const error = await response.json();
+            console.error('Email service error:', error);
+          } else {
+            console.log('Status notification email sent successfully');
+          }
         } catch (emailError) {
           console.error('Error sending email notification:', emailError);
         }
