@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { CheckCircle, Circle, Clock, XCircle } from 'lucide-react';
 import { getStatusLabel, getStatusDescription } from '../lib/statusLabels';
 
+// Force rebuild - version 2.0
 interface ProcessStep {
   stage: string;
   label: string;
