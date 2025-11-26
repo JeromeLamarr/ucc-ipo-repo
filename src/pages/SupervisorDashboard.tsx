@@ -274,6 +274,7 @@ export function SupervisorDashboard() {
 
       if (selectedRecord.applicant?.email) {
         try {
+          console.log(`[SupervisorDashboard] Sending email notification to ${selectedRecord.applicant.email}`);
           const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-status-notification`, {
             method: 'POST',
             headers: {
@@ -296,12 +297,23 @@ export function SupervisorDashboard() {
 
           if (!response.ok) {
             const error = await response.json();
-            console.error('Email service error:', error);
+            console.error('[SupervisorDashboard] Email service error:', {
+              status: response.status,
+              error: error,
+              to: selectedRecord.applicant.email,
+            });
           } else {
-            console.log('Status notification email sent successfully');
+            const result = await response.json();
+            console.log('[SupervisorDashboard] Status notification email sent successfully', {
+              to: selectedRecord.applicant.email,
+              emailId: result.data?.emailId,
+            });
           }
         } catch (emailError) {
-          console.error('Error sending email notification:', emailError);
+          console.error('[SupervisorDashboard] Error sending email notification:', {
+            error: emailError,
+            to: selectedRecord.applicant?.email,
+          });
         }
       }
 

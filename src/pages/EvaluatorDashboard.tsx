@@ -158,6 +158,32 @@ export function EvaluatorDashboard() {
       return;
     }
 
+    // Validate individual scores are in range 0-10
+    const scores = {
+      innovation: evaluationForm.innovation,
+      feasibility: evaluationForm.feasibility,
+      marketPotential: evaluationForm.marketPotential,
+      technicalMerit: evaluationForm.technicalMerit,
+    };
+
+    for (const [name, score] of Object.entries(scores)) {
+      if (typeof score !== 'number' || isNaN(score)) {
+        alert(`${name} must be a valid number`);
+        return;
+      }
+      if (score < 0 || score > 10) {
+        alert(`${name} must be between 0 and 10 (current: ${score})`);
+        return;
+      }
+    }
+
+    // Validate decision is one of allowed values
+    const allowedDecisions = ['approved', 'revision', 'rejected'];
+    if (!allowedDecisions.includes(evaluationForm.decision)) {
+      alert('Invalid decision selected');
+      return;
+    }
+
     const overallScore = calculateOverallScore();
     const finalGrade = evaluationForm.grade || getGradeFromScore(overallScore);
 
@@ -214,13 +240,13 @@ export function EvaluatorDashboard() {
         .single();
 
       if (updateError) {
-        console.error('Update error details:', updateError);
+        console.error('[EvaluatorDashboard] Update error details:', updateError);
         alert(`Failed to update submission: ${updateError.message}`);
         setSubmitting(false);
         return;
       }
 
-      console.log('Successfully updated record:', updateData);
+      console.log('[EvaluatorDashboard] Successfully updated record:', updateData);
 
       await supabase.from('notifications').insert({
         user_id: selectedRecord.applicant_id,
@@ -255,6 +281,7 @@ export function EvaluatorDashboard() {
 
       if (selectedRecord.applicant?.email) {
         try {
+          console.log(`[EvaluatorDashboard] Sending email notification to ${selectedRecord.applicant.email}`);
           const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-status-notification`, {
             method: 'POST',
             headers: {
@@ -277,12 +304,23 @@ export function EvaluatorDashboard() {
 
           if (!response.ok) {
             const error = await response.json();
-            console.error('Email service error:', error);
+            console.error('[EvaluatorDashboard] Email service error:', {
+              status: response.status,
+              error: error,
+              to: selectedRecord.applicant.email,
+            });
           } else {
-            console.log('Status notification email sent successfully');
+            const result = await response.json();
+            console.log('[EvaluatorDashboard] Status notification email sent successfully', {
+              to: selectedRecord.applicant.email,
+              emailId: result.data?.emailId,
+            });
           }
         } catch (emailError) {
-          console.error('Error sending email notification:', emailError);
+          console.error('[EvaluatorDashboard] Error sending email notification:', {
+            error: emailError,
+            to: selectedRecord.applicant?.email,
+          });
         }
       }
 
