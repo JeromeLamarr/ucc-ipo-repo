@@ -477,15 +477,22 @@ Deno.serve(async (req: Request) => {
       : String(requestData.record_id);
     const { user_id, requester_id, requester_role } = requestData;
 
+    // Determine the actual requester (either requester_id if provided, or user_id)
+    const actualRequesterId = requester_id || user_id;
+    const actualRequesterRole = requester_role || 'applicant';
+
     console.log(`[generate-certificate] Generating certificate for record ${record_id}`, {
       record_id,
       user_id,
       requester_id,
       requester_role,
+      actualRequesterId,
+      actualRequesterRole,
       timestamp: new Date().toISOString(),
     });
 
-    // Authorization check: Only the applicant, supervisors, evaluators, and admins can generate certificates
+    // Authorization check: Only applicants, supervisors, evaluators, and admins can generate certificates
+    // If requester_id is different from user_id, verify the requester has permission
     if (requester_id && requester_id !== user_id) {
       // Verify requester has authorization
       const { data: requesterUser, error: requesterError } = await supabase
@@ -499,7 +506,7 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({
             success: false,
-            error: "User not found",
+            error: "Requester user not found",
           }),
           {
             status: 404,
@@ -511,6 +518,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Only supervisors, evaluators, and admins can generate on behalf of applicants
       const allowedRoles = ["supervisor", "evaluator", "admin"];
       if (!allowedRoles.includes(requesterUser.role)) {
         console.error('[generate-certificate] Unauthorized access attempt', {
@@ -521,7 +529,7 @@ Deno.serve(async (req: Request) => {
         return new Response(
           JSON.stringify({
             success: false,
-            error: "You do not have permission to generate certificates",
+            error: "You do not have permission to generate certificates for this record",
           }),
           {
             status: 403,
@@ -583,34 +591,12 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "IP record not found or not approved for certificate generation",
+          error: "Cannot generate certificate for this record",
           details: {
             message: "Only records with approved status can generate certificates",
             validStatuses: validStatuses,
             currentStatus: currentStatus,
           },
-        }),
-        {
-          status: 404,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-
-    // Verify the user_id in request matches the record owner (applicant_id in ip_records)
-    if (ipRecord.applicant_id !== user_id) {
-      console.error('[generate-certificate] User ID mismatch', {
-        record_id,
-        expected_user: ipRecord.applicant_id,
-        provided_user: user_id,
-      });
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "This record does not belong to the specified user",
         }),
         {
           status: 403,
