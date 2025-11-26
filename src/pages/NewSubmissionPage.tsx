@@ -510,18 +510,8 @@ export function NewSubmissionPage() {
       setError('Please fill in all inventor names');
       return;
     }
-    if (step === 5) {
-      // Validate required documents
-      const docValidationError = validateRequiredDocuments(uploadedFiles);
-      if (docValidationError) {
-        setError(docValidationError.message || 'Missing required documents');
-        return;
-      }
-      if (uploadedFiles.length === 0) {
-        setError('Please upload at least one document');
-        return;
-      }
-    }
+    // Skip document validation here - will validate on submit
+    // Step 5 just lets users select files without validation delay
     setStep(step + 1);
   };
 
@@ -1112,9 +1102,31 @@ export function NewSubmissionPage() {
                 </dl>
               </div>
 
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h4 className="font-bold text-gray-900 mb-4">Documents Uploaded ({uploadedFiles.length})</h4>
+                {uploadedFiles.length > 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {uploadedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <FileIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{file.file.name}</p>
+                            <p className="text-xs text-gray-500">{(file.file.size / 1024 / 1024).toFixed(2)}MB • {file.type}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded text-sm text-red-600\">\n                    ⚠️ <strong>No documents uploaded!</strong> Please go back to Step 5 and upload at least one document.
+                  </div>
+                )}
+              </div>
+
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> By submitting this form, you confirm that all information provided is accurate and complete.
+                <p className="text-sm text-yellow-800\">
+                  <strong>Final Confirmation:</strong> By clicking Submit, you confirm that all information provided is accurate and complete.
                   Your submission will be reviewed by the assigned supervisor and evaluator.
                 </p>
               </div>

@@ -29,7 +29,6 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
   isUploading = false,
 }) => {
   const [dragActive, setDragActive] = useState(false);
-  const [validating, setValidating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Updated required documents more relevant to IP records
@@ -43,45 +42,21 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
   const processFiles = (files: FileList | null) => {
     if (!files) return;
 
-    setValidating(true);
+    // No validation here - just quick file selection
+    // Files will be validated when user submits
     const newFiles: UploadedFile[] = [];
-    const errors: string[] = [];
 
     Array.from(files).forEach((file) => {
-      // Validate file type
-      const validation = validateFile(file);
-      if (!validation.valid) {
-        errors.push(`${file.name}: ${validation.error}`);
-        return;
-      }
-
-      // Validate individual file size
-      const fileSizeMB = file.size / (1024 * 1024);
-      if (fileSizeMB > maxFileSize) {
-        errors.push(`${file.name}: Exceeds ${maxFileSize}MB size limit`);
-        return;
-      }
-
       newFiles.push({
         file,
-        type: 'attachment', // Default type - can be reassigned
+        type: 'attachment', // Default type
       });
     });
 
-    // Check total size
-    const totalSize = (totalUploadedSize + newFiles.reduce((sum, f) => sum + f.file.size / (1024 * 1024), 0));
-    if (totalSize > maxTotalSize) {
-      errors.push(`Total upload size exceeds ${maxTotalSize}MB limit. Current: ${totalSize.toFixed(1)}MB`);
-    }
-
-    if (errors.length > 0) {
-      onError(errors.join('\n'));
-    } else if (newFiles.length > 0) {
+    if (newFiles.length > 0) {
       onFilesAdded(newFiles);
-      onError(''); // Clear previous errors
+      onError(''); // Clear any previous errors
     }
-
-    setValidating(false);
   };
 
   const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
@@ -190,13 +165,13 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={validating || isUploading}
+          disabled={isUploading}
           className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
-          {validating || isUploading ? (
+          {isUploading ? (
             <>
               <Loader className="h-4 w-4 animate-spin" />
-              {isUploading ? 'Uploading...' : 'Validating...'}
+              Uploading...
             </>
           ) : (
             'Browse Files'
@@ -208,7 +183,7 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
           multiple
           onChange={handleFileInput}
           className="hidden"
-          disabled={validating || isUploading}
+          disabled={isUploading}
           title="Upload documents"
         />
         <div className="mt-4 pt-4 border-t border-gray-300">
