@@ -97,26 +97,42 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
       <div>
         <h3 className="text-xl font-bold text-gray-900 mb-4">Upload Documents</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Upload any documents you'd like to include with your IP record. A disclosure form will be automatically generated after you submit.
+          Upload any documents relevant to your intellectual property submission.
         </p>
       </div>
 
-      {/* Info Box - No Required Documents */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <h4 className="font-medium text-green-900 mb-2">📄 Document Upload</h4>
-        <p className="text-sm text-green-800 mb-2">
-          <strong>No specific documents required!</strong> Upload any files relevant to your IP:
-        </p>
-        <ul className="text-sm text-green-800 space-y-1 list-disc list-inside">
-          <li>Technical drawings, diagrams, or schematics</li>
-          <li>Specifications or technical documentation</li>
-          <li>Research papers or evidence</li>
-          <li>Prototypes or design files</li>
-          <li>Any supporting materials</li>
-        </ul>
-        <p className="text-xs text-green-700 mt-3">
-          ✓ After submission, a disclosure form will be auto-generated for you
-        </p>
+      {/* Document Upload Guidelines - Formal University Standard */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h4 className="font-semibold text-blue-900 mb-4 text-lg">Document Upload Guidelines</h4>
+        
+        {/* File Specifications */}
+        <div className="mb-5">
+          <p className="text-sm font-medium text-blue-900 mb-2">Upload any documents relevant to your intellectual property submission:</p>
+          <div className="text-sm text-blue-800 space-y-1 ml-4">
+            <p><strong>Accepted file types:</strong> PDF, DOCX, PPTX, PNG, JPG</p>
+            <p><strong>Max file size:</strong> 10 MB per file</p>
+            <p><strong>Total upload limit:</strong> 50 MB</p>
+          </div>
+        </div>
+
+        {/* Recommended Materials */}
+        <div className="mb-5">
+          <p className="text-sm font-medium text-blue-900 mb-2">You may include:</p>
+          <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside ml-2">
+            <li>Technical drawings or schematics</li>
+            <li>Specifications or technical documentation</li>
+            <li>Research papers or supporting evidence</li>
+            <li>Prototype or design images</li>
+            <li>Any supplemental materials relevant to your invention</li>
+          </ul>
+        </div>
+
+        {/* Confidentiality Notice */}
+        <div className="bg-white border border-blue-100 rounded p-3 mt-4">
+          <p className="text-sm text-gray-700">
+            <span className="font-semibold text-blue-900">🔒 Confidentiality Notice:</span> All uploaded files are stored securely. Only authorized university reviewers (supervisors and evaluators) can access your documents. Other applicants cannot view your submissions.
+          </p>
+        </div>
       </div>
 
       {/* Drag & Drop Area */}
@@ -272,22 +288,10 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         <div className="text-center py-8">
           <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 text-sm">
-            No files uploaded yet. Start by uploading your required documents above.
+            No files uploaded yet. You can add documents using the upload area above.
           </p>
         </div>
       )}
-
-      {/* Info Box */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <h4 className="font-medium text-amber-900 mb-2">Tips for Document Upload:</h4>
-        <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside">
-          <li>Ensure all documents are clear and legible</li>
-          <li>Use PDF format for text documents when possible</li>
-          <li>For drawings/diagrams, use PDF, PNG, or JPG</li>
-          <li>Technical specs should be detailed and complete</li>
-          <li>Include all relevant supporting evidence</li>
-        </ul>
-      </div>
     </div>
   );
 };
