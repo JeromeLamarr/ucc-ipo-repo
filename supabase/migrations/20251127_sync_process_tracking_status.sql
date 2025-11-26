@@ -8,8 +8,9 @@ CREATE OR REPLACE FUNCTION sync_ip_record_status()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Update ip_records.status to match the latest process_tracking status
+  -- Cast NEW.status to ip_status enum type
   UPDATE ip_records
-  SET status = NEW.status,
+  SET status = NEW.status::ip_status,
       updated_at = NOW()
   WHERE id = NEW.ip_record_id;
   
