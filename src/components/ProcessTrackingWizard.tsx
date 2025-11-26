@@ -103,6 +103,9 @@ export function ProcessTrackingWizard({
         if (index <= currentStepIndex || (currentStepIndex === -1 && index <= 1)) {
           status = 'rejected';
         }
+      } else if (currentStatus === 'completed') {
+        // If completed, mark all steps as completed
+        status = 'completed';
       } else if (index < currentStepIndex) {
         status = 'completed';
       } else if (index === currentStepIndex) {
