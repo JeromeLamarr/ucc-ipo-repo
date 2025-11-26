@@ -66,6 +66,12 @@ export function ProcessTrackingWizard({
         status: 'pending',
       },
       {
+        stage: 'legal_preparation',
+        label: 'Legal Preparation',
+        description: 'Preparing for legal filing',
+        status: 'pending',
+      },
+      {
         stage: 'completion',
         label: 'Completed',
         description: 'Process completed',
@@ -75,14 +81,16 @@ export function ProcessTrackingWizard({
 
     const statusMap: Record<string, number> = {
       draft: 0,
+      submitted: 0,
       waiting_supervisor: 1,
       supervisor_revision: 1,
       supervisor_approved: 2,
       waiting_evaluation: 2,
       evaluator_revision: 2,
       evaluator_approved: 3,
-      ready_for_filing: 3,
-      completed: 3,
+      preparing_legal: 3,
+      ready_for_filing: 4,
+      completed: 4,
       rejected: -1,
     };
 
@@ -101,15 +109,37 @@ export function ProcessTrackingWizard({
         status = 'current';
       }
 
+      // Find related tracking entry by exact status match or action match
       const relatedTracking = tracking.find((t) => {
-        if (step.stage === 'submission') return t.action === 'created' || t.stage.includes('Submitted');
-        if (step.stage === 'supervisor_review')
-          return t.stage.includes('Supervisor') || t.status === 'waiting_supervisor';
-        if (step.stage === 'evaluation')
-          return t.stage.includes('Evaluator') || t.stage.includes('Evaluation');
-        if (step.stage === 'completion')
-          return t.status === 'evaluator_approved' || t.status === 'ready_for_filing' || t.stage.includes('Ready for Filing');
-        return false;
+        switch (step.stage) {
+          case 'submission':
+            return t.status === 'submitted' || t.action === 'created' || t.action === 'submission';
+          case 'supervisor_review':
+            return t.status === 'waiting_supervisor' || 
+                   t.status === 'supervisor_revision' || 
+                   t.status === 'supervisor_approved' ||
+                   t.action === 'supervisor_approve' ||
+                   t.action === 'supervisor_reject' ||
+                   t.action === 'supervisor_revision';
+          case 'evaluation':
+            return t.status === 'waiting_evaluation' || 
+                   t.status === 'evaluator_revision' || 
+                   t.status === 'evaluator_approved' ||
+                   t.action === 'evaluator_approve' ||
+                   t.action === 'evaluator_reject' ||
+                   t.action === 'evaluator_revision';
+          case 'legal_preparation':
+            return t.status === 'preparing_legal' ||
+                   t.action === 'start_legal_prep' ||
+                   t.action === 'legal_preparation';
+          case 'completion':
+            return t.status === 'ready_for_filing' || 
+                   t.status === 'completed' ||
+                   t.action === 'completion' ||
+                   t.action === 'admin_complete';
+          default:
+            return false;
+        }
       });
 
       return {
