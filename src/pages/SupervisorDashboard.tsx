@@ -188,6 +188,14 @@ export function SupervisorDashboard() {
       }).eq('ip_record_id', selectedRecord.id).eq('supervisor_id', profile.id);
 
       if (action === 'approve' && evaluatorId) {
+        // Validate that this submission belongs to this supervisor before inserting
+        if (selectedRecord.supervisor_id !== profile.id) {
+          console.error('Security violation: Supervisor trying to assign submission they do not supervise');
+          alert('Security error: You cannot assign submissions you do not supervise');
+          setSubmitting(false);
+          return;
+        }
+
         // Create evaluator assignment record
         const { data: assignmentData, error: assignmentError } = await supabase
           .from('evaluator_assignments')
