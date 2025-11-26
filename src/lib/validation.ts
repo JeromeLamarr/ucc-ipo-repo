@@ -86,9 +86,20 @@ export function validateTotalSize(files: File[]): ValidationError | null {
 export function validateRequiredDocuments(
   uploadedFiles: Array<{ type: string; file: File }>
 ): ValidationError | null {
-  const hasDisclosure = uploadedFiles.some(f => f.type === 'disclosure');
-  const hasDrawing = uploadedFiles.some(f => f.type === 'drawing');
-  const hasAttachment = uploadedFiles.some(f => f.type === 'attachment');
+  // Handle both string array and object array formats
+  let documentTypes: string[] = [];
+  
+  if (uploadedFiles && uploadedFiles.length > 0) {
+    if (typeof uploadedFiles[0] === 'string') {
+      documentTypes = uploadedFiles as unknown as string[];
+    } else {
+      documentTypes = uploadedFiles.map(f => f.type);
+    }
+  }
+
+  const hasDisclosure = documentTypes.includes('disclosure');
+  const hasDrawing = documentTypes.includes('drawing');
+  const hasAttachment = documentTypes.includes('attachment');
 
   if (!hasDisclosure) {
     return {
