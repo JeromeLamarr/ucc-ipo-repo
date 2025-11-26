@@ -716,27 +716,45 @@ Deno.serve(async (req: Request) => {
 
     const publicUrl = urlData.publicUrl;
 
-    // Update previous certificates to not latest
-    await supabase
-      .from("ip_generated_files")
-      .update({ is_latest: false })
-      .eq("record_id", record_id)
-      .eq("file_type", "certificate");
+    // Check if a certificate already exists for this record
+    const { data: existingCert } = await supabase
+      .from("certificates")
+      .select("id")
+      .eq("ip_record_id", record_id)
+      .maybeSingle();
 
-    // Insert new certificate record
-    const { error: insertError } = await supabase
-      .from("ip_generated_files")
-      .insert({
-        record_id,
-        file_type: "certificate",
-        file_path: filePath,
-        original_name: `Certificate_${trackingId}.pdf`,
-        mime_type: "application/pdf",
-        file_size: pdfBuffer.length,
-        generated_by: user_id,
-        is_latest: true,
-        checksum,
-      });
+    let insertError;
+    if (existingCert) {
+      // Update existing certificate
+      const { error: updateError } = await supabase
+        .from("certificates")
+        .update({
+          certificate_number: trackingId,
+          pdf_url: publicUrl,
+          file_path: filePath,
+          issued_by: actualRequesterId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingCert.id);
+      insertError = updateError;
+    } else {
+      // Insert new certificate record
+      const { error } = await supabase
+        .from("certificates")
+        .insert({
+          ip_record_id: record_id,
+          certificate_number: trackingId,
+          applicant_id: ipRecord.applicant_id,
+          title: ipRecord.title,
+          category: ipRecord.category,
+          pdf_url: publicUrl,
+          file_path: filePath,
+          issued_by: actualRequesterId,
+          evaluation_score: evaluation?.total_score?.toString(),
+          co_creators: coCreators?.map((c: any) => c.name).join(", "),
+        });
+      insertError = error;
+    }
 
     if (insertError) {
       throw new Error(
