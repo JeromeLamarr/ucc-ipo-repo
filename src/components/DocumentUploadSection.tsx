@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, FileText, AlertCircle, CheckCircle2, FileIcon } from 'lucide-react';
+import { Upload, X, FileText, AlertCircle, CheckCircle2, FileIcon, Loader } from 'lucide-react';
 import { validateFile } from '../lib/validation';
 
 interface UploadedFile {
@@ -14,6 +14,8 @@ interface DocumentUploadSectionProps {
   onError: (error: string) => void;
   maxTotalSize?: number; // in MB
   maxFileSize?: number; // in MB
+  uploadProgress?: number; // 0-100 for upload progress
+  isUploading?: boolean; // is currently uploading to server
 }
 
 export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
@@ -23,12 +25,15 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
   onError,
   maxTotalSize = 50,
   maxFileSize = 25,
+  uploadProgress = 0,
+  isUploading = false,
 }) => {
   const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [validating, setValidating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const REQUIRED_CATEGORIES = ['disclosure', 'drawing', 'attachment'];
+  // Updated required documents more relevant to IP records
+  const REQUIRED_CATEGORIES = ['drawing', 'technical_specification', 'attachment'];
   const uploadedCategories = new Set(uploadedFiles.map(f => f.type));
   const missingCategories = REQUIRED_CATEGORIES.filter(cat => !uploadedCategories.has(cat));
   const allRequiredUploaded = missingCategories.length === 0;
@@ -38,7 +43,7 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
   const processFiles = (files: FileList | null) => {
     if (!files) return;
 
-    setUploading(true);
+    setValidating(true);
     const newFiles: UploadedFile[] = [];
     const errors: string[] = [];
 
@@ -76,7 +81,7 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
       onError(''); // Clear previous errors
     }
 
-    setUploading(false);
+    setValidating(false);
   };
 
   const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
@@ -102,8 +107,8 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
 
   const getCategoryLabel = (type: string) => {
     const labels: Record<string, string> = {
-      disclosure: 'Disclosure Form',
-      drawing: 'Technical Drawings',
+      drawing: 'Technical Drawings/Diagrams',
+      technical_specification: 'Technical Specifications',
       attachment: 'Supporting Documents',
     };
     return labels[type] || type;
@@ -111,9 +116,9 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
 
   const getCategoryDescription = (type: string) => {
     const descriptions: Record<string, string> = {
-      disclosure: 'Initial intellectual property disclosure form',
-      drawing: 'Technical drawings, diagrams, or schematics',
-      attachment: 'Any supporting or additional documents',
+      drawing: 'Technical drawings, schematics, or diagrams showing the IP design',
+      technical_specification: 'Technical specifications, claims, or detailed descriptions',
+      attachment: 'Any additional supporting documentation or evidence',
     };
     return descriptions[type] || '';
   };
@@ -123,7 +128,7 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
       <div>
         <h3 className="text-xl font-bold text-gray-900 mb-4">Upload Documents</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Upload all necessary documentation for your intellectual property record. You can upload any type of file, but ensure you include:
+          Upload all necessary documentation for your intellectual property record. Make sure to include:
         </p>
       </div>
 
@@ -173,7 +178,7 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
           dragActive 
             ? 'border-blue-500 bg-blue-50' 
             : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
-        }`}
+        } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <Upload className="h-12 w-12 text-gray-400 mx-auto mb-3" />
         <p className="text-lg font-medium text-gray-900 mb-1">
@@ -185,10 +190,17 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          disabled={validating || isUploading}
+          className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
-          {uploading ? 'Uploading...' : 'Browse Files'}
+          {validating || isUploading ? (
+            <>
+              <Loader className="h-4 w-4 animate-spin" />
+              {isUploading ? 'Uploading...' : 'Validating...'}
+            </>
+          ) : (
+            'Browse Files'
+          )}
         </button>
         <input
           ref={fileInputRef}
@@ -196,7 +208,7 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
           multiple
           onChange={handleFileInput}
           className="hidden"
-          disabled={uploading}
+          disabled={validating || isUploading}
           title="Upload documents"
         />
         <div className="mt-4 pt-4 border-t border-gray-300">
@@ -206,8 +218,30 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         </div>
       </div>
 
+      {/* Upload Progress Bar */}
+      {isUploading && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-blue-900 flex items-center gap-2">
+              <Loader className="h-4 w-4 animate-spin" />
+              Uploading files to server...
+            </p>
+            <p className="text-sm font-bold text-blue-600">{Math.round(uploadProgress)}%</p>
+          </div>
+          <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
+            <div
+              className="h-2 bg-blue-600 transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+          <p className="text-xs text-blue-700 mt-2">
+            Please don't close this window or refresh the page during upload.
+          </p>
+        </div>
+      )}
+
       {/* Storage Status */}
-      {uploadedFiles.length > 0 && (
+      {uploadedFiles.length > 0 && !isUploading && (
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-gray-700">Storage Used</p>
@@ -234,7 +268,7 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
       {uploadedFiles.length > 0 && (
         <div>
           <h4 className="font-medium text-gray-900 mb-3">
-            Uploaded Files ({uploadedFiles.length})
+            Uploaded Files ({uploadedFiles.length}) {isUploading && <Loader className="h-4 w-4 animate-spin inline ml-2" />}
           </h4>
           <div className="space-y-3">
             {uploadedFiles.map((file, index) => {
@@ -245,7 +279,9 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
               return (
                 <div
                   key={index}
-                  className="flex items-start justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                  className={`flex items-start justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors ${
+                    isUploading ? 'opacity-60' : ''
+                  }`}
                 >
                   <div className="flex items-start gap-3 min-w-0 flex-1">
                     <FileIcon className="h-5 w-5 text-gray-400 flex-shrink-0 mt-1" />
@@ -267,7 +303,8 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
                   <button
                     type="button"
                     onClick={() => onFileRemoved(index)}
-                    className="ml-3 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                    disabled={isUploading}
+                    className="ml-3 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Remove file"
                   >
                     <X className="h-5 w-5" />
@@ -295,9 +332,9 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
         <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside">
           <li>Ensure all documents are clear and legible</li>
           <li>Use PDF format for text documents when possible</li>
-          <li>For images, use PNG or JPG formats</li>
+          <li>For drawings/diagrams, use PDF, PNG, or JPG</li>
+          <li>Technical specs should be detailed and complete</li>
           <li>Include all relevant supporting evidence</li>
-          <li>Organize files logically before uploading</li>
         </ul>
       </div>
     </div>

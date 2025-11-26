@@ -9,6 +9,7 @@ import {
   MAX_FILE_SIZE,
   ErrorResponse,
 } from '../lib/validation';
+import { DocumentUploadSection } from '../components/DocumentUploadSection';
 import {
   FileText,
   Upload,
@@ -65,6 +66,7 @@ export function NewSubmissionPage() {
   const [supervisors, setSupervisors] = useState<User[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -177,49 +179,6 @@ export function NewSubmissionPage() {
     });
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const files = e.target.files;
-    if (!files) return;
-
-    const newFiles: UploadedFile[] = [];
-    const errors: string[] = [];
-
-    Array.from(files).forEach((file) => {
-      // Validate file
-      const validation = validateFile(file);
-      if (!validation.valid) {
-        errors.push(`${file.name}: ${validation.error}`);
-        return;
-      }
-
-      newFiles.push({
-        file,
-        type,
-      });
-    });
-
-    // Show errors if any
-    if (errors.length > 0) {
-      setError(errors.join('\n'));
-      setTimeout(() => setError(''), 5000);
-      return;
-    }
-
-    // Check total size
-    const totalSize = (uploadedFiles.reduce((sum, f) => sum + f.file.size, 0) + 
-                      newFiles.reduce((sum, f) => sum + f.file.size, 0));
-    if (totalSize > 50 * 1024 * 1024) { // 50MB
-      setError('Total upload size exceeds 50MB limit');
-      setTimeout(() => setError(''), 5000);
-      return;
-    }
-
-    setUploadedFiles([...uploadedFiles, ...newFiles]);
-    setError(''); // Clear any previous errors
-  };
-
   const removeFile = (index: number) => {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
   };
@@ -284,13 +243,21 @@ export function NewSubmissionPage() {
 
       if (ipError) throw ipError;
 
-      // Upload all files with proper error handling
+      // Upload all files with proper error handling and progress tracking
       const uploadedDocuments: Array<{ type: string; name: string }> = [];
-      for (const uploadedFile of uploadedFiles) {
+      setUploading(true);
+      setUploadProgress(0);
+
+      for (let i = 0; i < uploadedFiles.length; i++) {
+        const uploadedFile = uploadedFiles[i];
         try {
           const fileExt = uploadedFile.file.name.split('.').pop();
           const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}_${uploadedFile.file.name}`;
           const filePath = `${ipRecord.id}/${fileName}`;
+
+          // Update progress (50% for storage upload)
+          const storageProgress = Math.round(((i + 0.5) / uploadedFiles.length) * 100);
+          setUploadProgress(storageProgress);
 
           // Upload to storage
           const { error: uploadError } = await supabase.storage
@@ -304,6 +271,10 @@ export function NewSubmissionPage() {
             console.error(`[NewSubmission] Storage upload failed for ${uploadedFile.file.name}:`, uploadError);
             throw new Error(`Failed to upload ${uploadedFile.file.name}: ${uploadError.message}`);
           }
+
+          // Update progress (100% for this file including DB)
+          const dbProgress = Math.round(((i + 1) / uploadedFiles.length) * 100);
+          setUploadProgress(dbProgress);
 
           // Record in database
           const { error: dbError } = await supabase.from('ip_documents').insert({
@@ -330,15 +301,21 @@ export function NewSubmissionPage() {
           console.log(`[NewSubmission] Successfully uploaded: ${uploadedFile.file.name} (${uploadedFile.type})`);
         } catch (fileError: any) {
           console.error(`[NewSubmission] Error processing file ${uploadedFile.file.name}:`, fileError);
+          setUploading(false);
+          setUploadProgress(0);
           throw fileError;
         }
       }
 
       if (uploadedDocuments.length === 0) {
+        setUploading(false);
+        setUploadProgress(0);
         throw new Error('No documents were uploaded successfully');
       }
 
       console.log(`[NewSubmission] All ${uploadedDocuments.length} documents uploaded successfully`);
+      setUploading(false);
+      setUploadProgress(0);
 
       const { data: categoryEvaluator } = await supabase
         .from('users')
@@ -1088,141 +1065,16 @@ export function NewSubmissionPage() {
 
           {/* Step 5: Document Upload */}
           {step === 5 && (
-            <div className="space-y-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Upload Documents</h3>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h4 className="font-medium text-blue-900 mb-2">Required Documents:</h4>
-                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                  <li>✓ Technical Documentation / Drawings (Required)</li>
-                  <li>✓ Supporting Evidence (Required)</li>
-                  <li>✓ Additional Documentation (Required)</li>
-                </ul>
-                <p className="text-xs text-blue-700 mt-3 font-medium">
-                  Allowed file types: {ALLOWED_DOCUMENT_TYPES.join(', ')}
-                </p>
-                <p className="text-xs text-blue-700">Max file size: {MAX_FILE_SIZE / 1024 / 1024}MB per file</p>
-              </div>
-
-              {/* Document Status */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className={`p-3 rounded-lg border-2 ${uploadedFiles.some(f => f.type === 'drawing') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                  <p className="text-sm font-medium text-gray-900">Technical Docs</p>
-                  <p className={`text-xs ${uploadedFiles.some(f => f.type === 'drawing') ? 'text-green-700' : 'text-red-700'}`}>
-                    {uploadedFiles.some(f => f.type === 'drawing') ? '✓ Uploaded' : '✗ Missing'}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-lg border-2 ${uploadedFiles.some(f => f.type === 'disclosure') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                  <p className="text-sm font-medium text-gray-900">Evidence</p>
-                  <p className={`text-xs ${uploadedFiles.some(f => f.type === 'disclosure') ? 'text-green-700' : 'text-red-700'}`}>
-                    {uploadedFiles.some(f => f.type === 'disclosure') ? '✓ Uploaded' : '✗ Missing'}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-lg border-2 ${uploadedFiles.some(f => f.type === 'attachment') ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                  <p className="text-sm font-medium text-gray-900">Additional Docs</p>
-                  <p className={`text-xs ${uploadedFiles.some(f => f.type === 'attachment') ? 'text-green-700' : 'text-red-700'}`}>
-                    {uploadedFiles.some(f => f.type === 'attachment') ? '✓ Uploaded' : '✗ Missing'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Technical Documentation / Drawings <span className="text-red-500">*</span>
-                  </label>
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-600">Upload Technical Docs</p>
-                      <p className="text-xs text-gray-500">PDF, PNG, JPG, or DOCX</p>
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      multiple
-                      accept=".pdf,.png,.jpg,.jpeg,.docx,.doc"
-                      onChange={(e) => handleFileUpload(e, 'drawing')}
-                      title="Upload technical documentation"
-                    />
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Supporting Evidence <span className="text-red-500">*</span>
-                  </label>
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-600">Upload Evidence</p>
-                      <p className="text-xs text-gray-500">PDF, DOCX, XLSX, or Images</p>
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      multiple
-                      accept=".pdf,.docx,.doc,.xlsx,.xls,.png,.jpg,.jpeg"
-                      onChange={(e) => handleFileUpload(e, 'disclosure')}
-                      title="Upload supporting evidence"
-                    />
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Additional Documentation <span className="text-red-500">*</span>
-                  </label>
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-600">Upload Additional Files</p>
-                      <p className="text-xs text-gray-500">Any supporting files</p>
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      multiple
-                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.xlsx,.xls"
-                      onChange={(e) => handleFileUpload(e, 'attachment')}
-                      title="Upload additional documentation"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {uploadedFiles.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="font-medium text-gray-900 mb-3">Uploaded Files ({uploadedFiles.length})</h4>
-                  <div className="space-y-2">
-                    {uploadedFiles.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileIcon className="h-5 w-5 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{file.file.name}</p>
-                            <p className="text-xs text-gray-500">
-                              {(file.file.size / 1024 / 1024).toFixed(2)} MB • {file.type}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="text-red-600 hover:text-red-700"
-                          title="Remove file"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <DocumentUploadSection
+              uploadedFiles={uploadedFiles}
+              onFilesAdded={(files) => setUploadedFiles([...uploadedFiles, ...files])}
+              onFileRemoved={removeFile}
+              onError={setError}
+              maxTotalSize={50}
+              maxFileSize={MAX_FILE_SIZE / (1024 * 1024)}
+              uploadProgress={uploadProgress}
+              isUploading={uploading}
+            />
           )}
 
           {/* Step 6: Review & Submit */}

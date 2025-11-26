@@ -32,28 +32,36 @@ export interface ValidationError {
 /**
  * Validate file type and size
  */
-export function validateFile(file: File): { valid: boolean; error?: string } {
-  // Check file extension (more reliable than MIME type)
-  const fileName = file.name.toLowerCase();
-  const ext = fileName.split('.').pop();
-  
-  const allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg'];
-  if (!ext || !allowedExtensions.includes(ext)) {
+export function validateFile(file: File): ValidationError | null {
+  // Check MIME type
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
     return {
-      valid: false,
-      error: `Invalid file extension: .${ext}. Allowed: ${allowedExtensions.join(', ')}`,
+      field: 'file_type',
+      message: `Invalid file type: ${file.type}. Allowed types: ${Object.keys(ALLOWED_DOCUMENT_TYPES).join(', ')}`,
     };
   }
 
   // Check file size
   if (file.size > MAX_FILE_SIZE) {
     return {
-      valid: false,
-      error: `File exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB size limit`,
+      field: 'file_size',
+      message: `File size exceeds maximum: ${(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)}MB. Your file: ${(file.size / 1024 / 1024).toFixed(2)}MB`,
     };
   }
 
-  return { valid: true };
+  // Additional validation: check file extension matches MIME type
+  const fileName = file.name.toLowerCase();
+  const ext = fileName.split('.').pop();
+  const isExtensionValid = ext && Object.keys(ALLOWED_DOCUMENT_TYPES).includes(ext);
+
+  if (!isExtensionValid) {
+    return {
+      field: 'file_extension',
+      message: `Invalid file extension: .${ext}. Allowed: ${Object.keys(ALLOWED_DOCUMENT_TYPES).join(', ')}`,
+    };
+  }
+
+  return null;
 }
 
 /**
