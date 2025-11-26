@@ -44,6 +44,8 @@ export function ProcessTrackingWizard({
 
     if (!error && data) {
       setTracking(data);
+      // Force update with latest data
+      updateSteps();
     }
   };
 
@@ -106,7 +108,7 @@ export function ProcessTrackingWizard({
       rejected: -1,
     };
 
-    // Use the latest status from process_tracking table, not from ip_records
+    // CRITICAL: Always use the latest status from process_tracking, never rely on currentStatus prop
     const latestStatus = getLatestTrackingStatus() || currentStatus;
     const currentStepIndex = statusMap[latestStatus] ?? 0;
 
