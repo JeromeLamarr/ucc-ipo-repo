@@ -81,47 +81,16 @@ export function validateTotalSize(files: File[]): ValidationError | null {
 }
 
 /**
- * Check if required documents are present
+ * Validate required documents - NOW OPTIONAL
+ * Users can upload ANY files they want
+ * Disclosure form will be auto-generated after submission
  */
 export function validateRequiredDocuments(
   uploadedFiles: Array<{ type: string; file: File }>
 ): ValidationError | null {
-  // Handle both string array and object array formats
-  let documentTypes: string[] = [];
-  
-  if (uploadedFiles && uploadedFiles.length > 0) {
-    if (typeof uploadedFiles[0] === 'string') {
-      documentTypes = uploadedFiles as unknown as string[];
-    } else {
-      documentTypes = uploadedFiles.map(f => f.type);
-    }
-  }
-
-  const hasDisclosure = documentTypes.includes('disclosure');
-  const hasDrawing = documentTypes.includes('drawing');
-  const hasAttachment = documentTypes.includes('attachment');
-
-  if (!hasDisclosure) {
-    return {
-      field: 'disclosure',
-      message: 'Disclosure Form is required',
-    };
-  }
-
-  if (!hasDrawing) {
-    return {
-      field: 'drawing',
-      message: 'Technical Drawings/Diagrams are required',
-    };
-  }
-
-  if (!hasAttachment) {
-    return {
-      field: 'attachment',
-      message: 'Supporting Documents are required',
-    };
-  }
-
+  // No validation - users can upload any files or even none
+  // The system will auto-generate a disclosure form after submission
+  // This function kept for backward compatibility but always returns null
   return null;
 }
 

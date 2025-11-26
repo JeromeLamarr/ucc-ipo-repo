@@ -31,12 +31,6 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Updated required documents more relevant to IP records
-  const REQUIRED_CATEGORIES = ['drawing', 'technical_specification', 'attachment'];
-  const uploadedCategories = new Set(uploadedFiles.map(f => f.type));
-  const missingCategories = REQUIRED_CATEGORIES.filter(cat => !uploadedCategories.has(cat));
-  const allRequiredUploaded = missingCategories.length === 0;
-
   const totalUploadedSize = uploadedFiles.reduce((sum, f) => sum + f.file.size, 0) / (1024 * 1024);
 
   const processFiles = (files: FileList | null) => {
@@ -103,44 +97,26 @@ export const DocumentUploadSection: React.FC<DocumentUploadSectionProps> = ({
       <div>
         <h3 className="text-xl font-bold text-gray-900 mb-4">Upload Documents</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Upload all necessary documentation for your intellectual property record. Make sure to include:
+          Upload any documents you'd like to include with your IP record. A disclosure form will be automatically generated after you submit.
         </p>
       </div>
 
-      {/* Requirements Checklist */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
-          {allRequiredUploaded ? (
-            <>
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-              <span className="text-green-700">All Required Documents Uploaded</span>
-            </>
-          ) : (
-            <>
-              <AlertCircle className="h-5 w-5 text-blue-600" />
-              <span>Required Documents</span>
-            </>
-          )}
-        </h4>
-        <ul className="space-y-2">
-          {REQUIRED_CATEGORIES.map((category) => {
-            const hasCategory = uploadedCategories.has(category);
-            return (
-              <li key={category} className="flex items-center gap-2 text-sm">
-                <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${
-                  hasCategory 
-                    ? 'bg-green-500 border-green-500' 
-                    : 'border-gray-300'
-                }`}>
-                  {hasCategory && <CheckCircle2 className="h-3 w-3 text-white" />}
-                </div>
-                <span className={hasCategory ? 'text-green-700 font-medium' : 'text-gray-700'}>
-                  {getCategoryLabel(category)}
-                </span>
-              </li>
-            );
-          })}
+      {/* Info Box - No Required Documents */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h4 className="font-medium text-green-900 mb-2">📄 Document Upload</h4>
+        <p className="text-sm text-green-800 mb-2">
+          <strong>No specific documents required!</strong> Upload any files relevant to your IP:
+        </p>
+        <ul className="text-sm text-green-800 space-y-1 list-disc list-inside">
+          <li>Technical drawings, diagrams, or schematics</li>
+          <li>Specifications or technical documentation</li>
+          <li>Research papers or evidence</li>
+          <li>Prototypes or design files</li>
+          <li>Any supporting materials</li>
         </ul>
+        <p className="text-xs text-green-700 mt-3">
+          ✓ After submission, a disclosure form will be auto-generated for you
+        </p>
       </div>
 
       {/* Drag & Drop Area */}

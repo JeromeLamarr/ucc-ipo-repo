@@ -192,14 +192,8 @@ export function NewSubmissionPage() {
     setUploading(true);
 
     try {
-      // Validate required documents are present
-      const docValidationError = validateRequiredDocuments(uploadedFiles);
-      if (docValidationError) {
-        setError(docValidationError.message || 'Missing required documents');
-        setLoading(false);
-        setUploading(false);
-        return;
-      }
+      // No document validation required - users can submit without files
+      // Documents are optional; disclosure form will be auto-generated
 
       const ipDetails = {
         description: formData.description,
@@ -1103,7 +1097,7 @@ export function NewSubmissionPage() {
               </div>
 
               <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h4 className="font-bold text-gray-900 mb-4">Documents Uploaded ({uploadedFiles.length})</h4>
+                <h4 className="font-bold text-gray-900 mb-4">Documents ({uploadedFiles.length})</h4>
                 {uploadedFiles.length > 0 ? (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {uploadedFiles.map((file, index) => (
@@ -1112,20 +1106,25 @@ export function NewSubmissionPage() {
                           <FileIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">{file.file.name}</p>
-                            <p className="text-xs text-gray-500">{(file.file.size / 1024 / 1024).toFixed(2)}MB • {file.type}</p>
+                            <p className="text-xs text-gray-500">{(file.file.size / 1024 / 1024).toFixed(2)}MB</p>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded text-sm text-red-600\">\n                    ⚠️ <strong>No documents uploaded!</strong> Please go back to Step 5 and upload at least one document.
-                  </div>
+                  <p className="text-sm text-gray-600">ℹ️ No documents uploaded. That's okay! A disclosure form will be auto-generated after submission.</p>
                 )}
               </div>
 
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>📋 Disclosure Form:</strong> After you submit, a disclosure form will be automatically generated and available for download from your dashboard.
+                </p>
+              </div>
+
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800\">
+                <p className="text-sm text-yellow-800">
                   <strong>Final Confirmation:</strong> By clicking Submit, you confirm that all information provided is accurate and complete.
                   Your submission will be reviewed by the assigned supervisor and evaluator.
                 </p>
