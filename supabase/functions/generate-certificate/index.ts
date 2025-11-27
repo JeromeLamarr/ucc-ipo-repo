@@ -160,16 +160,12 @@ async function generateCertificatePDF(
   });
   yPosition -= 14;
 
-  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
   page.drawText("UNIVERSITY OF CALOOCAN CITY", {
     x: width / 2,
     y: yPosition,
     size: 18,
     align: "center",
     color: accentColor,
-    font: helveticaBold,
   });
   yPosition -= 18;
 
@@ -179,7 +175,6 @@ async function generateCertificatePDF(
     size: 12,
     align: "center",
     color: darkColor,
-    font: helveticaBold,
   });
 
   yPosition -= 32;
@@ -201,7 +196,6 @@ async function generateCertificatePDF(
     size: 13,
     align: "center",
     color: accentColor,
-    font: helveticaBold,
   });
 
   yPosition -= 50;
@@ -213,7 +207,6 @@ async function generateCertificatePDF(
     size: 11,
     align: "center",
     color: darkColor,
-    font: helveticaBold,
   });
 
   yPosition -= 18;
@@ -225,7 +218,6 @@ async function generateCertificatePDF(
     size: 16,
     align: "center",
     color: accentColor,
-    font: helveticaBold,
   });
 
   yPosition -= 16;
@@ -275,7 +267,6 @@ async function generateCertificatePDF(
     size: 12,
     align: "center",
     color: accentColor,
-    font: helveticaBold,
     maxWidth: contentWidth - 100,
   });
 
@@ -291,7 +282,6 @@ async function generateCertificatePDF(
     y: yPosition,
     size: 9,
     color: accentColor,
-    font: helveticaBold,
   });
   page.drawText(
     ipRecord.category.charAt(0).toUpperCase() + ipRecord.category.slice(1),
@@ -300,7 +290,6 @@ async function generateCertificatePDF(
       y: yPosition,
       size: 9,
       color: darkColor,
-      font: helvetica,
     }
   );
 
@@ -310,14 +299,12 @@ async function generateCertificatePDF(
     y: yPosition,
     size: 9,
     color: accentColor,
-    font: helveticaBold,
   });
   page.drawText(formatDate(ipRecord.created_at), {
     x: col2X + 120,
     y: yPosition,
     size: 9,
     color: darkColor,
-    font: helvetica,
   });
 
   yPosition -= 16;
@@ -327,14 +314,12 @@ async function generateCertificatePDF(
     y: yPosition,
     size: 9,
     color: accentColor,
-    font: helveticaBold,
   });
   page.drawText("APPROVED", {
     x: col1X + 70,
     y: yPosition,
     size: 9,
     color: rgb(0.2, 0.6, 0.2), // Green for approved
-    font: helveticaBold,
   });
 
   page.drawText("Tracking ID:", {
@@ -342,14 +327,12 @@ async function generateCertificatePDF(
     y: yPosition,
     size: 9,
     color: accentColor,
-    font: helveticaBold,
   });
   page.drawText(trackingId, {
     x: col2X + 120,
     y: yPosition,
     size: 9,
     color: darkColor,
-    font: helveticaBold,
   });
 
   yPosition -= 16;
@@ -359,14 +342,12 @@ async function generateCertificatePDF(
     y: yPosition,
     size: 9,
     color: accentColor,
-    font: helveticaBold,
   });
   page.drawText(`${evaluation?.total_score || 0}/50`, {
     x: col1X + 120,
     y: yPosition,
     size: 9,
     color: darkColor,
-    font: helveticaBold,
   });
 
   if (coCreators && coCreators.length > 0) {
@@ -375,7 +356,6 @@ async function generateCertificatePDF(
       y: yPosition,
       size: 9,
       color: accentColor,
-      font: helveticaBold,
     });
     const coCreatorNames = coCreators.map((c) => c.name).join(", ");
     page.drawText(coCreatorNames, {
@@ -383,7 +363,6 @@ async function generateCertificatePDF(
       y: yPosition,
       size: 8,
       color: darkColor,
-      font: helvetica,
       maxWidth: 150,
     });
   }
@@ -410,7 +389,6 @@ async function generateCertificatePDF(
       size: 8,
       align: "center",
       color: darkColor,
-      font: helvetica,
     }
   );
   yPosition -= 11;
@@ -422,7 +400,6 @@ async function generateCertificatePDF(
       size: 8,
       align: "center",
       color: darkColor,
-      font: helvetica,
     }
   );
   yPosition -= 11;
@@ -432,7 +409,6 @@ async function generateCertificatePDF(
     size: 8,
     align: "center",
     color: darkColor,
-    font: helvetica,
   });
 
   yPosition -= 20;
@@ -453,7 +429,6 @@ async function generateCertificatePDF(
       size: 9,
       align: "center",
       color: darkColor,
-      font: helveticaBold,
     }
   );
 
@@ -495,21 +470,18 @@ async function generateCertificatePDF(
     y: yPosition,
     size: 9,
     color: darkColor,
-    font: helveticaBold,
   });
   page.drawText("Dean", {
     x: sig2X + 45,
     y: yPosition,
     size: 9,
     color: darkColor,
-    font: helveticaBold,
   });
   page.drawText("President", {
     x: sig3X + 35,
     y: yPosition,
     size: 9,
     color: darkColor,
-    font: helveticaBold,
   });
 
   yPosition -= 13;
@@ -520,21 +492,18 @@ async function generateCertificatePDF(
     y: yPosition,
     size: 8,
     color: darkColor,
-    font: helvetica,
   });
   page.drawText("College of Computer Studies", {
     x: sig2X - 10,
     y: yPosition,
     size: 8,
     color: darkColor,
-    font: helvetica,
   });
   page.drawText("Office of the President", {
     x: sig3X + 25,
     y: yPosition,
     size: 8,
     color: darkColor,
-    font: helvetica,
   });
 
   yPosition -= 11;
@@ -544,21 +513,18 @@ async function generateCertificatePDF(
     y: yPosition,
     size: 8,
     color: darkColor,
-    font: helvetica,
   });
   page.drawText("UCC", {
     x: sig2X + 55,
     y: yPosition,
     size: 8,
     color: darkColor,
-    font: helvetica,
   });
   page.drawText("UCC", {
     x: sig3X + 55,
     y: yPosition,
     size: 8,
     color: darkColor,
-    font: helvetica,
   });
 
   yPosition -= 25;
@@ -584,7 +550,6 @@ async function generateCertificatePDF(
       y: yPosition,
       size: 7,
       color: rgb(0.5, 0.5, 0.5),
-      font: helvetica,
     }
   );
 
