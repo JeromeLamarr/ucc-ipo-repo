@@ -702,7 +702,7 @@ Deno.serve(async (req: Request) => {
       .from("certificates")
       .upload(filePath, pdfBuffer, {
         contentType: "application/pdf",
-        upsert: false,
+        upsert: true,
       });
 
     if (uploadError) {
