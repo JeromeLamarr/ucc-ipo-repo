@@ -119,7 +119,26 @@ function getOrdinalDay(date: Date): string {
   return day + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
 }
 
-// Generate certificate PDF (simplified without images for first version)
+// Helper function to center text on page
+function centerText(
+  page: any,
+  text: string,
+  size: number,
+  y: number,
+  color: ReturnType<typeof rgb> = rgb(0.15, 0.15, 0.15),
+  maxWidth: number = 0
+): void {
+  page.drawText(text, {
+    x: maxWidth > 0 ? (page.getWidth() - maxWidth) / 2 : page.getWidth() / 2,
+    y: y,
+    size: size,
+    align: "center",
+    color: color,
+    maxWidth: maxWidth > 0 ? maxWidth : undefined,
+  });
+}
+
+// Generate certificate PDF with professional design
 async function generateCertificatePDF(
   ipRecord: IPRecord,
   creator: UserData,
@@ -131,56 +150,41 @@ async function generateCertificatePDF(
   const page = pdfDoc.addPage([612, 792]); // Letter size
 
   const { width, height } = page.getSize();
-  const margin = 50;
+  const margin = 40;
   const contentWidth = width - 2 * margin;
+  
+  // Color palette - Professional UCC Theme
+  const goldColor = rgb(0.8, 0.6, 0); // Gold border
   const accentColor = rgb(0.1, 0.35, 0.65); // Professional blue
   const darkColor = rgb(0.15, 0.15, 0.15); // Dark gray
   const lightColor = rgb(0.97, 0.97, 0.98); // Very light gray
   const greenColor = rgb(0.22, 0.56, 0.22); // Professional green
 
-  let yPosition = height - 35;
+  let yPosition = height - 30;
 
-  // Top decorative border
+  // Gold outer border (elegant frame)
   page.drawRectangle({
-    x: margin,
-    y: yPosition,
-    width: contentWidth,
-    height: 4,
-    color: accentColor,
+    x: margin - 10,
+    y: 20,
+    width: contentWidth + 20,
+    height: height - 40,
+    borderColor: goldColor,
+    borderWidth: 4,
   });
 
-  yPosition -= 30;
+  yPosition -= 25;
 
-  // Header Section
-  page.drawText("Republic of the Philippines", {
-    x: width / 2,
-    y: yPosition,
-    size: 9,
-    align: "center",
-    color: darkColor,
-  });
+  // Header Section - UCC Institution Info
+  centerText(page, "Republic of the Philippines", 9, yPosition, darkColor);
   yPosition -= 13;
 
-  page.drawText("UNIVERSITY OF CALOOCAN CITY", {
-    x: width / 2,
-    y: yPosition,
-    size: 16,
-    align: "center",
-    color: accentColor,
-  });
-  yPosition -= 16;
+  centerText(page, "UNIVERSITY OF CALOOCAN CITY", 16, yPosition, accentColor);
+  yPosition -= 18;
 
-  page.drawText("INTELLECTUAL PROPERTY OFFICE", {
-    x: width / 2,
-    y: yPosition,
-    size: 11,
-    align: "center",
-    color: darkColor,
-  });
-
+  centerText(page, "INTELLECTUAL PROPERTY OFFICE", 11, yPosition, darkColor);
   yPosition -= 28;
 
-  // Certificate Title Box
+  // Certificate Title Box - Professional styling
   page.drawRectangle({
     x: margin + 15,
     y: yPosition - 28,
@@ -191,45 +195,26 @@ async function generateCertificatePDF(
     borderWidth: 2,
   });
 
-  page.drawText("CERTIFICATE OF INTELLECTUAL PROPERTY REGISTRATION", {
-    x: width / 2,
-    y: yPosition - 10,
-    size: 12,
-    align: "center",
-    color: accentColor,
-    maxWidth: contentWidth - 60,
-  });
+  centerText(
+    page,
+    "CERTIFICATE OF INTELLECTUAL PROPERTY REGISTRATION",
+    12,
+    yPosition - 10,
+    accentColor,
+    contentWidth - 60
+  );
 
   yPosition -= 45;
 
   // Declaration opening
-  page.drawText("BE IT KNOWN THAT", {
-    x: width / 2,
-    y: yPosition,
-    size: 10,
-    align: "center",
-    color: darkColor,
-  });
+  centerText(page, "BE IT KNOWN THAT", 10, yPosition, darkColor);
   yPosition -= 16;
 
   // Recipient name - prominent
-  page.drawText(creator.full_name.toUpperCase(), {
-    x: width / 2,
-    y: yPosition,
-    size: 15,
-    align: "center",
-    color: accentColor,
-    maxWidth: contentWidth,
-  });
+  centerText(page, creator.full_name.toUpperCase(), 15, yPosition, accentColor, contentWidth);
   yPosition -= 14;
 
-  page.drawText("of the University of Caloocan City", {
-    x: width / 2,
-    y: yPosition,
-    size: 9,
-    align: "center",
-    color: darkColor,
-  });
+  centerText(page, "of the University of Caloocan City", 9, yPosition, darkColor);
 
   yPosition -= 20;
 
@@ -241,14 +226,7 @@ async function generateCertificatePDF(
   ];
 
   for (const declaration of declarations) {
-    page.drawText(declaration, {
-      x: width / 2,
-      y: yPosition,
-      size: 9,
-      align: "center",
-      color: darkColor,
-      maxWidth: contentWidth - 40,
-    });
+    centerText(page, declaration, 9, yPosition, darkColor, contentWidth - 40);
     yPosition -= 11;
   }
 
@@ -263,14 +241,7 @@ async function generateCertificatePDF(
     color: lightColor,
   });
 
-  page.drawText(`"${ipRecord.title}"`, {
-    x: width / 2,
-    y: yPosition - 6,
-    size: 11,
-    align: "center",
-    color: accentColor,
-    maxWidth: contentWidth - 80,
-  });
+  centerText(page, `"${ipRecord.title}"`, 11, yPosition - 6, accentColor, contentWidth - 80);
 
   yPosition -= 32;
 
@@ -285,15 +256,12 @@ async function generateCertificatePDF(
     size: 8,
     color: accentColor,
   });
-  page.drawText(
-    ipRecord.category.charAt(0).toUpperCase() + ipRecord.category.slice(1),
-    {
-      x: leftCol + 65,
-      y: yPosition,
-      size: 8,
-      color: darkColor,
-    }
-  );
+  page.drawText(ipRecord.category.charAt(0).toUpperCase() + ipRecord.category.slice(1), {
+    x: leftCol + 65,
+    y: yPosition,
+    size: 8,
+    color: darkColor,
+  });
 
   page.drawText("Registration Date:", {
     x: rightCol,
@@ -391,14 +359,7 @@ async function generateCertificatePDF(
   ];
 
   for (const line of legalLines) {
-    page.drawText(line, {
-      x: width / 2,
-      y: yPosition,
-      size: 7,
-      align: "center",
-      color: darkColor,
-      maxWidth: contentWidth - 40,
-    });
+    centerText(page, line, 7, yPosition, darkColor, contentWidth - 40);
     yPosition -= 10;
   }
 
@@ -412,16 +373,13 @@ async function generateCertificatePDF(
     year: "numeric",
   });
 
-  page.drawText(
+  centerText(
+    page,
     `IN WITNESS WHEREOF, this certificate has been duly executed on this ${dayOrdinal} day of ${monthYear}.`,
-    {
-      x: width / 2,
-      y: yPosition,
-      size: 8,
-      align: "center",
-      color: darkColor,
-      maxWidth: contentWidth - 40,
-    }
+    8,
+    yPosition,
+    darkColor,
+    contentWidth - 40
   );
 
   yPosition -= 30;
