@@ -24,18 +24,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Check if user's email is verified in auth
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError) throw authError;
-
-      // If email is not confirmed, prevent access
-      if (!user?.email_confirmed_at && !user?.user_metadata?.email_verified) {
-        console.warn('User email not verified');
-        setProfile(null);
-        return;
-      }
-
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -44,31 +32,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      // If user profile doesn't exist but auth is verified, create it
-      if (!data && user?.email_confirmed_at) {
-        // User completed email verification but profile wasn't created yet
-        const { data: newProfile, error: insertError } = await supabase
-          .from('users')
-          .insert({
-            auth_user_id: userId,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            affiliation: user.user_metadata?.affiliation || null,
-            role: 'applicant',
-            is_verified: true,
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('Error creating user profile:', insertError);
-          setProfile(null);
-          return;
-        }
-
-        setProfile(newProfile);
-      } else {
+      // If user profile doesn't exist, just set it to null (don't block login)
+      if (data) {
         setProfile(data);
+      } else {
+        console.warn('User profile not found, but allowing access');
+        setProfile(null);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -77,16 +46,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      }
-      setLoading(false);
-    });
+    let isMounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
+    // Check for existing session on component mount
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (isMounted) {
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await fetchUserProfile(session.user.id);
+          }
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (isMounted) {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
+      }
+    };
+
+    initAuth();
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (isMounted) {
         setUser(session?.user ?? null);
         if (session?.user) {
           await fetchUserProfile(session.user.id);
@@ -94,10 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
         }
         setLoading(false);
-      })();
+      }
     });
 
-    return () => subscription.unsubscribe();
+    // Cleanup on unmount
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
