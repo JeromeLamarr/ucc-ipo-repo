@@ -11,12 +11,14 @@ export function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [affiliation, setAffiliation] = useState('');
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setWarning('');
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -48,6 +50,11 @@ export function RegisterPage() {
         throw new Error(data?.error || 'Registration failed. Please try again.');
       }
 
+      // Check if email send failed
+      if (data?.warning) {
+        setWarning(data.warning);
+      }
+
       setStep('email-sent');
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');
@@ -58,6 +65,7 @@ export function RegisterPage() {
 
   const handleResendEmail = async () => {
     setError('');
+    setWarning('');
     setLoading(true);
 
     try {
@@ -77,6 +85,11 @@ export function RegisterPage() {
 
       if (!data?.success) {
         throw new Error(data?.error || 'Failed to resend email. Please try again.');
+      }
+
+      // Check if email send failed
+      if (data?.warning) {
+        setWarning(data.warning);
       }
 
       // Clear error on success
@@ -206,20 +219,44 @@ export function RegisterPage() {
           {step === 'email-sent' && (
             <div className="space-y-6">
               <div className="text-center">
-                <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MailIcon className="h-8 w-8 text-green-600" />
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                  warning ? 'bg-yellow-100' : 'bg-green-100'
+                }`}>
+                  <MailIcon className={`h-8 w-8 ${
+                    warning ? 'text-yellow-600' : 'text-green-600'
+                  }`} />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Check Your Email</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {warning ? 'Email Delivery Issue' : 'Check Your Email'}
+                </h3>
                 <p className="text-gray-600 text-sm mb-4">
-                  A verification link has been sent to
-                  <br />
-                  <span className="font-medium text-gray-900">{email}</span>
+                  {warning ? (
+                    <>
+                      We encountered an issue sending to
+                      <br />
+                      <span className="font-medium text-gray-900">{email}</span>
+                    </>
+                  ) : (
+                    <>
+                      A verification link has been sent to
+                      <br />
+                      <span className="font-medium text-gray-900">{email}</span>
+                    </>
+                  )}
                 </p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-blue-800">
-                    <strong>Next step:</strong> Click the verification link in the email to activate your account. You'll be able to log in after verification.
-                  </p>
-                </div>
+                {warning ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-yellow-800">
+                      <strong>⚠️ Email delivery delayed:</strong> Our email service is experiencing issues. Please try resending below or check your spam folder.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-blue-800">
+                      <strong>Next step:</strong> Click the verification link in the email to activate your account. You'll be able to log in after verification.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {error && (
