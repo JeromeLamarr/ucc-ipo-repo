@@ -56,8 +56,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Get sender email from environment, with fallback to domain
+    const senderEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@ucc-ipo.com";
+    const senderName = "UCC IP Office";
+
     const emailPayload = {
-      from: "UCC IP Office <onboarding@resend.dev>",
+      from: `${senderName} <${senderEmail}>`,
       to: [to],
       subject: subject,
       html: html,
@@ -76,7 +80,18 @@ Deno.serve(async (req: Request) => {
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.message || "Failed to send email");
+      const errorDetails = result.message || "Failed to send email";
+      
+      // Log domain verification issues
+      if (errorDetails.includes("unauthorized") || errorDetails.includes("not verified")) {
+        console.error("Domain verification issue with Resend:", {
+          senderEmail,
+          message: errorDetails,
+          resendError: result,
+        });
+      }
+      
+      throw new Error(errorDetails);
     }
 
     return new Response(

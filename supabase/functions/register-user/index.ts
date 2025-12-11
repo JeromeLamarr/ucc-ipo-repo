@@ -246,9 +246,9 @@ Deno.serve(async (req: Request) => {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header { background: linear-gradient(135deg, #1a59a6 0%, #0d3a7a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
             .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; background: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+            .button { display: inline-block; background: #1a59a6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
             .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
             .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; font-size: 13px; }
           </style>
@@ -260,7 +260,7 @@ Deno.serve(async (req: Request) => {
             </div>
             <div class="content">
               <h2>Hello ${fullName},</h2>
-              <p>Thank you for registering with the University of Cape Coast Intellectual Property Management System.</p>
+              <p>Thank you for registering with the University of Caloocan City Intellectual Property Management System.</p>
               
               <p>To complete your registration and activate your account, please click the button below:</p>
               
@@ -280,7 +280,8 @@ Deno.serve(async (req: Request) => {
               </div>
             </div>
             <div class="footer">
-              <p>University of Cape Coast Intellectual Property Office</p>
+              <p>University of Caloocan City Intellectual Property Office</p>
+              <p><a href="https://ucc-ipo.com" style="color: #1a59a6; text-decoration: none;">ucc-ipo.com</a></p>
               <p>Protecting Innovation, Promoting Excellence</p>
             </div>
           </div>
