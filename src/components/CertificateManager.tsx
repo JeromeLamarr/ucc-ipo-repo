@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Award, Download, Loader2, FileCheck, Send, Mail } from 'lucide-react';
+import { Award, Download, Loader2, FileCheck, Send, Mail, RotateCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface CertificateManagerProps {
@@ -392,6 +392,24 @@ export function CertificateManager({
                   <>
                     <Mail className="h-4 w-4" />
                     Send to Applicant
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleGenerateCertificate}
+                disabled={generating}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50"
+                title="Generate a new certificate to replace the current one"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <RotateCw className="h-4 w-4" />
+                    Regenerate
                   </>
                 )}
               </button>
