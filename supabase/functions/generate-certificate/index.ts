@@ -273,6 +273,7 @@ async function generateCertificatePDF(
   // SECTION 1: ENHANCED HEADER WITH LOGO
   // ============================================================
   // Logo area with actual UCC logo (60x60 top left)
+  let logoEmbedded = false;
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -281,12 +282,22 @@ async function generateCertificatePDF(
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
       
       try {
+        console.log("Attempting to download logo from assets/ucc_logo.png");
         const { data: logoData, error: logoError } = await supabase.storage
           .from("assets")
           .download("ucc_logo.png");
 
-        if (!logoError && logoData) {
-          const logoImage = await pdfDoc.embedPng(logoData);
+        if (logoError) {
+          console.error("Logo download error:", logoError);
+        } else if (logoData) {
+          console.log("Logo data received, size:", logoData.size, "bytes");
+          // Convert Blob to Uint8Array
+          const logoBuffer = await logoData.arrayBuffer();
+          const logoUint8Array = new Uint8Array(logoBuffer);
+          console.log("Logo buffer ready, embedding...");
+          
+          const logoImage = await pdfDoc.embedPng(logoUint8Array);
+          console.log("Logo embedded successfully");
           
           // Draw logo image
           page.drawImage(logoImage, {
@@ -295,69 +306,41 @@ async function generateCertificatePDF(
             width: 60,
             height: 60,
           });
+          logoEmbedded = true;
+          console.log("Logo drawn on certificate");
         } else {
-          // Fallback if logo not found
-          page.drawRectangle({
-            x: margin + 10,
-            y: yPosition - 50,
-            width: 60,
-            height: 60,
-            borderColor: accentColor,
-            borderWidth: 1,
-            color: lightBoxColor,
-          });
-          
-          page.drawText("UCC", {
-            x: margin + 15,
-            y: yPosition - 25,
-            size: 14,
-            color: accentColor,
-            font: undefined,
-          });
+          console.warn("No logo data received from storage");
         }
       } catch (logoError) {
-        console.warn("Warning: Could not embed logo image:", logoError);
-        // Fallback to placeholder
-        page.drawRectangle({
-          x: margin + 10,
-          y: yPosition - 50,
-          width: 60,
-          height: 60,
-          borderColor: accentColor,
-          borderWidth: 1,
-          color: lightBoxColor,
-        });
-        
-        page.drawText("UCC", {
-          x: margin + 15,
-          y: yPosition - 25,
-          size: 14,
-          color: accentColor,
-          font: undefined,
-        });
+        console.error("Logo embedding exception:", logoError);
       }
     } else {
-      // Fallback if no Supabase config
-      page.drawRectangle({
-        x: margin + 10,
-        y: yPosition - 50,
-        width: 60,
-        height: 60,
-        borderColor: accentColor,
-        borderWidth: 1,
-        color: lightBoxColor,
-      });
-      
-      page.drawText("UCC", {
-        x: margin + 15,
-        y: yPosition - 25,
-        size: 14,
-        color: accentColor,
-        font: undefined,
-      });
+      console.warn("Supabase URL or Service Key not configured");
     }
   } catch (error) {
-    console.warn("Warning: Logo embedding failed:", error);
+    console.error("Logo section error:", error);
+  }
+  
+  // Draw fallback if logo not embedded
+  if (!logoEmbedded) {
+    console.log("Using UCC text fallback for logo");
+    page.drawRectangle({
+      x: margin + 10,
+      y: yPosition - 50,
+      width: 60,
+      height: 60,
+      borderColor: accentColor,
+      borderWidth: 1,
+      color: lightBoxColor,
+    });
+    
+    page.drawText("UCC", {
+      x: margin + 15,
+      y: yPosition - 25,
+      size: 14,
+      color: accentColor,
+      font: undefined,
+    });
   }
 
   // Republic header

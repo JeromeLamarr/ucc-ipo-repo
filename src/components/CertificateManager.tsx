@@ -254,18 +254,18 @@ export function CertificateManager({
               <div className="bg-green-100 p-3 rounded-lg">
                 <Award className="h-6 w-6 text-green-600" />
               </div>
-              <div>
-                <h3 className="font-bold text-gray-900">Certificate Available</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Certificate No: {certificate.certificate_number}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Issued: {new Date(certificate.created_at).toLocaleDateString()}
-                </p>
-              </div>
+          <div>
+              <h3 className="font-bold text-gray-900">Certificate Available</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Certificate No: {certificate.certificate_number}
+              </p>
+              <p className="text-sm text-gray-600">
+                Issued: {new Date(certificate.created_at).toLocaleDateString()}
+              </p>
+            </div>
             </div>
             <a
-              href={certificate.pdf_url || `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/certificates/${certificate.file_path || ''}`}
+              href={`${certificate.pdf_url || `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/certificates/${certificate.file_path || ''}`}?t=${Date.now()}`}
               download
               target="_blank"
               rel="noopener noreferrer"
@@ -361,9 +361,9 @@ export function CertificateManager({
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
+              <div className="flex gap-2">
               <a
-                href={certificate.pdf_url || `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/certificates/${certificate.file_path || ''}`}
+                href={`${certificate.pdf_url || `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/certificates/${certificate.file_path || ''}`}?t=${Date.now()}`}
                 download
                 target="_blank"
                 rel="noopener noreferrer"
