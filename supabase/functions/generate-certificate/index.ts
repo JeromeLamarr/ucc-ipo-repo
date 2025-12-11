@@ -371,6 +371,12 @@ async function generateCertificatePDF(
   yPosition -= 70;
 
   // ============================================================
+  // BE IT KNOWN THAT
+  // ============================================================
+  centerText(page, "BE IT KNOWN THAT", 11, yPosition, darkColor);
+  yPosition -= spaceAfterDeclaration;
+
+  // ============================================================
   // FIXED RECIPIENT NAME HIGHLIGHT
   // ============================================================
   page.drawRectangle({
