@@ -232,26 +232,133 @@ async function generateCertificatePDF(
   });
 
   // ============================================================
-  // SECTION 1: ENHANCED HEADER WITH LOGO SPACE
+  // SECTION 0: WATERMARK (UCC Logo - Subtle Background)
   // ============================================================
-  // Logo placeholder area (60x60 top left)
-  page.drawRectangle({
-    x: margin + 10,
-    y: yPosition - 50,
-    width: 60,
-    height: 60,
-    borderColor: accentColor,
-    borderWidth: 1,
-    color: lightBoxColor,
-  });
-  
-  page.drawText("UCC", {
-    x: margin + 15,
-    y: yPosition - 25,
-    size: 14,
-    color: accentColor,
-    font: undefined,
-  });
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      // Fetch logo from storage
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      try {
+        const { data: logoData, error: logoError } = await supabase.storage
+          .from("assets")
+          .download("ucc_logo.png");
+
+        if (!logoError && logoData) {
+          const logoImage = await pdfDoc.embedPng(logoData);
+          const watermarkWidth = 300;
+          const watermarkHeight = 300;
+          
+          // Place watermark in center-bottom area with opacity effect
+          page.drawImage(logoImage, {
+            x: width / 2 - watermarkWidth / 2,
+            y: borderY + 150,
+            width: watermarkWidth,
+            height: watermarkHeight,
+            opacity: 0.1, // Very subtle - 10% opacity
+          });
+        }
+      } catch (watermarkError) {
+        console.warn("Warning: Could not embed watermark:", watermarkError);
+      }
+    }
+  } catch (error) {
+    console.warn("Warning: Watermark setup failed:", error);
+  }
+
+  // ============================================================
+  // SECTION 1: ENHANCED HEADER WITH LOGO
+  // ============================================================
+  // Logo area with actual UCC logo (60x60 top left)
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      try {
+        const { data: logoData, error: logoError } = await supabase.storage
+          .from("assets")
+          .download("ucc_logo.png");
+
+        if (!logoError && logoData) {
+          const logoImage = await pdfDoc.embedPng(logoData);
+          
+          // Draw logo image
+          page.drawImage(logoImage, {
+            x: margin + 10,
+            y: yPosition - 50,
+            width: 60,
+            height: 60,
+          });
+        } else {
+          // Fallback if logo not found
+          page.drawRectangle({
+            x: margin + 10,
+            y: yPosition - 50,
+            width: 60,
+            height: 60,
+            borderColor: accentColor,
+            borderWidth: 1,
+            color: lightBoxColor,
+          });
+          
+          page.drawText("UCC", {
+            x: margin + 15,
+            y: yPosition - 25,
+            size: 14,
+            color: accentColor,
+            font: undefined,
+          });
+        }
+      } catch (logoError) {
+        console.warn("Warning: Could not embed logo image:", logoError);
+        // Fallback to placeholder
+        page.drawRectangle({
+          x: margin + 10,
+          y: yPosition - 50,
+          width: 60,
+          height: 60,
+          borderColor: accentColor,
+          borderWidth: 1,
+          color: lightBoxColor,
+        });
+        
+        page.drawText("UCC", {
+          x: margin + 15,
+          y: yPosition - 25,
+          size: 14,
+          color: accentColor,
+          font: undefined,
+        });
+      }
+    } else {
+      // Fallback if no Supabase config
+      page.drawRectangle({
+        x: margin + 10,
+        y: yPosition - 50,
+        width: 60,
+        height: 60,
+        borderColor: accentColor,
+        borderWidth: 1,
+        color: lightBoxColor,
+      });
+      
+      page.drawText("UCC", {
+        x: margin + 15,
+        y: yPosition - 25,
+        size: 14,
+        color: accentColor,
+        font: undefined,
+      });
+    }
+  } catch (error) {
+    console.warn("Warning: Logo embedding failed:", error);
+  }
 
   // Republic header
   centerText(page, "Republic of the Philippines", 9, yPosition, darkColor);
