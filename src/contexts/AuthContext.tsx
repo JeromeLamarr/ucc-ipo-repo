@@ -30,23 +30,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('auth_user_id', userId)
         .maybeSingle();
 
-      if (error) throw error;
-
-      // If user profile doesn't exist, just set it to null (don't block login)
-      if (data) {
-        setProfile(data);
-      } else {
-        console.warn('User profile not found, but allowing access');
-        setProfile(null);
+      if (error) {
+        // Log the error but don't block login
+        console.warn('Error fetching user profile:', error.message);
+        // Try once more in case it's a transient error
+        await new Promise(r => setTimeout(r, 500));
+        
+        const { data: retryData, error: retryError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_user_id', userId)
+          .maybeSingle();
+        
+        if (retryError) {
+          console.error('Failed to fetch profile after retry:', retryError);
+          setProfile(null);
+          return;
+        }
+        
+        if (retryData) {
+          setProfile(retryData);
+        } else {
+          setProfile(null);
+        }
+        return;
       }
+
+      // Set profile (even if null - user just doesn't have a profile yet)
+      setProfile(data);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Unexpected error fetching user profile:', error);
       setProfile(null);
     }
   };
 
   useEffect(() => {
     let isMounted = true;
+    let isInitializing = true;
 
     // Check for existing session on component mount
     const initAuth = async () => {
@@ -57,15 +77,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(session?.user ?? null);
           if (session?.user) {
             await fetchUserProfile(session.user.id);
+          } else {
+            setProfile(null);
           }
-          setLoading(false);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
         if (isMounted) {
           setUser(null);
           setProfile(null);
+        }
+      } finally {
+        if (isMounted) {
           setLoading(false);
+          isInitializing = false;
         }
       }
     };
@@ -74,7 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Subscribe to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (isMounted) {
+      // Only update if we're not initializing or if something actually changed
+      if (isMounted && !isInitializing) {
         setUser(session?.user ?? null);
         
         // Fetch profile asynchronously without blocking
