@@ -73,14 +73,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
 
     // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (isMounted) {
         setUser(session?.user ?? null);
+        
+        // Fetch profile asynchronously without blocking
         if (session?.user) {
-          await fetchUserProfile(session.user.id);
+          fetchUserProfile(session.user.id).catch(err => {
+            console.error('Failed to fetch profile:', err);
+            setProfile(null);
+          });
         } else {
           setProfile(null);
         }
+        
         setLoading(false);
       }
     });
