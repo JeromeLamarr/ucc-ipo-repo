@@ -608,12 +608,13 @@ async function generateCertificatePDF(
   // ============================================================
   // SIGNATURE BLOCK
   // ============================================================
-  const sigLineLength = 140;
+  const sigLineLength = 135;
   const sigLineY = yPosition;
 
-  const sig1X = width * 0.10;
-  const sig2X = width * 0.38;
-  const sig3X = width * 0.66;
+  // Align signature blocks with content margins
+  const sig1X = margin + 25;
+  const sig2X = margin + contentWidth / 3;
+  const sig3X = margin + contentWidth * 2 / 3 - 30;
 
   // Signature lines
   page.drawLine({ start: { x: sig1X, y: sigLineY }, end: { x: sig1X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
@@ -621,16 +622,16 @@ async function generateCertificatePDF(
   page.drawLine({ start: { x: sig3X, y: sigLineY }, end: { x: sig3X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
 
   // Signature titles
-  page.drawText("Director", { x: sig1X + 35, y: sigLineY - 13, size: 8, color: darkColor });
+  page.drawText("Director", { x: sig1X + 40, y: sigLineY - 13, size: 8, color: darkColor });
   page.drawText("Dean", { x: sig2X + 45, y: sigLineY - 13, size: 8, color: darkColor });
   page.drawText("President", { x: sig3X + 35, y: sigLineY - 13, size: 8, color: darkColor });
 
   yPosition = moveDown(yPosition, 20);
 
   // Department/office info
-  page.drawText("IP Office", { x: sig1X + 35, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("College of Computer Studies", { x: sig2X - 58, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("Office of the President", { x: sig3X + 23, y: yPosition - 5, size: 6.5, color: darkColor });
+  page.drawText("IP Office", { x: sig1X + 40, y: yPosition - 5, size: 6.5, color: darkColor });
+  page.drawText("College of Computer Studies", { x: sig2X + 10, y: yPosition - 5, size: 6.5, color: darkColor });
+  page.drawText("Office of the President", { x: sig3X + 35, y: yPosition - 5, size: 6.5, color: darkColor });
 
   yPosition = moveDown(yPosition, spaceAfterMainText);
 
@@ -655,8 +656,8 @@ async function generateCertificatePDF(
 
     // QR code label
     page.drawText("Verify Certificate", {
-      x: qrX - 4,
-      y: qrY - 15,
+      x: qrX - 2,
+      y: qrY - 11,
       size: 6.5,
       color: accentColor,
     });
