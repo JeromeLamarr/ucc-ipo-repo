@@ -628,9 +628,9 @@ async function generateCertificatePDF(
   yPosition = moveDown(yPosition, 22);
 
   // Department/office info
-  page.drawText("IP Office", { x: sig1X + 32, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("College of Computer Studies", { x: sig2X - 28, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("Office of the President", { x: sig3X + 38, y: yPosition - 5, size: 6.5, color: darkColor });
+  page.drawText("IP Office", { x: sig1X + 35, y: yPosition - 5, size: 6.5, color: darkColor });
+  page.drawText("College of Computer Studies", { x: sig2X - 38, y: yPosition - 5, size: 6.5, color: darkColor });
+  page.drawText("Office of the President", { x: sig3X + 48, y: yPosition - 5, size: 6.5, color: darkColor });
 
   yPosition = moveDown(yPosition, spaceAfterMainText);
 
@@ -656,7 +656,7 @@ async function generateCertificatePDF(
     // QR code label
     page.drawText("Verify Certificate", {
       x: qrX - 4,
-      y: qrY - 11,
+      y: qrY - 15,
       size: 6.5,
       color: accentColor,
     });
@@ -675,7 +675,7 @@ async function generateCertificatePDF(
     color: goldColor,
   });
 
-  let footerY = margin + 1;
+  let footerY = margin + 4;
 
   page.drawText(
     `Verify at: ucc-ipo.com/verify/${trackingId}`,
@@ -687,7 +687,7 @@ async function generateCertificatePDF(
     }
   );
 
-  footerY = moveDown(footerY, 5);
+  footerY = moveDown(footerY, 15);
 
   page.drawText(
     `Certificate #: ${trackingId} | Issued: ${formatDate(new Date().toISOString())}`,
@@ -699,7 +699,7 @@ async function generateCertificatePDF(
     }
   );
 
-  footerY = moveDown(footerY, 8);
+  footerY = moveDown(footerY, 12);
 
   page.drawText(
     `Caloocan City, Philippines | UCC Intellectual Property Office`,
