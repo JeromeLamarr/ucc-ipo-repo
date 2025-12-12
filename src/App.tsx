@@ -16,6 +16,7 @@ import { SubmissionDetailPage } from '@pages/SubmissionDetailPage';
 import { AllRecordsPage } from '@pages/AllRecordsPage';
 import { AssignmentManagementPage } from '@pages/AssignmentManagementPage';
 import { SettingsPage } from '@pages/SettingsPage';
+import { CertificateVerifyPage } from '@pages/CertificateVerifyPage';
 
 function DashboardRouter() {
   const { profile } = useAuth();
@@ -65,6 +66,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/verify/:trackingId" element={<CertificateVerifyPage />} />
           <Route
             path="/dashboard/*"
             element={
