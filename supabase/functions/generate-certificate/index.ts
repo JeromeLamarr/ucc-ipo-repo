@@ -207,7 +207,7 @@ async function generateCertificatePDF(
   const lineHeight = 12;
 
   // start Y (top area)
-  let yPosition = height - 80; // pulls header down from top edge
+  let yPosition = height - 60; // pulls header down from top edge
 
   // Decorative corner ornaments
   const cornerSize = 15;
@@ -415,7 +415,7 @@ async function generateCertificatePDF(
   const line2 = "PROPERTY REGISTRATION";
   
   // Estimate text width (Helvetica: ~4.2pt per character at size 14)
-  const approxCharWidth1 = (line1.length * 4.2) / 2;
+  const approxCharWidth1 = (line1.length * 2.2) / 2;
   const approxCharWidth2 = (line2.length * 4.2) / 2;
 
   page.drawText(line1, {
