@@ -342,7 +342,7 @@ async function generateCertificatePDF(
           // Draw logo image
           page.drawImage(logoImage, {
             x: margin + 12,
-            y: yPosition - 68,
+            y: yPosition - 58,
             width: 72,
             height: 72,
           });
@@ -364,7 +364,7 @@ async function generateCertificatePDF(
   if (!logoEmbedded) {
     page.drawRectangle({
       x: margin + 12,
-      y: yPosition - 48,
+      y: yPosition - 58,
       width: 72,
       height: 72,
       borderColor: accentColor,
@@ -374,7 +374,7 @@ async function generateCertificatePDF(
     
     page.drawText("UCC", {
       x: margin + 22,
-      y: yPosition - 38,
+      y: yPosition - 48,
       size: 15,
       color: accentColor,
     });
@@ -394,7 +394,7 @@ async function generateCertificatePDF(
   // ============================================================
   // FIXED TITLE BOX
   // ============================================================
-  const titleBoxY = yPosition - 45;
+  const titleBoxY = yPosition - 65;
 
   page.drawRectangle({
     x: margin + 15,
@@ -407,7 +407,7 @@ async function generateCertificatePDF(
   });
 
   // Center title text in box using box center calculation
-  const boxX = margin + 15;
+  const boxX = margin + 25;
   const boxWidth = contentWidth - 30;
   const boxCenterX = boxX + boxWidth / 2;
   const fontSize = 14;
@@ -416,7 +416,7 @@ async function generateCertificatePDF(
   
   // Estimate text width (Helvetica: ~4.2pt per character at size 14)
   const approxCharWidth1 = (line1.length * 8.4) / 2;
-  const approxCharWidth2 = (line2.length * 8.4) / 2;
+  const approxCharWidth2 = (line2.length * 8.6) / 2;
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
