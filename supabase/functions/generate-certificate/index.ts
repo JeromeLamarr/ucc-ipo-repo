@@ -432,7 +432,7 @@ async function generateCertificatePDF(
     color: accentColor,
   });
 
-  yPosition = moveDown(yPosition, 75);
+  yPosition = moveDown(yPosition, 95);
 
 
   // ============================================================
