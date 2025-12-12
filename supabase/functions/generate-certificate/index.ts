@@ -292,13 +292,13 @@ async function generateCertificatePDF(
           }
 
           const logoImage = await pdfDoc.embedPng(buf);
-          const watermarkWidth = 300;
-          const watermarkHeight = 300;
+          const watermarkWidth = 400;
+          const watermarkHeight = 400;
           
           // Place watermark in center-bottom area with opacity effect
           page.drawImage(logoImage, {
             x: width / 2 - watermarkWidth / 2,
-            y: borderY + 150,
+            y: borderY + 100,
             width: watermarkWidth,
             height: watermarkHeight,
             opacity: 0.08, // very subtle
