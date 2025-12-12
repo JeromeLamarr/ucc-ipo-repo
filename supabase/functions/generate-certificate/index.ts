@@ -363,10 +363,10 @@ async function generateCertificatePDF(
   // Draw fallback if logo not embedded
   if (!logoEmbedded) {
     page.drawRectangle({
-      x: margin + 10,
+      x: margin + 12,
       y: yPosition - 38,
-      width: 82,
-      height: 82,
+      width: 62,
+      height: 62,
       borderColor: accentColor,
       borderWidth: 2,
       color: lightBoxColor,
@@ -381,9 +381,9 @@ async function generateCertificatePDF(
   }
 
   // Header text (positioned after logo on the left)
-  const headerX = margin + 45;
+  const headerX = margin + 85;
   page.drawText("Republic of the Philippines", { x: headerX, y: yPosition, size: 8, color: darkColor });
-  yPosition = moveDown(yPosition, 18);
+  yPosition = moveDown(yPosition, 16);
 
   page.drawText("UNIVERSITY OF CALOOCAN CITY", { x: headerX, y: yPosition, size: 18, color: accentColor });
   yPosition = moveDown(yPosition, 14);
@@ -394,9 +394,9 @@ async function generateCertificatePDF(
   // ============================================================
   // FIXED TITLE BOX
   // ============================================================
-  const titleBoxY = yPosition - 85;
+  const titleBoxY = yPosition - 45;
   page.drawRectangle({
-    x: margin + 25,
+    x: margin + 15,
     y: titleBoxY,
     width: contentWidth - 30,
     height: 48,
@@ -405,11 +405,11 @@ async function generateCertificatePDF(
     borderWidth: 3,
   });
 
-  const titleX = margin + 85;
+  const titleX = margin + 25;
   page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: yPosition - 16, size: 14, color: accentColor });
-  page.drawText("PROPERTY REGISTRATION", { x: titleX, y: yPosition - 32, size: 14, color: accentColor });
+  page.drawText("PROPERTY REGISTRATION", { x: titleX, y: yPosition - 21, size: 14, color: accentColor });
 
-  yPosition = moveDown(yPosition, 125);
+  yPosition = moveDown(yPosition, 85);
 
   // ============================================================
   // DECLARATION OPENING
