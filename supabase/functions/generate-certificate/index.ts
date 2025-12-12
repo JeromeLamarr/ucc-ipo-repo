@@ -342,7 +342,7 @@ async function generateCertificatePDF(
           // Draw logo image
           page.drawImage(logoImage, {
             x: margin + 12,
-            y: yPosition - 68,
+            y: yPosition - 58,
             width: 62,
             height: 62,
           });
@@ -364,7 +364,7 @@ async function generateCertificatePDF(
   if (!logoEmbedded) {
     page.drawRectangle({
       x: margin + 12,
-      y: yPosition - 68,
+      y: yPosition - 58,
       width: 62,
       height: 62,
       borderColor: accentColor,
@@ -383,7 +383,7 @@ async function generateCertificatePDF(
   // Header text (positioned after logo on the left)
   const headerX = margin + 85;
   page.drawText("Republic of the Philippines", { x: headerX, y: yPosition, size: 8, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
+  yPosition = moveDown(yPosition, 14);
 
   page.drawText("UNIVERSITY OF CALOOCAN CITY", { x: headerX, y: yPosition, size: 18, color: accentColor });
   yPosition = moveDown(yPosition, 14);
