@@ -341,7 +341,7 @@ async function generateCertificatePDF(
 
           // Draw logo image
           page.drawImage(logoImage, {
-            x: margin + 62,
+            x: margin + 67,
             y: yPosition - 48,
             width: 72,
             height: 72,
@@ -363,7 +363,7 @@ async function generateCertificatePDF(
   // Draw fallback if logo not embedded
   if (!logoEmbedded) {
     page.drawRectangle({
-      x: margin + 62,
+      x: margin + 67,
       y: yPosition - 38,
       width: 72,
       height: 72,
@@ -373,7 +373,7 @@ async function generateCertificatePDF(
     });
     
     page.drawText("UCC", {
-      x: margin + 72,
+      x: margin + 77,
       y: yPosition - 48,
       size: 15,
       color: accentColor,
@@ -432,13 +432,13 @@ async function generateCertificatePDF(
     color: accentColor,
   });
 
-  yPosition = moveDown(yPosition, 95);
+  yPosition = moveDown(yPosition, 45);
 
 
   // ============================================================
   // DECLARATION OPENING
   // ============================================================
-  page.drawText("BE IT KNOWN THAT", { x: margin + 80, y: yPosition, size: 11, color: darkColor });
+  page.drawText("BE IT KNOWN THAT", { x: margin + 30, y: yPosition, size: 11, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterDeclaration);
 
   // ============================================================
