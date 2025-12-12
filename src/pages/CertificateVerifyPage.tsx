@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
+
+// Create a public Supabase client for certificate verification
+// This uses the anon key to allow public access to verified data
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface Certificate {
   id: string;
