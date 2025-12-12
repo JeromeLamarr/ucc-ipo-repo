@@ -395,28 +395,49 @@ async function generateCertificatePDF(
   // FIXED TITLE BOX
   // ============================================================
 const titleBoxY = yPosition - 45;
-const titleBoxHeight = 48; // Height of the title box
+
 page.drawRectangle({
   x: margin + 15,
   y: titleBoxY,
   width: contentWidth - 30,
-  height: titleBoxHeight,
+  height: 48,
   color: lightBgColor,
   borderColor: accentColor,
   borderWidth: 3,
 });
 
-// Calculate the y-position to vertically center the text inside the box
-const textHeight = 14; // Approximate height of the text (size)
-const centerY = titleBoxY + titleBoxHeight / 2; // Vertical center of the box
+// --- MANUAL CENTERING (NO align: "center") ---
+const font = page.getFont(); // default font being used
+const fontSize = 14;
 
-// Adjust y-position so that the text is vertically centered
-const titleTextY1 = centerY + textHeight / 2;
-const titleTextY2 = centerY - textHeight / 2 - 14; // Slightly adjust the second line's position
+const line1 = "CERTIFICATE OF INTELLECTUAL";
+const line2 = "PROPERTY REGISTRATION";
 
-const titleX = width / 2; // Center horizontally
-page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: titleTextY1, size: 14, color: accentColor });
-page.drawText("PROPERTY REGISTRATION", { x: titleX, y: titleTextY2, size: 14, color: accentColor });
+// Measure text widths
+const textWidth1 = font.widthOfTextAtSize(line1, fontSize);
+const textWidth2 = font.widthOfTextAtSize(line2, fontSize);
+
+// Compute horizontal center of the box
+const boxX = margin + 15;
+const boxWidth = contentWidth - 30;
+
+const centerX1 = boxX + (boxWidth - textWidth1) / 2;
+const centerX2 = boxX + (boxWidth - textWidth2) / 2;
+
+// Draw text perfectly centered
+page.drawText(line1, {
+  x: centerX1,
+  y: titleBoxY + 48 - 18, // move text downward inside box
+  size: fontSize,
+  color: accentColor,
+});
+
+page.drawText(line2, {
+  x: centerX2,
+  y: titleBoxY + 48 - 33,
+  size: fontSize,
+  color: accentColor,
+});
 
 yPosition = moveDown(yPosition, 65);
 
