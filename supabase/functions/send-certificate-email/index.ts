@@ -32,6 +32,10 @@ Deno.serve(async (req: Request) => {
       throw new Error('RESEND_API_KEY is not configured');
     }
 
+    // Get sender email from environment
+    const senderEmail = Deno.env.get('RESEND_FROM_EMAIL') || 'noreply@ucc-ipo.com';
+    const senderName = 'UCC IP Office';
+
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -106,7 +110,7 @@ Deno.serve(async (req: Request) => {
         'Authorization': `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: 'UCC IP Office <onboarding@resend.dev>',
+        from: `${senderName} <${senderEmail}>`,
         to: [applicantEmail],
         subject: `🏆 Your IP Certificate is Ready - ${certificateNumber}`,
         html: emailHtml,

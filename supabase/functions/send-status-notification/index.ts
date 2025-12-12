@@ -247,8 +247,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const senderEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@ucc-ipo.com";
+    const senderName = "UCC IP Office";
+
     const emailPayload = {
-      from: "UCC IP Office <noreply@resend.dev>",
+      from: `${senderName} <${senderEmail}>`,
       to: [payload.applicantEmail],
       subject: statusInfo.subject,
       html: emailHtml,
@@ -485,8 +488,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const senderEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@ucc-ipo.com";
+    const senderName = "UCC IP Office";
+
     const emailPayload = {
-      from: "UCC IP Office <onboarding@resend.dev>",
+      from: `${senderName} <${senderEmail}>`,
       to: [payload.applicantEmail],
       subject: statusInfo.subject,
       html: emailHtml,
