@@ -407,7 +407,7 @@ async function generateCertificatePDF(
   });
 
   // Center title text in box using box center calculation
-  const boxX = margin + 10;
+  const boxX = margin + 5;
   const boxWidth = contentWidth - 30;
   const boxCenterX = boxX + boxWidth / 2;
   const fontSize = 14;
