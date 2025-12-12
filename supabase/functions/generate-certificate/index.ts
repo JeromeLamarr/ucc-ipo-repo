@@ -394,7 +394,7 @@ async function generateCertificatePDF(
   // ============================================================
   // FIXED TITLE BOX
   // ============================================================
-  const titleBoxY = yPosition - 45;
+  const titleBoxY = yPosition - 35;
 
   page.drawRectangle({
     x: margin + 15,
@@ -420,14 +420,14 @@ async function generateCertificatePDF(
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
-    y: yPosition - 25,
+    y: yPosition - 15,
     size: fontSize,
     color: accentColor,
   });
 
   page.drawText(line2, {
     x: boxCenterX - approxCharWidth2,
-    y: yPosition - 40,
+    y: yPosition - 30,
     size: fontSize,
     color: accentColor,
   });
