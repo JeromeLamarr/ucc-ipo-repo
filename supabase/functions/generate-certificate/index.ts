@@ -639,7 +639,12 @@ async function generateCertificatePDF(
   // QR CODE FOR VERIFICATION (fixed & consolidated)
   // ============================================================
   try {
-    const verificationUrl = `https://${Deno.env.get("SITE_URL") || "ucc-ipo.com"}/verify/${trackingId}`.replace(/\/\//g, "/").replace("https:/", "https://");
+    // Get the correct verification domain
+    // Priority: environment variable > request origin > fallback
+    const siteUrl = Deno.env.get("SITE_URL") || "https://ucc-ipo.com";
+    const cleanUrl = siteUrl.replace(/\/$/, '').replace(/^https?:\/\//, 'https://');
+    const verificationUrl = `${cleanUrl}/verify/${trackingId}`;
+    
     const qrCodeDataUrl = await generateQRCodeImage(verificationUrl);
     const qrBytes = dataUrlToUint8Array(qrCodeDataUrl);
     const qrImage = await pdfDoc.embedPng(qrBytes);
@@ -679,7 +684,7 @@ async function generateCertificatePDF(
   let footerY = margin + 2;
 
   page.drawText(
-    `Verify at: ucc-ipo.com/verify/${trackingId}`,
+    `Verify at: https://ucc-ipo.com/verify/${trackingId}`,
     {
       x: margin + 25,
       y: footerY,
@@ -749,7 +754,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const siteUrl =
-      Deno.env.get("SITE_URL") || "https://university-intellect-dqt4.bolt.host";
+      Deno.env.get("SITE_URL") || "https://ucc-ipo.com";
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing Supabase configuration");
