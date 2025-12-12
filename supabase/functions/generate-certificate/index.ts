@@ -629,8 +629,8 @@ async function generateCertificatePDF(
 
   // Department/office info
   page.drawText("IP Office", { x: sig1X + 35, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("College of Computer Studies", { x: sig2X - 38, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("Office of the President", { x: sig3X + 28, y: yPosition - 5, size: 6.5, color: darkColor });
+  page.drawText("College of Computer Studies", { x: sig2X - 58, y: yPosition - 5, size: 6.5, color: darkColor });
+  page.drawText("Office of the President", { x: sig3X + 23, y: yPosition - 5, size: 6.5, color: darkColor });
 
   yPosition = moveDown(yPosition, spaceAfterMainText);
 
