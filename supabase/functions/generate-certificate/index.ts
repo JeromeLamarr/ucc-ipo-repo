@@ -474,7 +474,37 @@ async function generateCertificatePDF(
   // ============================================================
   
 
-  centerText(page, `"${ipRecord.title}"`, 12, yPosition , accentColor, contentWidth - 76);
+    // ============================================================
+  // IP TITLE - STYLED BOX
+  // ============================================================
+  const ipTitleBoxY = yPosition - 20;
+  const ipBoxX = margin + 38;
+  const ipBoxWidth = contentWidth - 76;
+  const ipBoxCenterX = ipBoxX + ipBoxWidth / 2;
+
+  page.drawRectangle({
+    x: ipBoxX,
+    y: ipTitleBoxY,
+    width: ipBoxWidth,
+    height: 28,
+    color: lightBoxColor,
+    borderColor: accentColor,
+    borderWidth: 2,
+  });
+
+  // Center IP title text in box
+  const ipTitle = `"${ipRecord.title}"`;
+  const ipTitleFontSize = 12;
+  // Estimate text width (Helvetica: ~5pt per character at size 12)
+  const ipTitleCharWidth = (ipTitle.length * 5.0) / 2;
+
+  page.drawText(ipTitle, {
+    x: ipBoxCenterX - ipTitleCharWidth,
+    y: yPosition - 6,
+    size: ipTitleFontSize,
+    color: accentColor,
+  });
+
   yPosition = moveDown(yPosition, 40);
 
   // ============================================================
