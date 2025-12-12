@@ -394,22 +394,32 @@ async function generateCertificatePDF(
   // ============================================================
   // FIXED TITLE BOX
   // ============================================================
-  const titleBoxY = yPosition - 45;
-  page.drawRectangle({
-    x: margin + 15,
-    y: titleBoxY,
-    width: contentWidth - 30,
-    height: 48,
-    color: lightBgColor,
-    borderColor: accentColor,
-    borderWidth: 3,
-  });
+const titleBoxY = yPosition - 45;
+const titleBoxHeight = 48; // Height of the title box
+page.drawRectangle({
+  x: margin + 15,
+  y: titleBoxY,
+  width: contentWidth - 30,
+  height: titleBoxHeight,
+  color: lightBgColor,
+  borderColor: accentColor,
+  borderWidth: 3,
+});
 
-  const titleX = width / 2; // Center of box
-  page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: yPosition - 6, size: 14, color: accentColor, align: "center" });
-  page.drawText("PROPERTY REGISTRATION", { x: titleX, y: yPosition - 21, size: 14, color: accentColor, align: "center" });
+// Calculate the y-position to vertically center the text inside the box
+const textHeight = 14; // Approximate height of the text (size)
+const centerY = titleBoxY + titleBoxHeight / 2; // Vertical center of the box
 
-  yPosition = moveDown(yPosition, 65);
+// Adjust y-position so that the text is vertically centered
+const titleTextY1 = centerY + textHeight / 2;
+const titleTextY2 = centerY - textHeight / 2 - 14; // Slightly adjust the second line's position
+
+const titleX = width / 2; // Center horizontally
+page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: titleTextY1, size: 14, color: accentColor, align: "center" });
+page.drawText("PROPERTY REGISTRATION", { x: titleX, y: titleTextY2, size: 14, color: accentColor, align: "center" });
+
+yPosition = moveDown(yPosition, 65);
+
 
   // ============================================================
   // DECLARATION OPENING
