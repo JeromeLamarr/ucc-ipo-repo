@@ -420,14 +420,14 @@ async function generateCertificatePDF(
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
-    y: yPosition - 35,
+    y: yPosition - 25,
     size: fontSize,
     color: accentColor,
   });
 
   page.drawText(line2, {
     x: boxCenterX - approxCharWidth2,
-    y: yPosition - 50,
+    y: yPosition - 40,
     size: fontSize,
     color: accentColor,
   });
