@@ -341,7 +341,7 @@ async function generateCertificatePDF(
 
           // Draw logo image
           page.drawImage(logoImage, {
-            x: margin + 30,
+            x: margin + 10,
             y: yPosition - 48,
             width: 67,
             height: 67,
@@ -363,7 +363,7 @@ async function generateCertificatePDF(
   // Draw fallback if logo not embedded
   if (!logoEmbedded) {
     page.drawRectangle({
-      x: margin + 30,
+      x: margin + 10,
       y: yPosition - 38,
       width: 67,
       height: 67,
@@ -373,7 +373,7 @@ async function generateCertificatePDF(
     });
     
     page.drawText("UCC", {
-      x: margin + 40,
+      x: margin + 20,
       y: yPosition - 48,
       size: 15,
       color: accentColor,
@@ -381,7 +381,7 @@ async function generateCertificatePDF(
   }
 
   // Header text (positioned after logo on the left)
-  const headerX = margin + 105;
+  const headerX = margin + 85;
   page.drawText("Republic of the Philippines", { x: headerX, y: yPosition, size: 8, color: darkColor });
   yPosition = moveDown(yPosition, 18);
 
@@ -438,14 +438,14 @@ async function generateCertificatePDF(
   // ============================================================
   // DECLARATION OPENING
   // ============================================================
-  page.drawText("BE IT KNOWN THAT", { x: margin + 30, y: yPosition, size: 11, color: darkColor });
+  page.drawText("BE IT KNOWN THAT", { x: margin + 25, y: yPosition, size: 11, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterDeclaration);
 
   // ============================================================
   // RECIPIENT NAME - HIGHLIGHT
   // ============================================================
   page.drawRectangle({
-    x: margin + 35,
+    x: margin + 25,
     y: yPosition - 20,
     width: contentWidth - 70,
     height: 26,
