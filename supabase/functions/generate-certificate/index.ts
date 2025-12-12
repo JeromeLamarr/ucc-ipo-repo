@@ -341,10 +341,10 @@ async function generateCertificatePDF(
 
           // Draw logo image
           page.drawImage(logoImage, {
-            x: margin + 10,
+            x: margin + 12,
             y: yPosition - 28,
-            width: 82,
-            height: 82,
+            width: 62,
+            height: 62,
           });
           logoEmbedded = true;
         } else {
@@ -364,7 +364,7 @@ async function generateCertificatePDF(
   if (!logoEmbedded) {
     page.drawRectangle({
       x: margin + 12,
-      y: yPosition - 38,
+      y: yPosition - 28,
       width: 62,
       height: 62,
       borderColor: accentColor,
@@ -373,8 +373,8 @@ async function generateCertificatePDF(
     });
     
     page.drawText("UCC", {
-      x: margin + 22,
-      y: yPosition - 48,
+      x: margin + 12,
+      y: yPosition - 28,
       size: 15,
       color: accentColor,
     });
