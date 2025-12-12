@@ -688,7 +688,7 @@ async function generateCertificatePDF(
     }
   );
 
-  footerY = moveDown(footerY, 10);
+  footerY = moveDown(footerY, 15);
 
   page.drawText(
     `Certificate #: ${trackingId} | Issued: ${formatDate(new Date().toISOString())}`,
