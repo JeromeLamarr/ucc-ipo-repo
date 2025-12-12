@@ -444,14 +444,8 @@ async function generateCertificatePDF(
   // ============================================================
   // RECIPIENT NAME - HIGHLIGHT
   // ============================================================
-  page.drawRectangle({
-    x: margin + 25,
-    y: yPosition - 10,
-    width: contentWidth - 70,
-    height: 26,
-    color: lightBgColor,
-  });
-  page.drawText(creator.full_name.toUpperCase(), { x: margin + 30, y: yPosition - 4, size: 18, color: accentColor });
+ 
+  page.drawText(creator.full_name.toUpperCase(), { x: margin + 25, y: yPosition - 4, size: 18, color: accentColor });
 
   yPosition = moveDown(yPosition, spaceAfterName + 4);
 
