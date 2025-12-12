@@ -576,7 +576,7 @@ async function generateCertificatePDF(
     "by University Policy apply from the date of registration.",
   ];
 
-  const legalTextX = margin + 48;
+  const legalTextX = margin + 25;
   for (const line of legalLines) {
     page.drawText(line, { x: legalTextX, y: yPosition, size: 8, color: darkColor, maxWidth: contentWidth - 96 });
     yPosition = moveDown(yPosition, 10);
@@ -596,14 +596,14 @@ async function generateCertificatePDF(
 
   const witnessText = `IN WITNESS WHEREOF, this certificate has been duly executed on this ${dayOrdinal} day of ${monthYear}.`;
   page.drawText(witnessText, {
-    x: margin + 48,
+    x: margin + 25,
     y: yPosition,
     size: 8,
     color: darkColor,
     maxWidth: contentWidth - 96,
   });
   
-  yPosition = moveDown(yPosition, 32);
+  yPosition = moveDown(yPosition, spaceAfterMainText);
 
   // ============================================================
   // SIGNATURE BLOCK
@@ -628,11 +628,11 @@ async function generateCertificatePDF(
   yPosition = moveDown(yPosition, 22);
 
   // Department/office info
-  page.drawText("IP Office", { x: sig1X + 12, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("College of Computer Studies", { x: sig2X - 8, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("Office of the President", { x: sig3X + 18, y: yPosition - 5, size: 6.5, color: darkColor });
+  page.drawText("IP Office", { x: sig1X + 12, y: yPosition - 25, size: 6.5, color: darkColor });
+  page.drawText("College of Computer Studies", { x: sig2X - 8, y: yPosition - 25, size: 6.5, color: darkColor });
+  page.drawText("Office of the President", { x: sig3X + 18, y: yPosition - 25, size: 6.5, color: darkColor });
 
-  yPosition = moveDown(yPosition, 16);
+  yPosition = moveDown(yPosition, spaceAfterMainText);
 
   // ============================================================
   // QR CODE FOR VERIFICATION (fixed & consolidated)
