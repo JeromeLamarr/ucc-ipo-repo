@@ -342,7 +342,7 @@ async function generateCertificatePDF(
           // Draw logo image
           page.drawImage(logoImage, {
             x: margin + 12,
-            y: yPosition - 58,
+            y: yPosition - 48,
             width: 72,
             height: 72,
           });
@@ -432,13 +432,13 @@ async function generateCertificatePDF(
     color: accentColor,
   });
 
-  yPosition = moveDown(yPosition, 65);
+  yPosition = moveDown(yPosition, 75);
 
 
   // ============================================================
   // DECLARATION OPENING
   // ============================================================
-  page.drawText("BE IT KNOWN THAT", { x: margin + 100, y: yPosition, size: 11, color: darkColor });
+  page.drawText("BE IT KNOWN THAT", { x: margin + 80, y: yPosition, size: 11, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterDeclaration);
 
   // ============================================================
