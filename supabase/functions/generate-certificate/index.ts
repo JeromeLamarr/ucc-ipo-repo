@@ -394,23 +394,29 @@ async function generateCertificatePDF(
   // ============================================================
   // FIXED TITLE BOX
   // ============================================================
-const titleBoxY = yPosition - 45;
+  const titleBoxY = yPosition - 45;
 
-page.drawRectangle({
-  x: margin + 15,
-  y: titleBoxY,
-  width: contentWidth - 30,
-  height: 48,
-  color: lightBgColor,
-  borderColor: accentColor,
-  borderWidth: 3,
-});
+  page.drawRectangle({
+    x: margin + 15,
+    y: titleBoxY,
+    width: contentWidth - 30,
+    height: 48,
+    color: lightBgColor,
+    borderColor: accentColor,
+    borderWidth: 3,
+  });
 
-// Center title text in box using centerText helper
-centerText(page, "CERTIFICATE OF INTELLECTUAL", 14, yPosition - 6, accentColor, contentWidth - 30);
-centerText(page, "PROPERTY REGISTRATION", 14, yPosition - 21, accentColor, contentWidth - 30);
+  // Center title text in box
+  const boxX = margin + 15;
+  const boxWidth = contentWidth - 30;
+  const boxCenterX = boxX + boxWidth / 2;
+  const line1 = "CERTIFICATE OF INTELLECTUAL";
+  const line2 = "PROPERTY REGISTRATION";
+  
+  centerText(page, line1, 14, yPosition - 6, accentColor, boxWidth);
+  centerText(page, line2, 14, yPosition - 21, accentColor, boxWidth);
 
-yPosition = moveDown(yPosition, 65);
+  yPosition = moveDown(yPosition, 65);
 
 
   // ============================================================
