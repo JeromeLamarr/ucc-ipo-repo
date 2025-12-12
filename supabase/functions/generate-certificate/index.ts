@@ -364,9 +364,9 @@ async function generateCertificatePDF(
   if (!logoEmbedded) {
     page.drawRectangle({
       x: margin + 12,
-      y: yPosition - 28,
-      width: 62,
-      height: 62,
+      y: yPosition - 48,
+      width: 82,
+      height: 82,
       borderColor: accentColor,
       borderWidth: 2,
       color: lightBoxColor,
@@ -374,8 +374,8 @@ async function generateCertificatePDF(
     
     page.drawText("UCC", {
       x: margin + 12,
-      y: yPosition - 28,
-      size: 15,
+      y: yPosition - 48,
+      size: 18,
       color: accentColor,
     });
   }
