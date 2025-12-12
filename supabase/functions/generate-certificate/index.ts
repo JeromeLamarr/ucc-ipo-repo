@@ -432,7 +432,7 @@ async function generateCertificatePDF(
     color: accentColor,
   });
 
-  yPosition = moveDown(yPosition, 55);
+  yPosition = moveDown(yPosition, 60);
 
 
   // ============================================================
@@ -482,7 +482,7 @@ async function generateCertificatePDF(
     borderWidth: 2,
   });
 
-  centerText(page, `"${ipRecord.title}"`, 12, yPosition - 6, accentColor, contentWidth - 76);
+  centerText(page, `"${ipRecord.title}"`, 2, yPosition - 6, accentColor, contentWidth - 76);
   yPosition = moveDown(yPosition, 50);
 
   // ============================================================
