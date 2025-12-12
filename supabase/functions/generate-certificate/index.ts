@@ -405,9 +405,9 @@ async function generateCertificatePDF(
     borderWidth: 3,
   });
 
-  const titleX = margin + 25;
-  page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: yPosition - 6, size: 14, color: accentColor });
-  page.drawText("PROPERTY REGISTRATION", { x: titleX, y: yPosition - 21, size: 14, color: accentColor });
+  const titleX = width / 2; // Center of box
+  page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: yPosition - 6, size: 14, color: accentColor, align: "center" });
+  page.drawText("PROPERTY REGISTRATION", { x: titleX, y: yPosition - 21, size: 14, color: accentColor, align: "center" });
 
   yPosition = moveDown(yPosition, 65);
 
