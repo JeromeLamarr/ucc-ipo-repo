@@ -415,8 +415,8 @@ const titleTextY1 = centerY + textHeight / 2;
 const titleTextY2 = centerY - textHeight / 2 - 14; // Slightly adjust the second line's position
 
 const titleX = width / 2; // Center horizontally
-page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: titleTextY1, size: 14, color: accentColor, align: "center" });
-page.drawText("PROPERTY REGISTRATION", { x: titleX, y: titleTextY2, size: 14, color: accentColor, align: "center" });
+page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: titleTextY1, size: 14, color: accentColor });
+page.drawText("PROPERTY REGISTRATION", { x: titleX, y: titleTextY2, size: 14, color: accentColor });
 
 yPosition = moveDown(yPosition, 65);
 
