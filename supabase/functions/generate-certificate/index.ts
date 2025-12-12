@@ -364,7 +364,7 @@ async function generateCertificatePDF(
   if (!logoEmbedded) {
     page.drawRectangle({
       x: margin + 12,
-      y: yPosition - 58,
+      y: yPosition - 48,
       width: 72,
       height: 72,
       borderColor: accentColor,
@@ -438,7 +438,7 @@ async function generateCertificatePDF(
   // ============================================================
   // DECLARATION OPENING
   // ============================================================
-  page.drawText("BE IT KNOWN THAT", { x: margin + 48, y: yPosition, size: 11, color: darkColor });
+  page.drawText("BE IT KNOWN THAT", { x: margin + 60, y: yPosition, size: 11, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterDeclaration);
 
   // ============================================================
