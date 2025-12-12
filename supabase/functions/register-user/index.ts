@@ -456,16 +456,25 @@ Deno.serve(async (req: Request) => {
       const emailResult = await emailResponse.json();
 
       if (!emailResult.success) {
-        console.error("Email service error:", emailResult.error);
-        // User is created but email failed - still return success so user can retry
+        console.error("Email service error:", {
+          status: "error",
+          error: emailResult.error,
+          resendDetails: emailResult,
+          recipientEmail: email,
+          timestamp: new Date().toISOString(),
+        });
+        
+        // Return clear error about email configuration
         return new Response(
           JSON.stringify({
-            success: true,
-            message: "Account created but email delivery failed. Please try resending.",
-            warning: "Email delivery issue - you may not receive the verification link",
+            success: false,
+            error: "Email delivery failed",
+            details: "Verification email could not be sent. This usually means RESEND_API_KEY is not configured in Supabase Environment Variables.",
+            troubleshoot: "1. Go to Supabase Dashboard → Settings → Environment Variables\n2. Verify RESEND_API_KEY is present\n3. Check Resend.com for domain verification (DKIM, SPF, DMARC)",
+            resendError: emailResult.error,
           }),
           {
-            status: 200,
+            status: 500,
             headers: {
               ...corsHeaders,
               "Content-Type": "application/json",
@@ -474,16 +483,24 @@ Deno.serve(async (req: Request) => {
         );
       }
     } catch (emailError: any) {
-      console.error("Failed to send email:", emailError);
-      // User is created but email failed - still return success
+      console.error("Failed to send email:", {
+        status: "exception",
+        error: emailError.message || String(emailError),
+        recipientEmail: email,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Return clear error about email service
       return new Response(
         JSON.stringify({
-          success: true,
-          message: "Account created but email delivery failed. Please try resending.",
-          warning: "Email service unavailable - you may not receive the verification link",
+          success: false,
+          error: "Email service unavailable",
+          details: "Could not connect to email service. Check that RESEND_API_KEY is configured.",
+          troubleshoot: "1. Verify RESEND_API_KEY in Supabase Environment Variables\n2. Check network connectivity to Resend API\n3. Verify domain is verified in Resend dashboard",
+          exceptionMessage: emailError.message,
         }),
         {
-          status: 200,
+          status: 500,
           headers: {
             ...corsHeaders,
             "Content-Type": "application/json",

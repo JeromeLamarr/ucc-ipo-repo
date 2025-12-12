@@ -88,6 +88,24 @@ Deno.serve(async (req: Request) => {
           senderEmail,
           message: errorDetails,
           resendError: result,
+          recipientEmail: to,
+          timestamp: new Date().toISOString(),
+        });
+      } else if (errorDetails.includes("invalid_api_key") || errorDetails.includes("missing") || errorDetails.includes("not set")) {
+        console.error("API Key issue - RESEND_API_KEY may not be configured:", {
+          message: errorDetails,
+          hasApiKey: !!Deno.env.get("RESEND_API_KEY"),
+          resendError: result,
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        console.error("Email sending error:", {
+          status: response.status,
+          message: errorDetails,
+          resendError: result,
+          recipientEmail: to,
+          senderEmail,
+          timestamp: new Date().toISOString(),
         });
       }
       
