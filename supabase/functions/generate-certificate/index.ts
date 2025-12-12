@@ -483,26 +483,26 @@ async function generateCertificatePDF(
   const rightColStart = width / 2 + 20;
 
   // Row 1
-  page.drawText("Category:", { x: leftColStart, y: yPosition - 14, size: 10, color: accentColor, font: pdfDoc.getFont("Helvetica-Bold") });
+  page.drawText("Category:", { x: leftColStart, y: yPosition - 14, size: 10, color: accentColor });
   page.drawText(capitalize(ipRecord.category), { x: leftColStart + 85, y: yPosition - 14, size: 10, color: darkColor });
 
-  page.drawText("Registration Date:", { x: rightColStart, y: yPosition - 14, size: 10, color: accentColor, font: pdfDoc.getFont("Helvetica-Bold") });
+  page.drawText("Registration Date:", { x: rightColStart, y: yPosition - 14, size: 10, color: accentColor });
   page.drawText(formatDate(ipRecord.created_at), { x: rightColStart + 125, y: yPosition - 14, size: 10, color: darkColor });
 
   // Row 2
-  page.drawText("Status:", { x: leftColStart, y: yPosition - 36, size: 10, color: accentColor, font: pdfDoc.getFont("Helvetica-Bold") });
-  page.drawText("APPROVED", { x: leftColStart + 85, y: yPosition - 36, size: 10, color: greenColor, font: pdfDoc.getFont("Helvetica-Bold") });
+  page.drawText("Status:", { x: leftColStart, y: yPosition - 36, size: 10, color: accentColor });
+  page.drawText("APPROVED", { x: leftColStart + 85, y: yPosition - 36, size: 10, color: greenColor });
 
-  page.drawText("Tracking ID:", { x: rightColStart, y: yPosition - 36, size: 10, color: accentColor, font: pdfDoc.getFont("Helvetica-Bold") });
+  page.drawText("Tracking ID:", { x: rightColStart, y: yPosition - 36, size: 10, color: accentColor });
   page.drawText(trackingId, { x: rightColStart + 125, y: yPosition - 36, size: 10, color: darkColor });
 
   // Row 3
-  page.drawText("Evaluation Score:", { x: leftColStart, y: yPosition - 58, size: 10, color: accentColor, font: pdfDoc.getFont("Helvetica-Bold") });
+  page.drawText("Evaluation Score:", { x: leftColStart, y: yPosition - 58, size: 10, color: accentColor });
   page.drawText(`${evaluation?.total_score || 0}/50`, { x: leftColStart + 85, y: yPosition - 58, size: 10, color: darkColor });
 
   if (coCreators && coCreators.length > 0) {
     const coCreatorText = coCreators.map((c) => c.name).join(", ");
-    page.drawText("Co-Creators:", { x: rightColStart, y: yPosition - 58, size: 10, color: accentColor, font: pdfDoc.getFont("Helvetica-Bold") });
+    page.drawText("Co-Creators:", { x: rightColStart, y: yPosition - 58, size: 10, color: accentColor });
     page.drawText(coCreatorText, { x: rightColStart + 85, y: yPosition - 58, size: 9, color: darkColor, maxWidth: 165 });
   }
 
@@ -574,9 +574,9 @@ async function generateCertificatePDF(
   page.drawLine({ start: { x: sig3X, y: sigLineY }, end: { x: sig3X + sigLineLength, y: sigLineY }, thickness: 1.5, color: darkColor });
 
   // Signature titles
-  page.drawText("Director", { x: sig1X + 45, y: sigLineY - 16, size: 10, color: darkColor, font: pdfDoc.getFont("Helvetica-Bold") });
-  page.drawText("Dean", { x: sig2X + 50, y: sigLineY - 16, size: 10, color: darkColor, font: pdfDoc.getFont("Helvetica-Bold") });
-  page.drawText("President", { x: sig3X + 40, y: sigLineY - 16, size: 10, color: darkColor, font: pdfDoc.getFont("Helvetica-Bold") });
+  page.drawText("Director", { x: sig1X + 45, y: sigLineY - 16, size: 10, color: darkColor });
+  page.drawText("Dean", { x: sig2X + 50, y: sigLineY - 16, size: 10, color: darkColor });
+  page.drawText("President", { x: sig3X + 40, y: sigLineY - 16, size: 10, color: darkColor });
 
   yPosition = moveDown(yPosition, 26);
 
@@ -612,7 +612,6 @@ async function generateCertificatePDF(
       y: qrY - 14,
       size: 8,
       color: accentColor,
-      font: pdfDoc.getFont("Helvetica-Bold"),
     });
   } catch (error) {
     console.warn("Warning: Could not embed QR code:", error);
@@ -638,7 +637,6 @@ async function generateCertificatePDF(
       y: footerY,
       size: 9,
       color: accentColor,
-      font: pdfDoc.getFont("Helvetica-Bold"),
     }
   );
 
