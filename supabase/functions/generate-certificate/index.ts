@@ -411,7 +411,7 @@ async function generateCertificatePDF(
   const boxX = margin + 5;
   const boxWidth = contentWidth - 30;
   const boxCenterX = boxX + boxWidth / 2;
-  const fontSize = 14;
+  const fontSize = 12;
   const line1 = "CERTIFICATE OF INTELLECTUAL";
   const line2 = "PROPERTY REGISTRATION";
   
@@ -439,18 +439,18 @@ async function generateCertificatePDF(
   // ============================================================
   // DECLARATION OPENING
   // ============================================================
-  page.drawText("BE IT KNOWN THAT", { x: margin + 25, y: yPosition, size: 11, color: darkColor });
+  page.drawText("BE IT KNOWN THAT", { x: margin + 25, y: yPosition, size: 9, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterDeclaration);
 
   // ============================================================
   // RECIPIENT NAME - HIGHLIGHT
   // ============================================================
  
-  page.drawText(creator.full_name.toUpperCase(), { x: margin + 25, y: yPosition - 4, size: 18, color: accentColor });
+  page.drawText(creator.full_name.toUpperCase(), { x: margin + 25, y: yPosition - 4, size: 14, color: accentColor });
 
   yPosition = moveDown(yPosition, spaceAfterName + 4);
 
-  page.drawText("of the University of Caloocan City", { x: margin + 25, y: yPosition, size: 9, color: darkColor });
+  page.drawText("of the University of Caloocan City", { x: margin + 25, y: yPosition, size: 8, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterName);
 
   // ============================================================
@@ -483,15 +483,6 @@ async function generateCertificatePDF(
   const ipBoxWidth = contentWidth - 76;
   const ipBoxCenterX = ipBoxX + ipBoxWidth / 2;
 
-  page.drawRectangle({
-    x: ipBoxX,
-    y: ipTitleBoxY,
-    width: ipBoxWidth,
-    height: 28,
-    color: lightBoxColor,
-    borderColor: accentColor,
-    borderWidth: 2,
-  });
 
   // Center IP title text in box
   const ipTitle = `"${ipRecord.title}"`;
@@ -506,8 +497,7 @@ async function generateCertificatePDF(
     color: accentColor,
   });
 
-  yPosition = moveDown(yPosition, 35);
-
+  yPosition = moveDown(yPosition, spaceAfterMainText);
   // ============================================================
   // ABSTRACT SECTION
   // ============================================================
@@ -525,12 +515,12 @@ async function generateCertificatePDF(
     color: darkColor, 
     maxWidth: abstractMaxWidth 
   });
-  yPosition = moveDown(yPosition, 28);
+  yPosition = moveDown(yPosition, spaceAfterMainText);
 
   // ============================================================
   // DETAILS TABLE - STYLED BOX
   // ============================================================
-  const tableHeight = 60;
+  const tableHeight = 40;
 
   page.drawRectangle({
     x: margin + 18,
