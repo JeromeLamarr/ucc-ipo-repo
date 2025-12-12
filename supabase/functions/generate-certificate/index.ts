@@ -25,6 +25,7 @@ interface IPRecord {
   applicant_id: string;
   created_at: string;
   tracking_id?: string;
+  abstract?: string;
 }
 
 interface UserData {
@@ -510,7 +511,7 @@ async function generateCertificatePDF(
   // ============================================================
   // ABSTRACT SECTION
   // ============================================================
-  const abstractText = "This intellectual property represents significant innovation and creativity in its field, demonstrating original thought and technical excellence.";
+  const abstractText = ipRecord.abstract || "No abstract provided.";
   const abstractX = margin + 25;
   const abstractMaxWidth = contentWidth - 50;
   
