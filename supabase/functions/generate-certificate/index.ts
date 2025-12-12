@@ -441,8 +441,9 @@ async function generateCertificatePDF(
     "which has been evaluated and approved:",
   ];
 
+  const declTextX = margin + 45;
   for (const declaration of declarations) {
-    centerText(page, declaration, 10, yPosition, darkColor, contentWidth - 48);
+    page.drawText(declaration, { x: declTextX, y: yPosition, size: 10, color: darkColor, maxWidth: contentWidth - 90 });
     yPosition = moveDown(yPosition, lineHeight);
   }
   
@@ -530,8 +531,9 @@ async function generateCertificatePDF(
     "by University Policy apply from the date of registration.",
   ];
 
+  const legalTextX = margin + 50;
   for (const line of legalLines) {
-    centerText(page, line, 8, yPosition, darkColor, contentWidth - 56);
+    page.drawText(line, { x: legalTextX, y: yPosition, size: 8, color: darkColor, maxWidth: contentWidth - 100 });
     yPosition = moveDown(yPosition, 11);
   }
   
@@ -547,14 +549,14 @@ async function generateCertificatePDF(
     year: "numeric",
   });
 
-  centerText(
-    page,
-    `IN WITNESS WHEREOF, this certificate has been duly executed on this ${dayOrdinal} day of ${monthYear}.`,
-    9,
-    yPosition,
-    darkColor,
-    contentWidth - 56
-  );
+  const witnessText = `IN WITNESS WHEREOF, this certificate has been duly executed on this ${dayOrdinal} day of ${monthYear}.`;
+  page.drawText(witnessText, {
+    x: margin + 50,
+    y: yPosition,
+    size: 9,
+    color: darkColor,
+    maxWidth: contentWidth - 100,
+  });
   
   yPosition = moveDown(yPosition, spaceBeforeSignatures);
 
