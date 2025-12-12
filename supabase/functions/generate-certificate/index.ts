@@ -196,15 +196,15 @@ async function generateCertificatePDF(
   // ============================================================
   // FIXED SPACING & LAYOUT CONSTANTS
   // ============================================================
-  const spaceAfterHeader = 48;
-  const spaceAfterTitle = 45;
-  const spaceAfterDeclaration = 32;
-  const spaceAfterName = 28;
-  const spaceAfterMainText = 32;
-  const spaceAfterIP = 38;
-  const spaceAfterDetails = 40;
-  const spaceBeforeSignatures = 55;
-  const lineHeight = 13;
+  const spaceAfterHeader = 42;
+  const spaceAfterTitle = 38;
+  const spaceAfterDeclaration = 24;
+  const spaceAfterName = 20;
+  const spaceAfterMainText = 24;
+  const spaceAfterIP = 30;
+  const spaceAfterDetails = 30;
+  const spaceBeforeSignatures = 45;
+  const lineHeight = 12;
 
   // start Y (top area)
   let yPosition = height - 80; // pulls header down from top edge
@@ -383,10 +383,10 @@ async function generateCertificatePDF(
   // Header text (positioned after logo on the left)
   const headerX = margin + 85;
   page.drawText("Republic of the Philippines", { x: headerX, y: yPosition, size: 8, color: darkColor });
-  yPosition = moveDown(yPosition, 11);
+  yPosition = moveDown(yPosition, 10);
 
   page.drawText("UNIVERSITY OF CALOOCAN CITY", { x: headerX, y: yPosition, size: 18, color: accentColor });
-  yPosition = moveDown(yPosition, 16);
+  yPosition = moveDown(yPosition, 14);
 
   page.drawText("INTELLECTUAL PROPERTY OFFICE", { x: headerX, y: yPosition, size: 11, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterHeader);
@@ -394,22 +394,22 @@ async function generateCertificatePDF(
   // ============================================================
   // FIXED TITLE BOX
   // ============================================================
-  const titleBoxY = yPosition - 48;
+  const titleBoxY = yPosition - 45;
   page.drawRectangle({
     x: margin + 15,
     y: titleBoxY,
     width: contentWidth - 30,
-    height: 52,
+    height: 48,
     color: lightBgColor,
     borderColor: accentColor,
     borderWidth: 3,
   });
 
   const titleX = margin + 25;
-  page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: yPosition - 7, size: 15, color: accentColor });
-  page.drawText("PROPERTY REGISTRATION", { x: titleX, y: yPosition - 24, size: 15, color: accentColor });
+  page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: yPosition - 6, size: 14, color: accentColor });
+  page.drawText("PROPERTY REGISTRATION", { x: titleX, y: yPosition - 21, size: 14, color: accentColor });
 
-  yPosition = moveDown(yPosition, 75);
+  yPosition = moveDown(yPosition, 65);
 
   // ============================================================
   // DECLARATION OPENING
@@ -422,16 +422,16 @@ async function generateCertificatePDF(
   // ============================================================
   page.drawRectangle({
     x: margin + 35,
-    y: yPosition - 22,
+    y: yPosition - 20,
     width: contentWidth - 70,
-    height: 28,
+    height: 26,
     color: lightBgColor,
   });
-  page.drawText(creator.full_name.toUpperCase(), { x: margin + 48, y: yPosition - 5, size: 19, color: accentColor });
+  page.drawText(creator.full_name.toUpperCase(), { x: margin + 48, y: yPosition - 4, size: 18, color: accentColor });
 
-  yPosition = moveDown(yPosition, spaceAfterName + 6);
+  yPosition = moveDown(yPosition, spaceAfterName + 4);
 
-  page.drawText("of the University of Caloocan City", { x: margin + 48, y: yPosition, size: 10, color: darkColor });
+  page.drawText("of the University of Caloocan City", { x: margin + 48, y: yPosition, size: 9, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterName);
 
   // ============================================================
@@ -445,8 +445,8 @@ async function generateCertificatePDF(
 
   const declTextX = margin + 45;
   for (const declaration of declarations) {
-    page.drawText(declaration, { x: declTextX, y: yPosition, size: 10, color: darkColor, maxWidth: contentWidth - 90 });
-    yPosition = moveDown(yPosition, lineHeight);
+    page.drawText(declaration, { x: declTextX, y: yPosition, size: 9, color: darkColor, maxWidth: contentWidth - 90 });
+    yPosition = moveDown(yPosition, 11);
   }
   
   yPosition = moveDown(yPosition, spaceAfterMainText);
@@ -456,16 +456,16 @@ async function generateCertificatePDF(
   // ============================================================
   page.drawRectangle({
     x: margin + 38,
-    y: yPosition - 26,
+    y: yPosition - 24,
     width: contentWidth - 76,
-    height: 34,
+    height: 32,
     color: lightBoxColor,
     borderColor: accentColor,
     borderWidth: 2,
   });
 
-  centerText(page, `"${ipRecord.title}"`, 13, yPosition - 7, accentColor, contentWidth - 76);
-  yPosition = moveDown(yPosition, 60);
+  centerText(page, `"${ipRecord.title}"`, 12, yPosition - 6, accentColor, contentWidth - 76);
+  yPosition = moveDown(yPosition, 50);
 
   // ============================================================
   // DETAILS TABLE - STYLED BOX
@@ -516,13 +516,13 @@ async function generateCertificatePDF(
   // ============================================================
   page.drawRectangle({
     x: margin + 48,
-    y: yPosition + 5,
+    y: yPosition + 4,
     width: contentWidth - 96,
-    height: 2,
+    height: 1.5,
     color: goldColor,
   });
   
-  yPosition = moveDown(yPosition, 28);
+  yPosition = moveDown(yPosition, 20);
 
   // ============================================================
   // LEGAL STATEMENT
@@ -535,11 +535,11 @@ async function generateCertificatePDF(
 
   const legalTextX = margin + 48;
   for (const line of legalLines) {
-    page.drawText(line, { x: legalTextX, y: yPosition, size: 8, color: darkColor, maxWidth: contentWidth - 96 });
-    yPosition = moveDown(yPosition, 10);
+    page.drawText(line, { x: legalTextX, y: yPosition, size: 7.5, color: darkColor, maxWidth: contentWidth - 96 });
+    yPosition = moveDown(yPosition, 9);
   }
   
-  yPosition = moveDown(yPosition, 14);
+  yPosition = moveDown(yPosition, 10);
 
   // ============================================================
   // WITNESS CLAUSE
@@ -555,12 +555,12 @@ async function generateCertificatePDF(
   page.drawText(witnessText, {
     x: margin + 48,
     y: yPosition,
-    size: 8,
+    size: 7.5,
     color: darkColor,
     maxWidth: contentWidth - 96,
   });
   
-  yPosition = moveDown(yPosition, 32);
+  yPosition = moveDown(yPosition, 26);
 
   // ============================================================
   // SIGNATURE BLOCK
@@ -578,18 +578,18 @@ async function generateCertificatePDF(
   page.drawLine({ start: { x: sig3X, y: sigLineY }, end: { x: sig3X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
 
   // Signature titles
-  page.drawText("Director", { x: sig1X + 35, y: sigLineY - 13, size: 8, color: darkColor });
-  page.drawText("Dean", { x: sig2X + 45, y: sigLineY - 13, size: 8, color: darkColor });
-  page.drawText("President", { x: sig3X + 35, y: sigLineY - 13, size: 8, color: darkColor });
+  page.drawText("Director", { x: sig1X + 35, y: sigLineY - 12, size: 7.5, color: darkColor });
+  page.drawText("Dean", { x: sig2X + 45, y: sigLineY - 12, size: 7.5, color: darkColor });
+  page.drawText("President", { x: sig3X + 35, y: sigLineY - 12, size: 7.5, color: darkColor });
 
-  yPosition = moveDown(yPosition, 22);
+  yPosition = moveDown(yPosition, 18);
 
   // Department/office info
-  page.drawText("IP Office", { x: sig1X + 12, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("College of Computer Studies", { x: sig2X - 8, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("Office of the President", { x: sig3X + 18, y: yPosition - 5, size: 6.5, color: darkColor });
+  page.drawText("IP Office", { x: sig1X + 12, y: yPosition - 4, size: 6, color: darkColor });
+  page.drawText("College of Computer Studies", { x: sig2X - 8, y: yPosition - 4, size: 6, color: darkColor });
+  page.drawText("Office of the President", { x: sig3X + 18, y: yPosition - 4, size: 6, color: darkColor });
 
-  yPosition = moveDown(yPosition, 16);
+  yPosition = moveDown(yPosition, 12);
 
   // ============================================================
   // QR CODE FOR VERIFICATION (fixed & consolidated)
@@ -626,44 +626,44 @@ async function generateCertificatePDF(
   // ============================================================
   page.drawRectangle({
     x: margin,
-    y: margin + 8,
+    y: margin + 7,
     width: contentWidth,
     height: 1.5,
     color: goldColor,
   });
 
-  let footerY = margin + 2;
+  let footerY = margin + 1;
 
   page.drawText(
     `Verify at: ucc-ipo.com/verify/${trackingId}`,
     {
       x: margin,
       y: footerY,
-      size: 7,
+      size: 6.5,
       color: accentColor,
-    }
-  );
-
-  footerY = moveDown(footerY, 10);
-
-  page.drawText(
-    `Certificate #: ${trackingId} | Issued: ${formatDate(new Date().toISOString())}`,
-    {
-      x: margin,
-      y: footerY,
-      size: 6,
-      color: rgb(0.6, 0.6, 0.6),
     }
   );
 
   footerY = moveDown(footerY, 8);
 
   page.drawText(
+    `Certificate #: ${trackingId} | Issued: ${formatDate(new Date().toISOString())}`,
+    {
+      x: margin,
+      y: footerY,
+      size: 5.5,
+      color: rgb(0.6, 0.6, 0.6),
+    }
+  );
+
+  footerY = moveDown(footerY, 6);
+
+  page.drawText(
     `Caloocan City, Philippines | UCC Intellectual Property Office`,
     {
       x: margin,
       y: footerY,
-      size: 6,
+      size: 5.5,
       color: rgb(0.6, 0.6, 0.6),
     }
   );
