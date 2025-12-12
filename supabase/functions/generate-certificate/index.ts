@@ -506,16 +506,17 @@ async function generateCertificatePDF(
   const abstractMaxWidth = contentWidth - 50;
   
   page.drawText("Abstract:", { x: abstractX, y: yPosition, size: 9, color: accentColor });
-  yPosition = moveDown(yPosition, 12);
+  yPosition = moveDown(yPosition, 10);
   
   page.drawText(abstractText, { 
     x: abstractX, 
     y: yPosition, 
-    size: 8, 
+    size: 7.5, 
     color: darkColor, 
-    maxWidth: abstractMaxWidth 
+    maxWidth: abstractMaxWidth,
+    lineHeight: 1.2
   });
-  yPosition = moveDown(yPosition, spaceAfterMainText);
+  yPosition = moveDown(yPosition, 18);
 
   // ============================================================
   // DETAILS TABLE - STYLED BOX

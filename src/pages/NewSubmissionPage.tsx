@@ -622,15 +622,21 @@ export function NewSubmissionPage() {
                 </label>
                 <textarea
                   value={formData.abstract}
-                  onChange={(e) => setFormData({ ...formData, abstract: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, abstract: e.target.value.slice(0, 450) })}
                   required
-                  rows={5}
+                  rows={4}
+                  maxLength={450}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Provide a concise summary (150-250 words) of your intellectual property"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Character count: {formData.abstract.length}
-                </p>
+                <div className="flex justify-between mt-2">
+                  <p className="text-xs text-gray-500">
+                    Brief description of your IP work
+                  </p>
+                  <p className={`text-xs font-medium ${formData.abstract.length > 400 ? 'text-orange-600' : formData.abstract.length > 350 ? 'text-blue-600' : 'text-gray-500'}`}>
+                    {formData.abstract.length}/450 characters
+                  </p>
+                </div>
               </div>
 
               <div>
