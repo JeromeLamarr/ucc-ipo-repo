@@ -492,9 +492,21 @@ export function NewSubmissionPage() {
 
   const nextStep = () => {
     setError('');
-    if (step === 1 && (!formData.title || !formData.category || !formData.abstract)) {
-      setError('Please fill in all required fields');
-      return;
+    if (step === 1) {
+      // Check required fields
+      if (!formData.title || !formData.category || !formData.abstract) {
+        setError('Please fill in all required fields');
+        return;
+      }
+      // Check abstract length
+      if (formData.abstract.length > 450) {
+        setError('Abstract must not exceed 450 characters. Current: ' + formData.abstract.length + ' characters. Please reduce the text.');
+        return;
+      }
+      if (formData.abstract.length < 20) {
+        setError('Abstract must be at least 20 characters long');
+        return;
+      }
     }
     if (step === 2 && !formData.description) {
       setError('Please provide a detailed description');
@@ -626,17 +638,23 @@ export function NewSubmissionPage() {
                   required
                   rows={4}
                   maxLength={450}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 ${formData.abstract.length > 450 ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
                   placeholder="Provide a concise summary (150-250 words) of your intellectual property"
                 />
                 <div className="flex justify-between mt-2">
                   <p className="text-xs text-gray-500">
                     Brief description of your IP work
                   </p>
-                  <p className={`text-xs font-medium ${formData.abstract.length > 400 ? 'text-orange-600' : formData.abstract.length > 350 ? 'text-blue-600' : 'text-gray-500'}`}>
+                  <p className={`text-xs font-medium ${formData.abstract.length >= 450 ? 'text-red-600 font-bold' : formData.abstract.length > 400 ? 'text-orange-600' : formData.abstract.length > 350 ? 'text-blue-600' : 'text-gray-500'}`}>
                     {formData.abstract.length}/450 characters
                   </p>
                 </div>
+                {formData.abstract.length >= 450 && (
+                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700">Abstract has reached the maximum length of 450 characters. Please reduce the text to proceed.</p>
+                  </div>
+                )}
               </div>
 
               <div>
