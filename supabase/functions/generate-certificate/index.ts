@@ -472,18 +472,10 @@ async function generateCertificatePDF(
   // ============================================================
   // IP TITLE - STYLED BOX
   // ============================================================
-  page.drawRectangle({
-    x: margin + 38,
-    y: yPosition - 24,
-    width: contentWidth - 76,
-    height: 32,
-    color: lightBoxColor,
-    borderColor: accentColor,
-    borderWidth: 2,
-  });
+  
 
-  centerText(page, `"${ipRecord.title}"`, 2, yPosition - 6, accentColor, contentWidth - 76);
-  yPosition = moveDown(yPosition, 50);
+  centerText(page, `"${ipRecord.title}"`, 12, yPosition , accentColor, contentWidth - 76);
+  yPosition = moveDown(yPosition, 40);
 
   // ============================================================
   // DETAILS TABLE - STYLED BOX
