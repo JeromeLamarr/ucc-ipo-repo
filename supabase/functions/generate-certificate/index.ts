@@ -381,7 +381,7 @@ async function generateCertificatePDF(
   }
 
   // Header text (positioned after logo on the left)
-  const headerX = margin + 85;
+  const headerX = margin + 95;
   page.drawText("Republic of the Philippines", { x: headerX, y: yPosition, size: 8, color: darkColor });
   yPosition = moveDown(yPosition, 18);
 
