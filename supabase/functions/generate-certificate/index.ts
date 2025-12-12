@@ -380,14 +380,15 @@ async function generateCertificatePDF(
     });
   }
 
-  // Header text (centered block near top)
-  centerText(page, "Republic of the Philippines", 9, yPosition, darkColor);
-  yPosition = moveDown(yPosition, 12);
+  // Header text (positioned after logo on the left)
+  const headerX = margin + 85;
+  page.drawText("Republic of the Philippines", { x: headerX, y: yPosition, size: 8, color: darkColor });
+  yPosition = moveDown(yPosition, 11);
 
-  centerText(page, "UNIVERSITY OF CALOOCAN CITY", 22, yPosition, accentColor);
-  yPosition = moveDown(yPosition, 18);
+  page.drawText("UNIVERSITY OF CALOOCAN CITY", { x: headerX, y: yPosition, size: 18, color: accentColor });
+  yPosition = moveDown(yPosition, 16);
 
-  centerText(page, "INTELLECTUAL PROPERTY OFFICE", 12, yPosition, darkColor);
+  page.drawText("INTELLECTUAL PROPERTY OFFICE", { x: headerX, y: yPosition, size: 11, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterHeader);
 
   // ============================================================
@@ -395,41 +396,42 @@ async function generateCertificatePDF(
   // ============================================================
   const titleBoxY = yPosition - 48;
   page.drawRectangle({
-    x: margin + 22,
+    x: margin + 15,
     y: titleBoxY,
-    width: contentWidth - 44,
+    width: contentWidth - 30,
     height: 52,
     color: lightBgColor,
     borderColor: accentColor,
     borderWidth: 3,
   });
 
-  centerText(page, "CERTIFICATE OF INTELLECTUAL", 15, yPosition - 7, accentColor, contentWidth - 44);
-  centerText(page, "PROPERTY REGISTRATION", 15, yPosition - 24, accentColor, contentWidth - 44);
+  const titleX = margin + 25;
+  page.drawText("CERTIFICATE OF INTELLECTUAL", { x: titleX, y: yPosition - 7, size: 15, color: accentColor });
+  page.drawText("PROPERTY REGISTRATION", { x: titleX, y: yPosition - 24, size: 15, color: accentColor });
 
   yPosition = moveDown(yPosition, 75);
 
   // ============================================================
   // DECLARATION OPENING
   // ============================================================
-  centerText(page, "BE IT KNOWN THAT", 11, yPosition, darkColor);
+  page.drawText("BE IT KNOWN THAT", { x: margin + 48, y: yPosition, size: 11, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterDeclaration);
 
   // ============================================================
   // RECIPIENT NAME - HIGHLIGHT
   // ============================================================
   page.drawRectangle({
-    x: margin + 42,
+    x: margin + 35,
     y: yPosition - 22,
-    width: contentWidth - 84,
+    width: contentWidth - 70,
     height: 28,
     color: lightBgColor,
   });
-  centerText(page, creator.full_name.toUpperCase(), 19, yPosition - 5, accentColor, contentWidth - 84);
+  page.drawText(creator.full_name.toUpperCase(), { x: margin + 48, y: yPosition - 5, size: 19, color: accentColor });
 
   yPosition = moveDown(yPosition, spaceAfterName + 6);
 
-  centerText(page, "of the University of Caloocan City", 10, yPosition, darkColor);
+  page.drawText("of the University of Caloocan City", { x: margin + 48, y: yPosition, size: 10, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterName);
 
   // ============================================================
