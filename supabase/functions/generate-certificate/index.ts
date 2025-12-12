@@ -394,7 +394,7 @@ async function generateCertificatePDF(
   // ============================================================
   // FIXED TITLE BOX
   // ============================================================
-  const titleBoxY = yPosition - 65;
+  const titleBoxY = yPosition - 45;
 
   page.drawRectangle({
     x: margin + 15,
