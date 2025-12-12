@@ -341,7 +341,7 @@ async function generateCertificatePDF(
 
           // Draw logo image
           page.drawImage(logoImage, {
-            x: margin + 22,
+            x: margin + 62,
             y: yPosition - 48,
             width: 72,
             height: 72,
@@ -363,7 +363,7 @@ async function generateCertificatePDF(
   // Draw fallback if logo not embedded
   if (!logoEmbedded) {
     page.drawRectangle({
-      x: margin + 22,
+      x: margin + 62,
       y: yPosition - 38,
       width: 72,
       height: 72,
@@ -373,7 +373,7 @@ async function generateCertificatePDF(
     });
     
     page.drawText("UCC", {
-      x: margin + 32,
+      x: margin + 72,
       y: yPosition - 48,
       size: 15,
       color: accentColor,
@@ -381,7 +381,7 @@ async function generateCertificatePDF(
   }
 
   // Header text (positioned after logo on the left)
-  const headerX = margin + 95;
+  const headerX = margin + 195;
   page.drawText("Republic of the Philippines", { x: headerX, y: yPosition, size: 8, color: darkColor });
   yPosition = moveDown(yPosition, 18);
 
@@ -420,14 +420,14 @@ async function generateCertificatePDF(
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
-    y: yPosition - 10,
+    y: yPosition - 8,
     size: fontSize,
     color: accentColor,
   });
 
   page.drawText(line2, {
     x: boxCenterX - approxCharWidth2,
-    y: yPosition - 25,
+    y: yPosition - 23,
     size: fontSize,
     color: accentColor,
   });
