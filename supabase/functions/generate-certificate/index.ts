@@ -449,7 +449,7 @@ async function generateCertificatePDF(
 
   yPosition = moveDown(yPosition, spaceAfterName + 4);
 
-  page.drawText("of the University of Caloocan City", { x: margin + 48, y: yPosition, size: 9, color: darkColor });
+  page.drawText("of the University of Caloocan City", { x: margin + 25, y: yPosition, size: 9, color: darkColor });
   yPosition = moveDown(yPosition, spaceAfterName);
 
   // ============================================================
@@ -461,7 +461,7 @@ async function generateCertificatePDF(
     "which has been evaluated and approved:",
   ];
 
-  const declTextX = margin + 45;
+  const declTextX = margin + 25;
   for (const declaration of declarations) {
     page.drawText(declaration, { x: declTextX, y: yPosition, size: 9, color: darkColor, maxWidth: contentWidth - 90 });
     yPosition = moveDown(yPosition, 11);
