@@ -50,6 +50,17 @@ export function RegisterPage() {
         throw new Error(data?.error || 'Registration failed. Please try again.');
       }
 
+      // Check if account already exists
+      if (data?.alreadyExists) {
+        if (data?.alreadyVerified) {
+          setError('Account already verified. Please sign in instead.');
+          setStep('form');
+        } else {
+          setStep('email-sent');
+        }
+        return;
+      }
+
       // Check if email send failed
       if (data?.warning) {
         setWarning(data.warning);
