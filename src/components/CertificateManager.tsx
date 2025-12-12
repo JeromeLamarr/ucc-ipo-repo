@@ -231,6 +231,94 @@ export function CertificateManager({
     }
   };
 
+  const handleDownloadCertificate = async () => {
+    try {
+      if (!certificate?.pdf_url && !certificate?.file_path) {
+        alert('Certificate file is not available yet. Please try again later.');
+        return;
+      }
+
+      const certificateUrl = certificate.pdf_url || `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/certificates/${certificate.file_path}`;
+      
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = certificateUrl;
+      link.download = `${certificate.certificate_number}.pdf`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      alert('Failed to download certificate. Please try again.');
+    }
+  };
+
+  const handleRegenerateCertificate = async () => {
+    if (!window.confirm('Are you sure you want to regenerate this certificate? This will create a new PDF and replace the current one.')) {
+      return;
+    }
+    
+    setGenerating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-certificate`;
+      const headers = {
+        Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      };
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          record_id: recordId,
+          user_id: profile?.id,
+          applicant_name: applicantName,
+          title: recordTitle,
+          category: recordCategory,
+          reference_number: referenceNumber,
+          co_creators: coCreators,
+          evaluation_score: evaluationScore,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Certificate regeneration error:', errorText);
+        throw new Error(errorText);
+      }
+
+      const result = await response.json();
+
+      // Notify applicant that certificate was regenerated
+      const { data: recordData } = await supabase
+        .from('ip_records')
+        .select('applicant_id')
+        .eq('id', recordId)
+        .single();
+
+      if (recordData?.applicant_id) {
+        await supabase.from('notifications').insert({
+          user_id: recordData.applicant_id,
+          type: 'certificate_regenerated',
+          title: 'Certificate Regenerated',
+          message: `Your certificate for "${recordTitle}" has been regenerated and updated. Please download the latest version.`,
+          payload: { ip_record_id: recordId },
+        });
+      }
+
+      alert('✅ Certificate regenerated successfully!');
+      await fetchCertificate();
+    } catch (error: any) {
+      console.error('Error regenerating certificate:', error);
+      alert(`Failed to regenerate certificate: ${error.message || 'Please try again.'}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   if (recordStatus !== 'ready_for_filing' && recordStatus !== 'completed') {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
@@ -396,7 +484,7 @@ export function CertificateManager({
                 )}
               </button>
               <button
-                onClick={handleGenerateCertificate}
+                onClick={handleRegenerateCertificate}
                 disabled={generating}
                 className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50"
                 title="Generate a new certificate to replace the current one"
