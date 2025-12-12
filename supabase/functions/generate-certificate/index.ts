@@ -505,12 +505,31 @@ async function generateCertificatePDF(
     color: accentColor,
   });
 
-  yPosition = moveDown(yPosition, 40);
+  yPosition = moveDown(yPosition, 35);
+
+  // ============================================================
+  // ABSTRACT SECTION
+  // ============================================================
+  const abstractText = "This intellectual property represents significant innovation and creativity in its field, demonstrating original thought and technical excellence.";
+  const abstractX = margin + 25;
+  const abstractMaxWidth = contentWidth - 50;
+  
+  page.drawText("Abstract:", { x: abstractX, y: yPosition, size: 9, color: accentColor });
+  yPosition = moveDown(yPosition, 12);
+  
+  page.drawText(abstractText, { 
+    x: abstractX, 
+    y: yPosition, 
+    size: 8, 
+    color: darkColor, 
+    maxWidth: abstractMaxWidth 
+  });
+  yPosition = moveDown(yPosition, 28);
 
   // ============================================================
   // DETAILS TABLE - STYLED BOX
   // ============================================================
-  const tableHeight = 80;
+  const tableHeight = 60;
 
   page.drawRectangle({
     x: margin + 18,
@@ -532,21 +551,14 @@ async function generateCertificatePDF(
   page.drawText("Registration Date:", { x: rightColStart, y: yPosition - 12, size: 9, color: accentColor });
   page.drawText(formatDate(ipRecord.created_at), { x: rightColStart + 115, y: yPosition - 12, size: 9, color: darkColor });
 
-  // Row 2
-  page.drawText("Status:", { x: leftColStart, y: yPosition - 32, size: 9, color: accentColor });
-  page.drawText("APPROVED", { x: leftColStart + 80, y: yPosition - 32, size: 9, color: greenColor });
-
-  page.drawText("Tracking ID:", { x: rightColStart, y: yPosition - 32, size: 9, color: accentColor });
-  page.drawText(trackingId, { x: rightColStart + 115, y: yPosition - 32, size: 9, color: darkColor });
-
-  // Row 3
-  page.drawText("Evaluation Score:", { x: leftColStart, y: yPosition - 52, size: 9, color: accentColor });
-  page.drawText(`${evaluation?.total_score || 0}/50`, { x: leftColStart + 80, y: yPosition - 52, size: 9, color: darkColor });
+  // Row 2 - Tracking ID and Co-Creators
+  page.drawText("Tracking ID:", { x: leftColStart, y: yPosition - 32, size: 9, color: accentColor });
+  page.drawText(trackingId, { x: leftColStart + 80, y: yPosition - 32, size: 9, color: darkColor });
 
   if (coCreators && coCreators.length > 0) {
     const coCreatorText = coCreators.map((c) => c.name).join(", ");
-    page.drawText("Co-Creators:", { x: rightColStart, y: yPosition - 52, size: 9, color: accentColor });
-    page.drawText(coCreatorText, { x: rightColStart + 80, y: yPosition - 52, size: 8, color: darkColor, maxWidth: 160 });
+    page.drawText("Co-Creators:", { x: rightColStart, y: yPosition - 32, size: 9, color: accentColor });
+    page.drawText(coCreatorText, { x: rightColStart + 80, y: yPosition - 32, size: 8, color: darkColor, maxWidth: 160 });
   }
 
   yPosition = moveDown(yPosition, tableHeight + spaceAfterDetails);
