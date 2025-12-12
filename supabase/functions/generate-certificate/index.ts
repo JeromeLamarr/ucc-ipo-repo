@@ -406,38 +406,9 @@ page.drawRectangle({
   borderWidth: 3,
 });
 
-// --- MANUAL CENTERING (NO align: "center") ---
-const font = page.getFont(); // default font being used
-const fontSize = 14;
-
-const line1 = "CERTIFICATE OF INTELLECTUAL";
-const line2 = "PROPERTY REGISTRATION";
-
-// Measure text widths
-const textWidth1 = font.widthOfTextAtSize(line1, fontSize);
-const textWidth2 = font.widthOfTextAtSize(line2, fontSize);
-
-// Compute horizontal center of the box
-const boxX = margin + 15;
-const boxWidth = contentWidth - 30;
-
-const centerX1 = boxX + (boxWidth - textWidth1) / 2;
-const centerX2 = boxX + (boxWidth - textWidth2) / 2;
-
-// Draw text perfectly centered
-page.drawText(line1, {
-  x: centerX1,
-  y: titleBoxY + 48 - 18, // move text downward inside box
-  size: fontSize,
-  color: accentColor,
-});
-
-page.drawText(line2, {
-  x: centerX2,
-  y: titleBoxY + 48 - 33,
-  size: fontSize,
-  color: accentColor,
-});
+// Center title text in box using centerText helper
+centerText(page, "CERTIFICATE OF INTELLECTUAL", 14, yPosition - 6, accentColor, contentWidth - 30);
+centerText(page, "PROPERTY REGISTRATION", 14, yPosition - 21, accentColor, contentWidth - 30);
 
 yPosition = moveDown(yPosition, 65);
 
