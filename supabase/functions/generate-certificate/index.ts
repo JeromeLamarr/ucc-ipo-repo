@@ -207,7 +207,7 @@ async function generateCertificatePDF(
   const lineHeight = 12;
 
   // start Y (top area)
-  let yPosition = height - 60; // pulls header down from top edge
+  let yPosition = height - 65; // pulls header down from top edge
 
   // Decorative corner ornaments
   const cornerSize = 15;
