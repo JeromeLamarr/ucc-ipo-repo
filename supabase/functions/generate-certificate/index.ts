@@ -341,7 +341,7 @@ async function generateCertificatePDF(
 
           // Draw logo image
           page.drawImage(logoImage, {
-            x: margin + 12,
+            x: margin + 22,
             y: yPosition - 48,
             width: 72,
             height: 72,
@@ -363,7 +363,7 @@ async function generateCertificatePDF(
   // Draw fallback if logo not embedded
   if (!logoEmbedded) {
     page.drawRectangle({
-      x: margin + 12,
+      x: margin + 22,
       y: yPosition - 38,
       width: 72,
       height: 72,
@@ -373,7 +373,7 @@ async function generateCertificatePDF(
     });
     
     page.drawText("UCC", {
-      x: margin + 22,
+      x: margin + 32,
       y: yPosition - 48,
       size: 15,
       color: accentColor,
@@ -420,14 +420,14 @@ async function generateCertificatePDF(
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
-    y: yPosition - 15,
+    y: yPosition - 10,
     size: fontSize,
     color: accentColor,
   });
 
   page.drawText(line2, {
     x: boxCenterX - approxCharWidth2,
-    y: yPosition - 30,
+    y: yPosition - 25,
     size: fontSize,
     color: accentColor,
   });
