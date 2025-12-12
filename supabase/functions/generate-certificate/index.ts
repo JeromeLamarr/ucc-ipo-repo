@@ -676,36 +676,36 @@ async function generateCertificatePDF(
     color: goldColor,
   });
 
-  let footerY = margin + 4;
+  let footerY = margin + 2;
 
   page.drawText(
     `Verify at: ucc-ipo.com/verify/${trackingId}`,
     {
-      x: margin,
+      x: margin + 25,
       y: footerY,
-      size: 7,
+      size: 6.5,
       color: accentColor,
     }
   );
 
-  footerY = moveDown(footerY, 15);
+  footerY = moveDown(footerY, 10);
 
   page.drawText(
     `Certificate #: ${trackingId} | Issued: ${formatDate(new Date().toISOString())}`,
     {
-      x: margin,
+      x: margin + 25,
       y: footerY,
       size: 6,
       color: rgb(0.6, 0.6, 0.6),
     }
   );
 
-  footerY = moveDown(footerY, 12);
+  footerY = moveDown(footerY, 8);
 
   page.drawText(
     `Caloocan City, Philippines | UCC Intellectual Property Office`,
     {
-      x: margin,
+      x: margin + 25,
       y: footerY,
       size: 6,
       color: rgb(0.6, 0.6, 0.6),
