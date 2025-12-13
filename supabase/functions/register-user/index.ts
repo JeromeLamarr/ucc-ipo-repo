@@ -149,8 +149,24 @@ Deno.serve(async (req: Request) => {
     if (authUsers && authUsers.users && authUsers.users.length > 0) {
       const existingAuthUser = authUsers.users[0];
       
-      // If email is not confirmed, resend verification email
-      if (!existingAuthUser.email_confirmed_at) {
+      // Check if profile exists for this auth user
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_user_id", existingAuthUser.id)
+        .maybeSingle();
+
+      // If auth user exists but profile doesn't exist, delete and allow re-registration
+      if (!existingProfile && !profileCheckError?.code) {
+        try {
+          await supabase.auth.admin.deleteUser(existingAuthUser.id);
+          console.log("Deleted stale auth user for email:", email);
+          // Continue with normal registration flow
+        } catch (e) {
+          console.error("Error deleting stale auth user:", e);
+        }
+      } else if (existingProfile && !existingAuthUser.email_confirmed_at) {
+        // Profile exists and email not confirmed - resend verification email
         try {
           // Generate magic link again
           const { data: signInData, error: signInError } = await supabase.auth.admin.generateLink({
@@ -260,8 +276,8 @@ Deno.serve(async (req: Request) => {
             }
           );
         }
-      } else {
-        // Email is already confirmed
+      } else if (existingProfile && existingAuthUser.email_confirmed_at) {
+        // Profile exists and email is confirmed
         return new Response(
           JSON.stringify({
             success: true,
