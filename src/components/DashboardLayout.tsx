@@ -80,6 +80,12 @@ const navItems: NavItem[] = [
     roles: ['admin'],
   },
   {
+    label: 'Departments',
+    path: '/dashboard/departments',
+    icon: Settings,
+    roles: ['admin'],
+  },
+  {
     label: 'Analytics',
     path: '/dashboard/analytics',
     icon: PieChart,

@@ -15,6 +15,7 @@ import { UserManagement } from '@pages/UserManagement';
 import { SubmissionDetailPage } from '@pages/SubmissionDetailPage';
 import { AllRecordsPage } from '@pages/AllRecordsPage';
 import { AssignmentManagementPage } from '@pages/AssignmentManagementPage';
+import { DepartmentManagementPage } from '@pages/DepartmentManagementPage';
 import { SettingsPage } from '@pages/SettingsPage';
 import { CertificateVerifyPage } from '@pages/CertificateVerifyPage';
 
@@ -51,6 +52,7 @@ function DashboardRouter() {
         <Route path="users" element={<UserManagement />} />
         <Route path="records" element={<AllRecordsPage />} />
         <Route path="assignments" element={<AssignmentManagementPage />} />
+        <Route path="departments" element={<DepartmentManagementPage />} />
         <Route path="analytics" element={<AdminDashboard />} />
       </Routes>
     </DashboardLayout>
