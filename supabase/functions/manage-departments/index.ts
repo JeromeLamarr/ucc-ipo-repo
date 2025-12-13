@@ -7,8 +7,6 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req: Request) => {
-  console.log("Incoming request:", req.method, req.url);
-
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -18,46 +16,50 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
-    console.log("Action:", action);
+    // PUBLIC: For list-active, allow public access (no auth needed)
+    if (req.method === "GET" && action === "list-active") {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-    // For list-active, allow public access (no auth needed)
-    if (action === "list-active") {
-      console.log("Fetching active departments...");
-      const supabaseUrl = Deno.env.get("SUPABASE_URL");
-      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+        if (!supabaseUrl || !supabaseAnonKey) {
+          throw new Error("Missing Supabase environment variables");
+        }
 
-      if (!supabaseUrl || !supabaseAnonKey) {
-        console.error("Missing Supabase environment variables");
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        const { data, error } = await supabase
+          .from("departments")
+          .select("id, name, description")
+          .eq("active", true)
+          .order("name", { ascending: true });
+
+        if (error) {
+          throw new Error(`Database error: ${error.message}`);
+        }
+
         return new Response(
-          JSON.stringify({ error: "Server configuration error" }),
-          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          JSON.stringify({ data: data || [] }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      } catch (err) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Failed to fetch departments", 
+            details: err instanceof Error ? err.message : String(err) 
+          }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
         );
       }
-
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-      const { data, error } = await supabase
-        .from("departments")
-        .select("id, name, description")
-        .eq("active", true)
-        .order("name", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching active departments:", error);
-        return new Response(
-          JSON.stringify({ error: "Failed to fetch departments", details: error.message }),
-          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
-      }
-
-      console.log("Successfully fetched departments:", data?.length);
-      return new Response(JSON.stringify({ data: data || [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
     }
 
-    // For admin operations, require authentication
+    // PROTECTED: For admin operations, require authentication
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
