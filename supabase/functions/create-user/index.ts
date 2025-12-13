@@ -76,19 +76,30 @@ Deno.serve(async (req: Request) => {
       throw new Error("Failed to create auth user");
     }
 
-    const { error: profileError } = await supabaseAdmin.from("users").insert({
-      auth_user_id: authData.user.id,
-      email,
-      full_name: fullName,
-      role,
-      department_id: departmentId || null,
-      category_specialization: categorySpecialization || null,
-      is_verified: true,
-      temp_password: false,
-    });
+    // Check if user profile already exists
+    const { data: existingUser, error: checkError } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
 
-    if (profileError) {
-      throw profileError;
+    // Only insert if profile doesn't already exist
+    if (!existingUser) {
+      const { error: profileError } = await supabaseAdmin.from("users").insert({
+        auth_user_id: authData.user.id,
+        email,
+        full_name: fullName,
+        role,
+        department_id: departmentId || null,
+        category_specialization: categorySpecialization || null,
+        is_verified: true,
+        temp_password: false,
+      });
+
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        throw profileError;
+      }
     }
 
     await supabaseAdmin.from("notifications").insert({
