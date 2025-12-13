@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Users, Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, Filter, Lock } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 
 type User = Database['public']['Tables']['users']['Row'];
@@ -27,6 +27,11 @@ export function UserManagement() {
     fullName: string;
     role: string;
   } | null>(null);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     fullName: '',
@@ -159,6 +164,70 @@ export function UserManagement() {
     }
   };
 
+  const handleResetPassword = async (user: User) => {
+    if (user.role === 'applicant') {
+      alert('Cannot reset password for applicants');
+      return;
+    }
+    setResetPasswordUser(user);
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setShowResetPasswordModal(true);
+  };
+
+  const handleConfirmResetPassword = async () => {
+    if (!resetPasswordUser) return;
+
+    if (newPassword !== confirmNewPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      alert('Password must be at least 6 characters');
+      return;
+    }
+
+    setResettingPassword(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-user-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: resetPasswordUser.id,
+            newPassword,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      alert('Password reset successfully');
+      setShowResetPasswordModal(false);
+      setResetPasswordUser(null);
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      alert('Failed to reset password: ' + error.message);
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -270,7 +339,16 @@ export function UserManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(user.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm flex gap-2">
+                      {user.role !== 'applicant' && (
+                        <button
+                          onClick={() => handleResetPassword(user)}
+                          className="text-blue-600 hover:text-blue-700 font-medium"
+                          title="Reset Password"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDeleteUser(user.id)}
                         className="text-red-600 hover:text-red-700 font-medium"
@@ -448,6 +526,64 @@ export function UserManagement() {
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResetPasswordModal && resetPasswordUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Reset Password</h3>
+            <p className="text-gray-600 mb-4">
+              Reset password for <span className="font-semibold">{resetPasswordUser.full_name}</span> ({resetPasswordUser.email})
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Minimum 6 characters"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Re-enter new password"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={() => setShowResetPasswordModal(false)}
+                className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmResetPassword}
+                disabled={resettingPassword}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {resettingPassword ? 'Resetting...' : 'Reset Password'}
               </button>
             </div>
           </div>
