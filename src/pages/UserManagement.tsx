@@ -233,9 +233,6 @@ export function UserManagement() {
                   Department
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Joined
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -246,7 +243,7 @@ export function UserManagement() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                     <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No users found</p>
                   </td>
@@ -266,18 +263,9 @@ export function UserManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.department_id ? departments.find(d => d.id === user.department_id)?.name || '-' : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user.is_verified
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {user.is_verified ? 'Verified' : 'Unverified'}
-                      </span>
+                      {user.department_id && departments.length > 0
+                        ? departments.find(d => d.id === user.department_id)?.name || '-'
+                        : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(user.created_at)}
