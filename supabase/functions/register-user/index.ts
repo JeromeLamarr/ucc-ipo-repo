@@ -136,26 +136,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Try to delete any stale auth users with this email (safety cleanup)
-    try {
-      const { data: authUsers } = await supabase.auth.admin.listUsers({
-        filters: `email:${email}`,
-      });
-      
-      if (authUsers?.users && authUsers.users.length > 0) {
-        for (const authUser of authUsers.users) {
-          try {
-            await supabase.auth.admin.deleteUser(authUser.id);
-            console.log("Cleaned up stale auth user:", email);
-          } catch (e) {
-            console.error("Error cleaning auth user:", e);
-          }
-        }
-      }
-    } catch (e) {
-      console.error("Error listing auth users:", e);
-      // Continue anyway
-    }
+    // Note: Removed stale auth user cleanup to prevent cascade deletes of user profiles
+    // Auth users will be managed through proper lifecycle management
 
     // Create auth user with email_confirm=false (requires email verification)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
