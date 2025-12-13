@@ -107,10 +107,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Check if user already exists in users table
+    // Simple check: if user profile already exists in users table, they've registered
     const { data: existingUser, error: checkError } = await supabase
       .from("users")
-      .select("id")
+      .select("id, auth_user_id")
       .eq("email", email)
       .maybeSingle();
 
@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
       throw checkError;
     }
 
-    // If user exists in users table, they've already registered and verified
+    // If user profile exists in users table, account is complete
     if (existingUser) {
       return new Response(
         JSON.stringify({
@@ -136,165 +136,25 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Check if auth user already exists (in case of duplicate registration attempt)
-    const { data: authUsers, error: authCheckError } = await supabase.auth.admin.listUsers({
-      filters: `email:${email}`,
-    });
-
-    if (authCheckError) {
-      console.error("Auth check error:", authCheckError);
-      // Continue anyway - we'll handle the error when creating the user
-    }
-
-    if (authUsers && authUsers.users && authUsers.users.length > 0) {
-      const existingAuthUser = authUsers.users[0];
+    // Try to delete any stale auth users with this email (safety cleanup)
+    try {
+      const { data: authUsers } = await supabase.auth.admin.listUsers({
+        filters: `email:${email}`,
+      });
       
-      // Check if profile exists for this auth user
-      const { data: existingProfile } = await supabase
-        .from("users")
-        .select("id")
-        .eq("auth_user_id", existingAuthUser.id)
-        .maybeSingle();
-
-      // If auth user exists but profile doesn't exist, delete and allow re-registration
-      if (!existingProfile) {
-        try {
-          await supabase.auth.admin.deleteUser(existingAuthUser.id);
-          console.log("Deleted stale auth user for email:", email);
-          // Continue with normal registration flow - don't return here
-        } catch (e) {
-          console.error("Error deleting stale auth user:", e);
-          // Continue anyway
-        }
-      } else if (!existingAuthUser.email_confirmed_at) {
-        // Profile exists and email not confirmed - resend verification email
-        try {
-          // Generate magic link again
-          const { data: signInData, error: signInError } = await supabase.auth.admin.generateLink({
-            type: "magiclink",
-            email,
-            options: {
-              redirectTo: `${supabaseUrl.replace('/rest/v1', '')}/auth/v1/callback?type=magiclink`,
-            },
-          });
-
-          if (!signInError && signInData?.properties?.action_link) {
-            const magicLink = signInData.properties.action_link;
-            
-            // Send verification email
-            const emailHtml = `
-              <!DOCTYPE html>
-              <html>
-                <head>
-                  <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: linear-gradient(135deg, #1a59a6 0%, #0d3a7a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                    .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-                    .button { display: inline-block; background: #1a59a6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-                    .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
-                    .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; font-size: 13px; }
-                  </style>
-                </head>
-                <body>
-                  <div class="container">
-                    <div class="header">
-                      <h1>Welcome to UCC IP Management</h1>
-                    </div>
-                    <div class="content">
-                      <h2>Email Verification Required</h2>
-                      <p>We noticed you're trying to register again. Here's your verification link:</p>
-                      
-                      <center>
-                        <a href="${magicLink}" class="button">Verify Email Address</a>
-                      </center>
-                      
-                      <p>Or copy and paste this link in your browser:</p>
-                      <p style="word-break: break-all; font-size: 12px; color: #6b7280;">
-                        ${magicLink}
-                      </p>
-                      
-                      <p style="margin-top: 30px;"><strong>This link expires in 24 hours.</strong></p>
-                    </div>
-                    <div class="footer">
-                      <p>University of Caloocan City Intellectual Property Office</p>
-                      <p><a href="https://ucc-ipo.com" style="color: #1a59a6; text-decoration: none;">ucc-ipo.com</a></p>
-                    </div>
-                  </div>
-                </body>
-              </html>
-            `;
-
-            try {
-              await fetch(
-                `${supabaseUrl}/functions/v1/send-notification-email`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Authorization": `Bearer ${supabaseServiceKey}`,
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    to: email,
-                    subject: "Verify Your Email - UCC IP Management System",
-                    html: emailHtml,
-                  }),
-                }
-              );
-            } catch (e) {
-              console.error("Email resend error:", e);
-            }
+      if (authUsers?.users && authUsers.users.length > 0) {
+        for (const authUser of authUsers.users) {
+          try {
+            await supabase.auth.admin.deleteUser(authUser.id);
+            console.log("Cleaned up stale auth user:", email);
+          } catch (e) {
+            console.error("Error cleaning auth user:", e);
           }
-
-          return new Response(
-            JSON.stringify({
-              success: true,
-              message: "Account already registered. Check your email for the verification link.",
-              alreadyExists: true,
-            }),
-            {
-              status: 200,
-              headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-        } catch (err: any) {
-          console.error("Resend email error:", err);
-          return new Response(
-            JSON.stringify({
-              success: true,
-              message: "Account already registered. Check your email for the verification link.",
-              alreadyExists: true,
-            }),
-            {
-              status: 200,
-              headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json",
-              },
-            }
-          );
         }
-      } else if (existingProfile && existingAuthUser.email_confirmed_at) {
-        // Profile exists and email is confirmed
-        return new Response(
-          JSON.stringify({
-            success: true,
-            message: "Account already verified. Please sign in.",
-            alreadyExists: true,
-            alreadyVerified: true,
-          }),
-          {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          }
-        );
       }
+    } catch (e) {
+      console.error("Error listing auth users:", e);
+      // Continue anyway
     }
 
     // Create auth user with email_confirm=false (requires email verification)
