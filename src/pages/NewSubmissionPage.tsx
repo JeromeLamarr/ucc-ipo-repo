@@ -44,9 +44,20 @@ interface UploadedFile {
   preview?: string;
 }
 
+interface Inventor {
+  name: string;
+  affiliation: string;
+  contribution: string;
+}
+
 interface Keyword {
   id: string;
   value: string;
+}
+
+interface Department {
+  id: string;
+  name: string;
 }
 
 interface Collaborator {
@@ -64,6 +75,7 @@ export function NewSubmissionPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [supervisors, setSupervisors] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -79,7 +91,7 @@ export function NewSubmissionPage() {
     solution: '',
     advantages: '',
     implementation: '',
-    inventors: [{ name: profile?.full_name || '', affiliation: profile?.affiliation || '', contribution: '' }],
+    inventors: [{ name: profile?.full_name || '', affiliation: profile?.department_id || '', contribution: '' }],
     dateConceived: '',
     dateReduced: '',
     priorArt: '',
@@ -96,6 +108,7 @@ export function NewSubmissionPage() {
 
   useEffect(() => {
     fetchSupervisors();
+    fetchDepartments();
   }, []);
 
   const fetchSupervisors = async () => {
@@ -110,6 +123,30 @@ export function NewSubmissionPage() {
       setSupervisors(data || []);
     } catch (error) {
       console.error('Error fetching supervisors:', error);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-departments?action=list-active`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.ok) {
+        const { data } = await response.json();
+        setDepartments(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
     }
   };
 
@@ -859,14 +896,20 @@ export function NewSubmissionPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Affiliation / Institution
+                        Department
                       </label>
-                      <input
-                        type="text"
+                      <select
                         value={inventor.affiliation}
                         onChange={(e) => updateInventor(index, 'affiliation', e.target.value)}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
+                      >
+                        <option value="">Select a department...</option>
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>

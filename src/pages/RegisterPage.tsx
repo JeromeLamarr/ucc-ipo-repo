@@ -1,7 +1,12 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { GraduationCap, Mail, Lock, User, Building, AlertCircle, CheckCircle, Mail as MailIcon } from 'lucide-react';
 import { supabase } from '@lib/supabase';
+
+interface Department {
+  id: string;
+  name: string;
+}
 
 export function RegisterPage() {
   const [step, setStep] = useState<'form' | 'email-sent' | 'success'>('form');
@@ -9,11 +14,39 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [affiliation, setAffiliation] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  const fetchDepartments = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // For public access, we don't need authentication to fetch active departments
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-departments?action=list-active`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.ok) {
+        const { data } = await response.json();
+        setDepartments(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,7 +71,7 @@ export function RegisterPage() {
           email,
           fullName,
           password,
-          affiliation: affiliation || undefined,
+          departmentId: departmentId || undefined,
         },
       });
 
@@ -85,7 +118,7 @@ export function RegisterPage() {
           email,
           fullName,
           password,
-          affiliation: affiliation || undefined,
+          departmentId: departmentId || undefined,
           resend: true,
         },
       });
@@ -169,17 +202,22 @@ export function RegisterPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Affiliation / Department
+                  Department
                 </label>
                 <div className="relative">
-                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={affiliation}
-                    onChange={(e) => setAffiliation(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Department of Computer Science"
-                  />
+                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 z-10 pointer-events-none" />
+                  <select
+                    value={departmentId}
+                    onChange={(e) => setDepartmentId(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                  >
+                    <option value="">Select a department...</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

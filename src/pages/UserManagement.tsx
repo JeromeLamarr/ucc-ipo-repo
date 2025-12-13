@@ -6,9 +6,15 @@ import type { Database } from '../lib/database.types';
 type User = Database['public']['Tables']['users']['Row'];
 type UserRole = Database['public']['Tables']['users']['Row']['role'];
 
+interface Department {
+  id: string;
+  name: string;
+}
+
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
@@ -26,17 +32,42 @@ export function UserManagement() {
     fullName: '',
     password: '',
     role: 'applicant' as UserRole,
-    affiliation: '',
+    departmentId: '',
     categorySpecialization: '',
   });
 
   useEffect(() => {
     fetchUsers();
+    fetchDepartments();
   }, []);
 
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, roleFilter]);
+
+  const fetchDepartments = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-departments?action=list-active`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.ok) {
+        const { data } = await response.json();
+        setDepartments(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -95,7 +126,7 @@ export function UserManagement() {
             fullName: formData.fullName,
             password: formData.password,
             role: formData.role,
-            affiliation: formData.affiliation,
+            departmentId: formData.departmentId || null,
             categorySpecialization: formData.role === 'evaluator' ? formData.categorySpecialization : null,
           }),
         }
@@ -110,7 +141,7 @@ export function UserManagement() {
       setShowCreateModal(false);
       setNewUserCredentials(result.credentials);
       setShowCredentialsModal(true);
-      setFormData({ email: '', fullName: '', password: '', role: 'applicant', affiliation: '', categorySpecialization: '' });
+      setFormData({ email: '', fullName: '', password: '', role: 'applicant', departmentId: '', categorySpecialization: '' });
       fetchUsers();
     } catch (error: any) {
       console.error('Error creating user:', error);
@@ -337,14 +368,20 @@ export function UserManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Affiliation / Department
+                  Department
                 </label>
-                <input
-                  type="text"
-                  value={formData.affiliation}
-                  onChange={(e) => setFormData({ ...formData, affiliation: e.target.value })}
+                <select
+                  value={formData.departmentId}
+                  onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
+                >
+                  <option value="">Select a department...</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {formData.role === 'evaluator' && (

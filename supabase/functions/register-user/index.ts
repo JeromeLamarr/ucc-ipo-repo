@@ -11,7 +11,7 @@ interface RegisterUserRequest {
   email: string;
   fullName: string;
   password: string;
-  affiliation?: string;
+  departmentId?: string;
   resend?: boolean;
 }
 
@@ -71,7 +71,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { email, fullName, password, affiliation } = requestData;
+    const { email, fullName, password, departmentId } = requestData;
 
     // Validate input
     if (!email || !fullName || !password) {
@@ -287,7 +287,7 @@ Deno.serve(async (req: Request) => {
       email_confirm: false,
       user_metadata: {
         full_name: fullName,
-        affiliation: affiliation || null,
+        department_id: departmentId || null,
       },
     });
 
@@ -331,7 +331,7 @@ Deno.serve(async (req: Request) => {
         auth_user_id: authData.user.id,
         email,
         full_name: fullName,
-        affiliation: affiliation || null,
+        department_id: departmentId || null,
       });
 
     if (tempRegError) {

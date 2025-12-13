@@ -12,7 +12,7 @@ interface CreateUserRequest {
   fullName: string;
   password: string;
   role: 'applicant' | 'supervisor' | 'evaluator' | 'admin';
-  affiliation?: string;
+  departmentId?: string | null;
   categorySpecialization?: string;
 }
 
@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
       throw new Error("Only admins can create users");
     }
 
-    const { email, fullName, password, role, affiliation, categorySpecialization }: CreateUserRequest = await req.json();
+    const { email, fullName, password, role, departmentId, categorySpecialization }: CreateUserRequest = await req.json();
 
     if (!password || password.length < 6) {
       throw new Error("Password must be at least 6 characters long");
@@ -81,7 +81,7 @@ Deno.serve(async (req: Request) => {
       email,
       full_name: fullName,
       role,
-      affiliation: affiliation || null,
+      department_id: departmentId || null,
       category_specialization: categorySpecialization || null,
       is_verified: true,
       temp_password: false,
