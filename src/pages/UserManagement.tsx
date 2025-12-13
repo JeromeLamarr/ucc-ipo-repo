@@ -52,17 +52,19 @@ export function UserManagement() {
 
   const fetchDepartments = async () => {
     try {
-      // Query Supabase directly for all departments
+      // Query Supabase directly for all departments (active and inactive)
       const { data, error } = await supabase
         .from('departments')
-        .select('id, name, description')
+        .select('id, name, description, active')
         .order('name', { ascending: true });
 
       if (error) {
         console.error('Error fetching departments:', error);
+        console.error('Error details:', error.message, error.code);
         return;
       }
 
+      console.log('Departments fetched:', data);
       setDepartments(data || []);
     } catch (error) {
       console.error('Error fetching departments:', error);
@@ -339,22 +341,24 @@ export function UserManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(user.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm flex gap-2">
-                      {user.role !== 'applicant' && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center gap-3">
+                        {user.role !== 'applicant' && (
+                          <button
+                            onClick={() => handleResetPassword(user)}
+                            className="text-blue-600 hover:text-blue-700 font-medium transition"
+                            title={`Reset password for ${user.full_name}`}
+                          >
+                            <Lock className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleResetPassword(user)}
-                          className="text-blue-600 hover:text-blue-700 font-medium"
-                          title="Reset Password"
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="text-red-600 hover:text-red-700 font-medium transition"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                      )}
-                      <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-600 hover:text-red-700 font-medium"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      </div>
                     </td>
                   </tr>
                 ))
