@@ -76,30 +76,24 @@ Deno.serve(async (req: Request) => {
       throw new Error("Failed to create auth user");
     }
 
-    // Check if user profile already exists
-    const { data: existingUser, error: checkError } = await supabaseAdmin
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
+    // Wait a moment for the trigger to create the profile
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Only insert if profile doesn't already exist
-    if (!existingUser) {
-      const { error: profileError } = await supabaseAdmin.from("users").insert({
-        auth_user_id: authData.user.id,
-        email,
+    // Update the profile created by the trigger with additional data
+    const { error: updateError } = await supabaseAdmin
+      .from("users")
+      .update({
         full_name: fullName,
         role,
         department_id: departmentId || null,
         category_specialization: categorySpecialization || null,
         is_verified: true,
-        temp_password: false,
-      });
+      })
+      .eq("auth_user_id", authData.user.id);
 
-      if (profileError) {
-        console.error("Profile creation error:", profileError);
-        throw profileError;
-      }
+    if (updateError) {
+      console.error("Profile update error:", updateError);
+      // Don't fail - auth user is created
     }
 
     await supabaseAdmin.from("notifications").insert({

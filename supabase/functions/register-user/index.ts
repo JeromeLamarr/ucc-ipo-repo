@@ -183,20 +183,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Create user profile immediately with department_id
+    // Wait for trigger to create the profile
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Update the profile created by trigger with department_id
     const { error: profileError } = await supabase
       .from("users")
-      .insert({
-        auth_user_id: authData.user.id,
-        email,
+      .update({
         full_name: fullName,
         department_id: departmentId || null,
-        role: "applicant",
-        is_verified: false,
-      });
+      })
+      .eq("auth_user_id", authData.user.id);
 
     if (profileError) {
-      console.error("Profile creation error:", profileError);
+      console.error("Profile update error:", profileError);
       // Log but don't fail - user auth is created
     }
 
