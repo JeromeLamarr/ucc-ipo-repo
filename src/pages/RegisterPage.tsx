@@ -27,23 +27,18 @@ export function RegisterPage() {
 
   const fetchDepartments = async () => {
     try {
-      // For public access, we don't need authentication to fetch active departments
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-departments?action=list-active`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      // Query Supabase directly for active departments
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name, description')
+        .eq('active', true)
+        .order('name', { ascending: true });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Error fetching departments:', { status: response.status, errorData });
+      if (error) {
+        console.error('Error fetching departments:', error);
         return;
       }
 
-      const { data } = await response.json();
       setDepartments(data || []);
     } catch (error) {
       console.error('Error fetching departments:', error);
