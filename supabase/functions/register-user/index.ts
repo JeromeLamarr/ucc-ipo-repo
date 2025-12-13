@@ -183,6 +183,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Create user profile immediately with department_id
+    const { error: profileError } = await supabase
+      .from("users")
+      .insert({
+        auth_user_id: authData.user.id,
+        email,
+        full_name: fullName,
+        department_id: departmentId || null,
+        role: "applicant",
+        is_verified: false,
+      });
+
+    if (profileError) {
+      console.error("Profile creation error:", profileError);
+      // Log but don't fail - user auth is created
+    }
+
     // Store temporary registration data
     const { error: tempRegError } = await supabase
       .from("temp_registrations")
