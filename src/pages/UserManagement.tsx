@@ -47,23 +47,18 @@ export function UserManagement() {
 
   const fetchDepartments = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      // Query Supabase directly for all departments
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name, description')
+        .order('name', { ascending: true });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-departments?action=list-active`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (response.ok) {
-        const { data } = await response.json();
-        setDepartments(data || []);
+      if (error) {
+        console.error('Error fetching departments:', error);
+        return;
       }
+
+      setDepartments(data || []);
     } catch (error) {
       console.error('Error fetching departments:', error);
     }
