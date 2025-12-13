@@ -48,12 +48,18 @@ export function AdminDepartmentManagement() {
         }
       );
 
-      if (!response.ok) throw new Error('Failed to fetch departments');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Fetch error response:', { status: response.status, errorData });
+        throw new Error(errorData.details || `HTTP ${response.status}: Failed to fetch departments`);
+      }
 
       const { data } = await response.json();
       setDepartments(data || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch departments');
+      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch departments';
+      console.error('Fetch departments error:', errorMsg);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
