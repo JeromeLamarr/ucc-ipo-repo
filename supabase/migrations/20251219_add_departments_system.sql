@@ -36,10 +36,10 @@ DROP POLICY IF EXISTS "Only admins can create departments" ON departments;
 DROP POLICY IF EXISTS "Only admins can update departments" ON departments;
 DROP POLICY IF EXISTS "Only admins can delete departments" ON departments;
 
--- Policy: Everyone can read active departments
+-- Policy: Everyone can read active departments (no auth required for public registration)
 CREATE POLICY "Anyone can view active departments"
 ON departments FOR SELECT
-USING (active = true OR auth.uid() IS NOT NULL);
+USING (active = true);
 
 -- Policy: Admins can view all departments (checked via edge function)
 CREATE POLICY "Admins can view all departments"
@@ -91,7 +91,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER IF NOT EXISTS departments_updated_at_trigger
+DROP TRIGGER IF EXISTS departments_updated_at_trigger ON departments;
+
+CREATE TRIGGER departments_updated_at_trigger
 BEFORE UPDATE ON departments
 FOR EACH ROW
 EXECUTE FUNCTION update_departments_updated_at();
