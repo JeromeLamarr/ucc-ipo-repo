@@ -11,7 +11,6 @@ export function SettingsPage() {
 
   const [profileForm, setProfileForm] = useState({
     fullName: profile?.full_name || '',
-    affiliation: profile?.affiliation || '',
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -32,7 +31,6 @@ export function SettingsPage() {
         .from('users')
         .update({
           full_name: profileForm.fullName,
-          affiliation: profileForm.affiliation,
         })
         .eq('id', profile.id);
 
@@ -163,18 +161,6 @@ export function SettingsPage() {
                       value={profileForm.fullName}
                       onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Affiliation / Department
-                    </label>
-                    <input
-                      type="text"
-                      value={profileForm.affiliation}
-                      onChange={(e) => setProfileForm({ ...profileForm, affiliation: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
