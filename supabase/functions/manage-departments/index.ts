@@ -7,6 +7,8 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req: Request) => {
+  console.log("Incoming request:", req.method, req.url);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -16,12 +18,23 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
+    console.log("Action:", action);
+
     // For list-active, allow public access (no auth needed)
-    if (req.method === "GET" && action === "list-active") {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") || "",
-        Deno.env.get("SUPABASE_ANON_KEY") || ""
-      );
+    if (action === "list-active") {
+      console.log("Fetching active departments...");
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.error("Missing Supabase environment variables");
+        return new Response(
+          JSON.stringify({ error: "Server configuration error" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
       const { data, error } = await supabase
         .from("departments")
@@ -37,6 +50,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      console.log("Successfully fetched departments:", data?.length);
       return new Response(JSON.stringify({ data: data || [] }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
