@@ -489,91 +489,120 @@ export function SubmissionDetailPage() {
                 return hasOtherDetails ? (
                   <>
                     <button
-                      onClick={() => setShowMoreDetails(!showMoreDetails)}
-                      className="flex items-center gap-2 px-4 py-2 mt-4 text-blue-600 hover:text-blue-700 font-medium transition"
+                      onClick={() => setShowMoreDetails(true)}
+                      className="flex items-center gap-2 px-6 py-2 mt-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
                     >
-                      {showMoreDetails ? '▼' : '▶'} {showMoreDetails ? 'Hide' : 'See'} More Details
+                      <FileText className="h-4 w-4" />
+                      View Additional Details
                     </button>
 
                     {showMoreDetails && (
-                      <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="space-y-4">
-                          {otherDetails.map(([key, value]) => {
-                            const fieldName = key.replace(/([A-Z])/g, ' $1').trim();
-                            
-                            // Render based on value type
-                            let renderValue = null;
-                            
-                            if (Array.isArray(value)) {
-                              // Handle arrays
-                              if (value.length === 0) {
-                                renderValue = <span className="text-gray-500 italic">Empty</span>;
-                              } else if (typeof value[0] === 'object' && value[0] !== null) {
-                                // Array of objects (like inventors, collaborators)
+                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                        <div className="bg-white rounded-xl max-w-3xl w-full my-8 max-h-[90vh] overflow-y-auto">
+                          {/* Modal Header */}
+                          <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 flex justify-between items-center">
+                            <div>
+                              <h3 className="text-2xl font-bold">Additional Details</h3>
+                              <p className="text-blue-100 text-sm mt-1">{record.title}</p>
+                            </div>
+                            <button
+                              onClick={() => setShowMoreDetails(false)}
+                              className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+                            >
+                              <X className="h-6 w-6" />
+                            </button>
+                          </div>
+
+                          {/* Modal Content */}
+                          <div className="p-6 space-y-6">
+                            {otherDetails.map(([key, value]) => {
+                              const fieldName = key.replace(/([A-Z])/g, ' $1').trim();
+                              
+                              // Render based on value type
+                              let renderValue = null;
+                              
+                              if (Array.isArray(value)) {
+                                // Handle arrays
+                                if (value.length === 0) {
+                                  renderValue = <span className="text-gray-500 italic">Empty</span>;
+                                } else if (typeof value[0] === 'object' && value[0] !== null) {
+                                  // Array of objects (like inventors, collaborators)
+                                  renderValue = (
+                                    <div className="space-y-3">
+                                      {value.map((item, idx) => (
+                                        <div key={idx} className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                                          {Object.entries(item)
+                                            .filter(([k]) => k !== 'id') // Filter out id field
+                                            .map(([k, v]) => {
+                                              // Special handling for affiliation field - show department info
+                                              let displayValue = String(v);
+                                              if (k === 'affiliation' && v) {
+                                                displayValue = v;
+                                              }
+                                              
+                                              return (
+                                                <div key={k} className="text-sm py-1">
+                                                  <span className="font-semibold text-blue-900">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                                  <span className="text-gray-700 ml-2">{displayValue}</span>
+                                                </div>
+                                              );
+                                            })}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                } else {
+                                  // Array of primitives (like keywords)
+                                  renderValue = (
+                                    <div className="flex flex-wrap gap-2">
+                                      {value.map((item, idx) => (
+                                        <span key={idx} className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium hover:bg-blue-200 transition-colors">
+                                          {String(item)}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  );
+                                }
+                              } else if (typeof value === 'object' && value !== null) {
+                                // Handle plain objects
                                 renderValue = (
-                                  <div className="space-y-3">
-                                    {value.map((item, idx) => (
-                                      <div key={idx} className="bg-white p-3 rounded border border-gray-300">
-                                        {Object.entries(item)
-                                          .filter(([k]) => k !== 'id') // Filter out id field
-                                          .map(([k, v]) => {
-                                            // Special handling for affiliation field - show department info
-                                            let displayValue = String(v);
-                                            if (k === 'affiliation' && v) {
-                                              displayValue = v;
-                                            }
-                                            
-                                            return (
-                                              <div key={k} className="text-sm">
-                                                <span className="font-semibold text-gray-700">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                                                <span className="text-gray-600 ml-2">{displayValue}</span>
-                                              </div>
-                                            );
-                                          })}
+                                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-300 space-y-2">
+                                    {Object.entries(value)
+                                      .filter(([k]) => k !== 'id') // Filter out id field
+                                      .map(([k, v]) => (
+                                      <div key={k} className="text-sm py-1">
+                                        <span className="font-semibold text-gray-900">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                        <span className="text-gray-700 ml-2">{String(v)}</span>
                                       </div>
                                     ))}
                                   </div>
                                 );
                               } else {
-                                // Array of primitives (like keywords)
-                                renderValue = (
-                                  <div className="flex flex-wrap gap-2">
-                                    {value.map((item, idx) => (
-                                      <span key={idx} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                                        {String(item)}
-                                      </span>
-                                    ))}
-                                  </div>
-                                );
+                                // Handle primitives
+                                renderValue = <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{String(value)}</p>;
                               }
-                            } else if (typeof value === 'object' && value !== null) {
-                              // Handle plain objects
-                              renderValue = (
-                                <div className="bg-white p-3 rounded border border-gray-300 space-y-2">
-                                  {Object.entries(value)
-                                    .filter(([k]) => k !== 'id') // Filter out id field
-                                    .map(([k, v]) => (
-                                    <div key={k} className="text-sm">
-                                      <span className="font-semibold text-gray-700">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                                      <span className="text-gray-600 ml-2">{String(v)}</span>
-                                    </div>
-                                  ))}
+
+                              return (
+                                <div key={key} className="border-b border-gray-200 pb-4 last:border-b-0">
+                                  <h4 className="text-lg font-bold text-gray-900 mb-3 capitalize flex items-center gap-2">
+                                    <div className="h-2 w-2 bg-blue-600 rounded-full"></div>
+                                    {fieldName}
+                                  </h4>
+                                  {renderValue}
                                 </div>
                               );
-                            } else {
-                              // Handle primitives
-                              renderValue = <p className="text-gray-700 whitespace-pre-wrap">{String(value)}</p>;
-                            }
+                            })}
+                          </div>
 
-                            return (
-                              <div key={key}>
-                                <div className="text-sm font-semibold text-gray-600 mb-2 capitalize">
-                                  {fieldName}
-                                </div>
-                                {renderValue}
-                              </div>
-                            );
-                          })}
+                          {/* Modal Footer */}
+                          <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
+                            <button
+                              onClick={() => setShowMoreDetails(false)}
+                              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors"
+                            >
+                              Close
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
