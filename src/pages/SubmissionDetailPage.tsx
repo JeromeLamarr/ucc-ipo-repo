@@ -515,9 +515,6 @@ export function SubmissionDetailPage() {
                 ) : null;
               })()}
             </div>
-                </div>
-              )}
-            </div>
           )}
         </div>
       </div>
