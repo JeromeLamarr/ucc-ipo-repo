@@ -107,6 +107,13 @@ export function UserManagement() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate department is selected
+    if (!formData.departmentId) {
+      alert('Please select a department for the user');
+      return;
+    }
+
     setCreating(true);
 
     try {
@@ -433,11 +440,12 @@ export function UserManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Department
+                  Department <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.departmentId}
                   onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                  required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select a department...</option>
