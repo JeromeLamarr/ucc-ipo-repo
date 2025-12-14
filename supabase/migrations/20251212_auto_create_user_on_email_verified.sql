@@ -16,10 +16,10 @@ BEGIN
       DECLARE
         temp_data RECORD;
         full_name_val TEXT;
-        affiliation_val TEXT;
+        department_id_val UUID;
       BEGIN
         -- Try to get temp registration data
-        SELECT full_name, affiliation INTO temp_data
+        SELECT full_name, department_id INTO temp_data
         FROM public.temp_registrations
         WHERE auth_user_id = NEW.id
         LIMIT 1;
@@ -31,9 +31,9 @@ BEGIN
           'User'
         );
         
-        affiliation_val := COALESCE(
-          temp_data.affiliation,
-          NEW.raw_user_meta_data->>'affiliation'
+        department_id_val := COALESCE(
+          temp_data.department_id,
+          (NEW.raw_user_meta_data->>'department_id')::UUID
         );
         
         -- Create user record
@@ -41,7 +41,7 @@ BEGIN
           auth_user_id,
           email,
           full_name,
-          affiliation,
+          department_id,
           role,
           created_at,
           updated_at
@@ -49,7 +49,7 @@ BEGIN
           NEW.id,
           NEW.email,
           full_name_val,
-          affiliation_val,
+          department_id_val,
           'applicant',
           NOW(),
           NOW()
@@ -91,7 +91,7 @@ BEGIN
       auth_user_id,
       email,
       full_name,
-      affiliation,
+      department_id,
       role,
       created_at,
       updated_at
@@ -102,7 +102,7 @@ BEGIN
         auth_user.raw_user_meta_data->>'full_name',
         'User'
       ),
-      auth_user.raw_user_meta_data->>'affiliation',
+      (auth_user.raw_user_meta_data->>'department_id')::UUID,
       'applicant',
       NOW(),
       NOW()

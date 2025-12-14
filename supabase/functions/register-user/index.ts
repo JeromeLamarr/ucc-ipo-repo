@@ -184,20 +184,24 @@ Deno.serve(async (req: Request) => {
     }
 
     // Wait for trigger to create the profile
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Update the profile created by trigger with department_id
-    const { error: profileError } = await supabase
+    // Update the profile created by trigger with department_id using service role
+    const { data: updateData, error: profileError } = await supabase
       .from("users")
       .update({
         full_name: fullName,
-        department_id: departmentId || null,
+        department_id: departmentId && departmentId !== '' ? departmentId : null,
+        role: 'applicant'
       })
-      .eq("auth_user_id", authData.user.id);
+      .eq("auth_user_id", authData.user.id)
+      .select();
 
     if (profileError) {
       console.error("Profile update error:", profileError);
-      // Log but don't fail - user auth is created
+      console.error("Attempted to update with:", { auth_user_id: authData.user.id, department_id: departmentId, role: 'applicant' });
+    } else {
+      console.log("Profile updated successfully:", updateData);
     }
 
     // Store temporary registration data
