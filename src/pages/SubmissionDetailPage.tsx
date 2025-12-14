@@ -484,50 +484,32 @@ export function SubmissionDetailPage() {
 
               {showMoreDetails && (
                 <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-3">
                     <div>
-                      <div className="text-sm font-semibold text-gray-600">Reference Number</div>
-                      <div className="text-gray-900">{record.reference_number || 'N/A'}</div>
+                      <div className="text-sm font-semibold text-gray-600 mb-1">Reference Number</div>
+                      <div className="text-gray-900 font-mono">{record.reference_number || 'N/A'}</div>
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-600">Status</div>
-                      <div className="text-gray-900 capitalize">{record.status?.replace(/_/g, ' ')}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-600">Current Stage</div>
-                      <div className="text-gray-900 capitalize">{record.current_stage?.replace(/_/g, ' ')}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-600">Category</div>
-                      <div className="text-gray-900 capitalize">{record.category}</div>
-                    </div>
-                  </div>
 
-                  <div className="space-y-3 border-t border-gray-300 pt-4">
-                    <div>
-                      <div className="text-sm font-semibold text-gray-600 mb-2">Additional Details</div>
-                      <div className="text-sm text-gray-700 space-y-2">
-                        {record.details && typeof record.details === 'object' && (
-                          <div>
-                            <pre className="bg-white p-3 rounded border border-gray-300 text-xs overflow-auto max-h-48">
-                              {JSON.stringify(record.details, null, 2)}
-                            </pre>
-                          </div>
-                        )}
+                    {record.details && typeof record.details === 'object' && Object.keys(record.details).length > 0 && (
+                      <div>
+                        <div className="text-sm font-semibold text-gray-600 mb-2">Technical Details</div>
+                        <pre className="bg-white p-3 rounded border border-gray-300 text-xs overflow-auto max-h-64 text-gray-800">
+                          {JSON.stringify(record.details, null, 2)}
+                        </pre>
                       </div>
-                    </div>
-                  </div>
+                    )}
 
-                  <div className="border-t border-gray-300 pt-4">
-                    <div className="text-sm font-semibold text-gray-600 mb-2">Timeline</div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Created:</span>
-                        <span className="text-gray-900">{new Date(record.created_at).toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Updated:</span>
-                        <span className="text-gray-900">{new Date(record.updated_at).toLocaleString()}</span>
+                    <div className="border-t border-gray-300 pt-3">
+                      <div className="text-sm font-semibold text-gray-600 mb-2">Record Metadata</div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Created:</span>
+                          <span className="text-gray-900">{new Date(record.created_at).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Last Updated:</span>
+                          <span className="text-gray-900">{new Date(record.updated_at).toLocaleString()}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
