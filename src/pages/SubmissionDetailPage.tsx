@@ -497,17 +497,71 @@ export function SubmissionDetailPage() {
 
                     {showMoreDetails && (
                       <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="space-y-3">
-                          {otherDetails.map(([key, value]) => (
-                            <div key={key}>
-                              <div className="text-sm font-semibold text-gray-600 mb-1 capitalize">
-                                {key.replace(/([A-Z])/g, ' $1').trim()}
+                        <div className="space-y-4">
+                          {otherDetails.map(([key, value]) => {
+                            const fieldName = key.replace(/([A-Z])/g, ' $1').trim();
+                            
+                            // Render based on value type
+                            let renderValue = null;
+                            
+                            if (Array.isArray(value)) {
+                              // Handle arrays
+                              if (value.length === 0) {
+                                renderValue = <span className="text-gray-500 italic">Empty</span>;
+                              } else if (typeof value[0] === 'object' && value[0] !== null) {
+                                // Array of objects (like inventors)
+                                renderValue = (
+                                  <div className="space-y-3">
+                                    {value.map((item, idx) => (
+                                      <div key={idx} className="bg-white p-3 rounded border border-gray-300">
+                                        {Object.entries(item).map(([k, v]) => (
+                                          <div key={k} className="text-sm">
+                                            <span className="font-semibold text-gray-700">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                            <span className="text-gray-600 ml-2">{String(v)}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              } else {
+                                // Array of primitives (like keywords)
+                                renderValue = (
+                                  <div className="flex flex-wrap gap-2">
+                                    {value.map((item, idx) => (
+                                      <span key={idx} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                                        {String(item)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                );
+                              }
+                            } else if (typeof value === 'object' && value !== null) {
+                              // Handle plain objects
+                              renderValue = (
+                                <div className="bg-white p-3 rounded border border-gray-300 space-y-2">
+                                  {Object.entries(value).map(([k, v]) => (
+                                    <div key={k} className="text-sm">
+                                      <span className="font-semibold text-gray-700">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                      <span className="text-gray-600 ml-2">{String(v)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            } else {
+                              // Handle primitives
+                              renderValue = <p className="text-gray-700 whitespace-pre-wrap">{String(value)}</p>;
+                            }
+
+                            return (
+                              <div key={key}>
+                                <div className="text-sm font-semibold text-gray-600 mb-2 capitalize">
+                                  {fieldName}
+                                </div>
+                                {renderValue}
                               </div>
-                              <div className="text-gray-700 whitespace-pre-wrap">
-                                {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
