@@ -509,17 +509,27 @@ export function SubmissionDetailPage() {
                               if (value.length === 0) {
                                 renderValue = <span className="text-gray-500 italic">Empty</span>;
                               } else if (typeof value[0] === 'object' && value[0] !== null) {
-                                // Array of objects (like inventors)
+                                // Array of objects (like inventors, collaborators)
                                 renderValue = (
                                   <div className="space-y-3">
                                     {value.map((item, idx) => (
                                       <div key={idx} className="bg-white p-3 rounded border border-gray-300">
-                                        {Object.entries(item).map(([k, v]) => (
-                                          <div key={k} className="text-sm">
-                                            <span className="font-semibold text-gray-700">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                                            <span className="text-gray-600 ml-2">{String(v)}</span>
-                                          </div>
-                                        ))}
+                                        {Object.entries(item)
+                                          .filter(([k]) => k !== 'id') // Filter out id field
+                                          .map(([k, v]) => {
+                                            // Special handling for affiliation field - show department info
+                                            let displayValue = String(v);
+                                            if (k === 'affiliation' && v) {
+                                              displayValue = v;
+                                            }
+                                            
+                                            return (
+                                              <div key={k} className="text-sm">
+                                                <span className="font-semibold text-gray-700">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                                <span className="text-gray-600 ml-2">{displayValue}</span>
+                                              </div>
+                                            );
+                                          })}
                                       </div>
                                     ))}
                                   </div>
@@ -540,7 +550,9 @@ export function SubmissionDetailPage() {
                               // Handle plain objects
                               renderValue = (
                                 <div className="bg-white p-3 rounded border border-gray-300 space-y-2">
-                                  {Object.entries(value).map(([k, v]) => (
+                                  {Object.entries(value)
+                                    .filter(([k]) => k !== 'id') // Filter out id field
+                                    .map(([k, v]) => (
                                     <div key={k} className="text-sm">
                                       <span className="font-semibold text-gray-700">{k.replace(/([A-Z])/g, ' $1').trim()}:</span>
                                       <span className="text-gray-600 ml-2">{String(v)}</span>
