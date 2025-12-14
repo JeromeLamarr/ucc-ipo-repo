@@ -475,44 +475,46 @@ export function SubmissionDetailPage() {
 
           {profile?.role === 'admin' && (
             <div>
-              <button
-                onClick={() => setShowMoreDetails(!showMoreDetails)}
-                className="flex items-center gap-2 px-4 py-2 mt-4 text-blue-600 hover:text-blue-700 font-medium transition"
-              >
-                {showMoreDetails ? '▼' : '▶'} {showMoreDetails ? 'Hide' : 'See'} More Details
-              </button>
+              {(() => {
+                // Fields that are already displayed above
+                const displayedFields = ['title', 'abstract', 'description', 'category'];
+                
+                // Get other details that aren't already shown
+                const otherDetails = record.details && typeof record.details === 'object' 
+                  ? Object.entries(record.details).filter(([key]) => !displayedFields.includes(key))
+                  : [];
 
-              {showMoreDetails && (
-                <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-sm font-semibold text-gray-600 mb-1">Reference Number</div>
-                      <div className="text-gray-900 font-mono">{record.reference_number || 'N/A'}</div>
-                    </div>
+                const hasOtherDetails = otherDetails.length > 0;
 
-                    {record.details && typeof record.details === 'object' && Object.keys(record.details).length > 0 && (
-                      <div>
-                        <div className="text-sm font-semibold text-gray-600 mb-2">Technical Details</div>
-                        <pre className="bg-white p-3 rounded border border-gray-300 text-xs overflow-auto max-h-64 text-gray-800">
-                          {JSON.stringify(record.details, null, 2)}
-                        </pre>
+                return hasOtherDetails ? (
+                  <>
+                    <button
+                      onClick={() => setShowMoreDetails(!showMoreDetails)}
+                      className="flex items-center gap-2 px-4 py-2 mt-4 text-blue-600 hover:text-blue-700 font-medium transition"
+                    >
+                      {showMoreDetails ? '▼' : '▶'} {showMoreDetails ? 'Hide' : 'See'} More Details
+                    </button>
+
+                    {showMoreDetails && (
+                      <div className="mt-6 space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="space-y-3">
+                          {otherDetails.map(([key, value]) => (
+                            <div key={key}>
+                              <div className="text-sm font-semibold text-gray-600 mb-1 capitalize">
+                                {key.replace(/([A-Z])/g, ' $1').trim()}
+                              </div>
+                              <div className="text-gray-700 whitespace-pre-wrap">
+                                {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
-
-                    <div className="border-t border-gray-300 pt-3">
-                      <div className="text-sm font-semibold text-gray-600 mb-2">Record Metadata</div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">Created:</span>
-                          <span className="text-gray-900">{new Date(record.created_at).toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">Last Updated:</span>
-                          <span className="text-gray-900">{new Date(record.updated_at).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  </>
+                ) : null;
+              })()}
+            </div>
                 </div>
               )}
             </div>
