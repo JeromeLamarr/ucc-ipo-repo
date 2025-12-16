@@ -45,3 +45,9 @@ verify_jwt = true
 
 [functions.send-certificate]
 verify_jwt = true
+
+[functions.generate-documentation]
+verify_jwt = true
+
+[functions.generate-disclosure]
+verify_jwt = true

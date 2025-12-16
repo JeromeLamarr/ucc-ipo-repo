@@ -395,6 +395,44 @@ export interface Database {
           updated_at?: string;
         };
       };
+      submission_documents: {
+        Row: {
+          id: string;
+          ip_record_id: string;
+          document_type: string;
+          status: string;
+          generated_file_path: string | null;
+          generated_at: string | null;
+          completed_by: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          ip_record_id: string;
+          document_type: string;
+          status?: string;
+          generated_file_path?: string | null;
+          generated_at?: string | null;
+          completed_by?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          ip_record_id?: string;
+          document_type?: string;
+          status?: string;
+          generated_file_path?: string | null;
+          generated_at?: string | null;
+          completed_by?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       templates: {
         Row: {
           id: string;

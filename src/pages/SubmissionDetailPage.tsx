@@ -22,6 +22,7 @@ import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
 import { CompletionButton } from '../components/CompletionButton';
 import { CertificateManager } from '../components/CertificateManager';
+import { DocumentGenerator } from '../components/DocumentGenerator';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -508,6 +509,8 @@ export function SubmissionDetailPage() {
                             <button
                               onClick={() => setShowMoreDetails(false)}
                               className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+                              title="Close details"
+                              aria-label="Close details modal"
                             >
                               <X className="h-6 w-6" />
                             </button>
@@ -646,6 +649,12 @@ export function SubmissionDetailPage() {
         applicantEmail={record.applicant?.email || ''}
         coCreators={(record.details as any)?.coCreators}
         evaluationScore={(record.details as any)?.evaluationScore}
+      />
+
+      <DocumentGenerator
+        recordId={record.id}
+        record={record}
+        userRole={profile?.role || 'viewer'}
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
