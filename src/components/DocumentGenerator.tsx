@@ -47,6 +47,33 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
     setGeneratingDoc(true);
     setError('');
     try {
+      // First, fetch the latest documents to ensure we have current state
+      const { data: latestDocs } = await supabase
+        .from('submission_documents')
+        .select('*')
+        .eq('ip_record_id', recordId);
+
+      // Delete old document if exists
+      const existingDoc = latestDocs?.find(d => d.document_type === 'full_documentation');
+      if (existingDoc?.generated_file_path) {
+        try {
+          await supabase.storage
+            .from('generated-documents')
+            .remove([existingDoc.generated_file_path]);
+        } catch (e) {
+          console.error('Storage deletion error:', e);
+        }
+        
+        try {
+          await supabase
+            .from('submission_documents')
+            .delete()
+            .eq('id', existingDoc.id);
+        } catch (e) {
+          console.error('Database deletion error:', e);
+        }
+      }
+
       // Call edge function to generate PDF
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-documentation`,
@@ -68,27 +95,6 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
       }
 
       const result = await response.json();
-      
-      // Delete old document if exists
-      const existingDoc = documents.find(d => d.document_type === 'full_documentation');
-      if (existingDoc?.generated_file_path) {
-        try {
-          await supabase.storage
-            .from('generated-documents')
-            .remove([existingDoc.generated_file_path]);
-        } catch (e) {
-          // Ignore storage deletion errors
-        }
-        
-        try {
-          await supabase
-            .from('submission_documents')
-            .delete()
-            .eq('id', existingDoc.id);
-        } catch (e) {
-          // Ignore database deletion errors
-        }
-      }
 
       // Save new document record
       const userId = (await supabase.auth.getUser()).data.user?.id;
@@ -118,6 +124,33 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
     setGeneratingDisclosure(true);
     setError('');
     try {
+      // First, fetch the latest documents to ensure we have current state
+      const { data: latestDocs } = await supabase
+        .from('submission_documents')
+        .select('*')
+        .eq('ip_record_id', recordId);
+
+      // Delete old document if exists
+      const existingDoc = latestDocs?.find(d => d.document_type === 'full_disclosure');
+      if (existingDoc?.generated_file_path) {
+        try {
+          await supabase.storage
+            .from('generated-documents')
+            .remove([existingDoc.generated_file_path]);
+        } catch (e) {
+          console.error('Storage deletion error:', e);
+        }
+        
+        try {
+          await supabase
+            .from('submission_documents')
+            .delete()
+            .eq('id', existingDoc.id);
+        } catch (e) {
+          console.error('Database deletion error:', e);
+        }
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-disclosure`,
         {
@@ -137,27 +170,6 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
       }
 
       const result = await response.json();
-      
-      // Delete old document if exists
-      const existingDoc = documents.find(d => d.document_type === 'full_disclosure');
-      if (existingDoc?.generated_file_path) {
-        try {
-          await supabase.storage
-            .from('generated-documents')
-            .remove([existingDoc.generated_file_path]);
-        } catch (e) {
-          // Ignore storage deletion errors
-        }
-        
-        try {
-          await supabase
-            .from('submission_documents')
-            .delete()
-            .eq('id', existingDoc.id);
-        } catch (e) {
-          // Ignore database deletion errors
-        }
-      }
 
       const userId = (await supabase.auth.getUser()).data.user?.id;
       const { error: saveError } = await (supabase

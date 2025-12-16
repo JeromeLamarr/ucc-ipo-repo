@@ -313,44 +313,62 @@ function generateFullDisclosureHTML(record: any): string {
 async function convertHTMLToPDF(htmlContent: string, pdfDoc: PDFDocument): Promise<Uint8Array> {
   const page = pdfDoc.addPage([612, 792]); // Letter size
   
-  // Extract text from HTML (simple approach)
-  const textContent = htmlContent
-    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+  // Extract clean text from HTML
+  const cleanText = htmlContent
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<[^>]+>/g, '\n') // Replace tags with newlines
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/\n\n+/g, '\n') // Remove multiple newlines
     .split('\n')
-    .filter(line => line.trim())
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
     .join('\n');
 
-  const fontSize = 11;
-  const margin = 40;
-  const maxWidth = page.getWidth() - 2 * margin;
+  const fontSize = 10;
+  const margin = 30;
+  const lineHeight = fontSize + 2;
+  const maxLinesPerPage = Math.floor((792 - 2 * margin) / lineHeight);
   
-  let yPosition = page.getHeight() - margin;
+  const lines = cleanText.split('\n');
+  let currentPage = page;
+  let yPosition = 792 - margin;
+  let lineCount = 0;
 
-  // Split text into lines that fit within the page width
-  const lines = textContent.split('\n');
-  
   for (const line of lines) {
-    if (yPosition < margin) {
-      // Add new page if needed
-      const newPage = pdfDoc.addPage([612, 792]);
-      yPosition = newPage.getHeight() - margin;
+    if (lineCount >= maxLinesPerPage) {
+      // Add new page
+      currentPage = pdfDoc.addPage([612, 792]);
+      yPosition = 792 - margin;
+      lineCount = 0;
     }
 
-    // Draw text
-    page.drawText(line.substring(0, 100), {
-      x: margin,
-      y: yPosition,
-      size: fontSize,
-      color: rgb(0, 0, 0),
-    });
+    // Break long lines
+    const maxCharsPerLine = 80;
+    const wrappedLines = line.match(new RegExp(`.{1,${maxCharsPerLine}}`, 'g')) || [line];
+    
+    for (const wrappedLine of wrappedLines) {
+      if (lineCount >= maxLinesPerPage) {
+        currentPage = pdfDoc.addPage([612, 792]);
+        yPosition = 792 - margin;
+        lineCount = 0;
+      }
 
-    yPosition -= fontSize + 5;
+      currentPage.drawText(wrappedLine, {
+        x: margin,
+        y: yPosition,
+        size: fontSize,
+        color: rgb(0, 0, 0),
+      });
+
+      yPosition -= lineHeight;
+      lineCount++;
+    }
   }
 
   return await pdfDoc.save();
