@@ -69,7 +69,23 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
 
       const result = await response.json();
       
-      // Save document record
+      // Delete old document if exists
+      const existingDoc = documents.find(d => d.document_type === 'full_documentation');
+      if (existingDoc?.generated_file_path) {
+        await supabase.storage
+          .from('generated-documents')
+          .remove([existingDoc.generated_file_path])
+          .catch(() => {}); // Ignore errors
+        
+        // Delete database record
+        await supabase
+          .from('submission_documents')
+          .delete()
+          .eq('id', existingDoc.id)
+          .catch(() => {});
+      }
+
+      // Save new document record
       const userId = (await supabase.auth.getUser()).data.user?.id;
       const { error: saveError } = await (supabase
         .from('submission_documents') as any)
@@ -117,6 +133,22 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
 
       const result = await response.json();
       
+      // Delete old document if exists
+      const existingDoc = documents.find(d => d.document_type === 'full_disclosure');
+      if (existingDoc?.generated_file_path) {
+        await supabase.storage
+          .from('generated-documents')
+          .remove([existingDoc.generated_file_path])
+          .catch(() => {}); // Ignore errors
+        
+        // Delete database record
+        await supabase
+          .from('submission_documents')
+          .delete()
+          .eq('id', existingDoc.id)
+          .catch(() => {});
+      }
+
       const userId = (await supabase.auth.getUser()).data.user?.id;
       const { error: saveError } = await (supabase
         .from('submission_documents') as any)
