@@ -72,17 +72,22 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
       // Delete old document if exists
       const existingDoc = documents.find(d => d.document_type === 'full_documentation');
       if (existingDoc?.generated_file_path) {
-        await supabase.storage
-          .from('generated-documents')
-          .remove([existingDoc.generated_file_path])
-          .catch(() => {}); // Ignore errors
+        try {
+          await supabase.storage
+            .from('generated-documents')
+            .remove([existingDoc.generated_file_path]);
+        } catch (e) {
+          // Ignore storage deletion errors
+        }
         
-        // Delete database record
-        await supabase
-          .from('submission_documents')
-          .delete()
-          .eq('id', existingDoc.id)
-          .catch(() => {});
+        try {
+          await supabase
+            .from('submission_documents')
+            .delete()
+            .eq('id', existingDoc.id);
+        } catch (e) {
+          // Ignore database deletion errors
+        }
       }
 
       // Save new document record
@@ -136,17 +141,22 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
       // Delete old document if exists
       const existingDoc = documents.find(d => d.document_type === 'full_disclosure');
       if (existingDoc?.generated_file_path) {
-        await supabase.storage
-          .from('generated-documents')
-          .remove([existingDoc.generated_file_path])
-          .catch(() => {}); // Ignore errors
+        try {
+          await supabase.storage
+            .from('generated-documents')
+            .remove([existingDoc.generated_file_path]);
+        } catch (e) {
+          // Ignore storage deletion errors
+        }
         
-        // Delete database record
-        await supabase
-          .from('submission_documents')
-          .delete()
-          .eq('id', existingDoc.id)
-          .catch(() => {});
+        try {
+          await supabase
+            .from('submission_documents')
+            .delete()
+            .eq('id', existingDoc.id);
+        } catch (e) {
+          // Ignore database deletion errors
+        }
       }
 
       const userId = (await supabase.auth.getUser()).data.user?.id;

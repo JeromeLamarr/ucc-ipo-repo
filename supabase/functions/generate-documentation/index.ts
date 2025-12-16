@@ -57,8 +57,8 @@ Deno.serve(async (req: Request) => {
       htmlContent = generateFullDisclosureHTML(record);
     }
 
-    // Convert HTML to PDF using a simple approach (you can integrate with a PDF library)
-    // For now, we'll save the HTML and return the file path
+    // Save as HTML file (browsers can view and print to PDF)
+    // For true PDF generation, you would need a library like pdfkit
     const fileName = `${recordId}_${documentType}_${Date.now()}.html`;
     const filePath = `${recordId}/${fileName}`;
 
@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
     const { error: uploadError } = await supabase.storage
       .from("generated-documents")
       .upload(filePath, new TextEncoder().encode(htmlContent), {
-        contentType: "text/html",
+        contentType: "text/html; charset=utf-8",
       });
 
     if (uploadError) {
