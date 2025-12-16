@@ -18,7 +18,8 @@ interface DocumentGeneratorProps {
 export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
   const [documents, setDocuments] = useState<SubmissionDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
+  const [generatingDoc, setGeneratingDoc] = useState(false);
+  const [generatingDisclosure, setGeneratingDisclosure] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
   };
 
   const generateFullDocumentation = async () => {
-    setGenerating(true);
+    setGeneratingDoc(true);
     setError('');
     try {
       // Call edge function to generate PDF
@@ -88,12 +89,12 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setGenerating(false);
+      setGeneratingDoc(false);
     }
   };
 
   const generateFullDisclosure = async () => {
-    setGenerating(true);
+    setGeneratingDisclosure(true);
     setError('');
     try {
       const response = await fetch(
@@ -135,7 +136,7 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setGenerating(false);
+      setGeneratingDisclosure(false);
     }
   };
 
@@ -201,20 +202,20 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
         <div className="space-y-3">
           <button
             onClick={generateFullDocumentation}
-            disabled={generating}
+            disabled={generatingDoc}
             className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
           >
             <FileText className="h-5 w-5" />
-            {generating ? 'Generating...' : 'Generate Full Documentation'}
+            {generatingDoc ? 'Generating...' : 'Generate Full Documentation'}
           </button>
 
           <button
             onClick={generateFullDisclosure}
-            disabled={generating}
+            disabled={generatingDisclosure}
             className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
           >
             <FileText className="h-5 w-5" />
-            {generating ? 'Generating...' : 'Generate Full Disclosure'}
+            {generatingDisclosure ? 'Generating...' : 'Generate Full Disclosure'}
           </button>
         </div>
       </div>
