@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { PDFDocument, PDFPage, rgb } from "npm:pdf-lib@1.17.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,13 +51,17 @@ Deno.serve(async (req: Request) => {
 
     const htmlContent = generateFullDisclosureHTML(record);
 
-    const fileName = `${recordId}_full_disclosure_${Date.now()}.html`;
+    // Convert HTML to PDF
+    const pdfDoc = await PDFDocument.create();
+    const pdfBytes = await convertHTMLToPDF(htmlContent, pdfDoc);
+
+    const fileName = `${recordId}_full_disclosure_${Date.now()}.pdf`;
     const filePath = `${recordId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from("generated-documents")
-      .upload(filePath, new TextEncoder().encode(htmlContent), {
-        contentType: "text/html",
+      .upload(filePath, pdfBytes, {
+        contentType: "application/pdf",
       });
 
     if (uploadError) {
@@ -304,4 +309,52 @@ function generateFullDisclosureHTML(record: any): string {
 </body>
 </html>
   `;
+}
+
+// Simple HTML to PDF conversion using pdf-lib
+async function convertHTMLToPDF(htmlContent: string, pdfDoc: PDFDocument): Promise<Uint8Array> {
+  const page = pdfDoc.addPage([612, 792]); // Letter size
+  
+  // Extract text from HTML (simple approach)
+  const textContent = htmlContent
+    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .split('\n')
+    .filter(line => line.trim())
+    .join('\n');
+
+  const fontSize = 11;
+  const margin = 40;
+  const maxWidth = page.getWidth() - 2 * margin;
+  
+  let yPosition = page.getHeight() - margin;
+
+  // Split text into lines that fit within the page width
+  const lines = textContent.split('\n');
+  
+  for (const line of lines) {
+    if (yPosition < margin) {
+      // Add new page if needed
+      const newPage = pdfDoc.addPage([612, 792]);
+      yPosition = newPage.getHeight() - margin;
+    }
+
+    // Draw text
+    page.drawText(line.substring(0, 100), {
+      x: margin,
+      y: yPosition,
+      size: fontSize,
+      color: rgb(0, 0, 0),
+    });
+
+    yPosition -= fontSize + 5;
+  }
+
+  return await pdfDoc.save();
+}
 }
