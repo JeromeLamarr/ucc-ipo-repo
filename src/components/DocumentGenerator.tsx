@@ -1,3 +1,16 @@
+/**
+ * DEPRECATED: This component is archived and no longer used.
+ * Document generation feature was removed on 2025-12-27.
+ * 
+ * Historical purpose: UI component for generating and managing submission documents
+ * - Full Documentation PDF generation
+ * - Full Disclosure PDF generation
+ * - Document regeneration with deletion of old files
+ * 
+ * This file is kept for reference but should not be imported anywhere.
+ * For document generation patterns, see generate-certificate edge function.
+ */
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Download, FileText, CheckCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react';

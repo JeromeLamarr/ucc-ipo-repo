@@ -1,3 +1,13 @@
+/**
+ * DEPRECATED: This edge function is archived and no longer used.
+ * Document generation feature was removed on 2025-12-27.
+ * 
+ * Historical purpose: Generated full documentation PDF with metadata and QR codes
+ * 
+ * If you need to restore document generation, refer to generate-certificate edge function
+ * for the proven PDF generation pattern using pdf-lib.
+ */
+
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { PDFDocument, PDFPage, rgb } from "npm:pdf-lib@1.17.1";
