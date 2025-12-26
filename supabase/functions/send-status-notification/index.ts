@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://ucc-ipo.com",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
@@ -99,6 +99,14 @@ Deno.serve(async (req: Request) => {
       message: "Your submission status has been updated.",
       icon: "•",
     };
+
+    console.log("Processing status notification request:", {
+      applicantEmail: payload.applicantEmail,
+      newStatus: payload.newStatus,
+      recordTitle: payload.recordTitle,
+      referenceNumber: payload.referenceNumber,
+      timestamp: new Date().toISOString(),
+    });
 
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
@@ -231,11 +239,21 @@ Deno.serve(async (req: Request) => {
     const emailResult = await emailResponse.json();
 
     if (!emailResponse.ok) {
-      console.error("Email sending failed:", emailResult);
+      console.error("Email sending failed:", {
+        status: emailResponse.status,
+        statusText: emailResponse.statusText,
+        error: emailResult,
+        to: payload.applicantEmail,
+        newStatus: payload.newStatus,
+        recordTitle: payload.recordTitle,
+        referenceNumber: payload.referenceNumber,
+        timestamp: new Date().toISOString(),
+      });
       return new Response(
         JSON.stringify({
           success: false,
           error: "Failed to send notification",
+          details: emailResult.message || emailResult.error,
         }),
         {
           status: 500,
@@ -247,10 +265,24 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    console.log("Email sent successfully:", {
+      to: payload.applicantEmail,
+      newStatus: payload.newStatus,
+      recordTitle: payload.recordTitle,
+      emailId: emailResult.id,
+      timestamp: new Date().toISOString(),
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
         message: "Status notification sent successfully",
+        data: {
+          emailId: emailResult.id,
+          to: payload.applicantEmail,
+          subject: statusInfo.subject,
+          newStatus: payload.newStatus,
+        },
       }),
       {
         status: 200,
