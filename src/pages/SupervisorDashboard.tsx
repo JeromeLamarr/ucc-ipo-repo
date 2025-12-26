@@ -236,6 +236,13 @@ export function SupervisorDashboard() {
           .single();
 
         if (evaluatorData?.email) {
+          // Fetch applicant data to get full name
+          const { data: applicantData } = await supabase
+            .from('users')
+            .select('full_name')
+            .eq('id', selectedRecord.applicant_id)
+            .single();
+
           try {
             await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`, {
               method: 'POST',
@@ -250,7 +257,7 @@ export function SupervisorDashboard() {
                 message: `A ${selectedRecord.category} intellectual property submission has been approved by supervisor and assigned to you for evaluation.`,
                 submissionTitle: selectedRecord.title,
                 submissionCategory: selectedRecord.category,
-                applicantName: selectedRecord.applicant?.full_name || 'Unknown',
+                applicantName: applicantData?.full_name || selectedRecord.applicant?.full_name || 'Unknown',
               }),
             });
           } catch (emailError) {
