@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { PDFDocument, PDFPage, rgb } from "npm:pdf-lib@1.17.1";
+import QRCode from "npm:qrcode@1.5.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -71,9 +72,9 @@ Deno.serve(async (req: Request) => {
       console.log(`[${DEPLOYMENT_VERSION}] Generated full disclosure HTML`);
     }
 
-    // Convert HTML to PDF
+    // Convert HTML to PDF using professional pdf-lib approach
     const pdfDoc = await PDFDocument.create();
-    const pdfBytes = await convertHTMLToPDF(htmlContent, pdfDoc);
+    const pdfBytes = await generateDocumentationPDF(record, pdfDoc, documentType);
 
     console.log(`[${DEPLOYMENT_VERSION}] PDF generated, size: ${pdfBytes.length} bytes`);
 
@@ -113,6 +114,238 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
+// ============================================================
+// PDF GENERATION FUNCTION - PROFESSIONAL DESIGN WITH QR CODE
+// ============================================================
+async function generateDocumentationPDF(record: any, pdfDoc: PDFDocument, documentType: string): Promise<Uint8Array> {
+  const page = pdfDoc.addPage([595, 842]); // A4 size
+  const { width, height } = page.getSize();
+
+  // Colors
+  const accentColor = rgb(0.15, 0.35, 0.65); // Professional blue
+  const darkColor = rgb(0.1, 0.1, 0.1);
+  const lightBgColor = rgb(0.94, 0.96, 1.0);
+  const goldColor = rgb(0.78, 0.58, 0.05);
+  const shadowColor = rgb(0.88, 0.88, 0.88);
+
+  const margin = 40;
+  const contentWidth = width - 2 * margin;
+  
+  let yPosition = height - 60;
+
+  // ============================================================
+  // WATERMARK (UCC Logo)
+  // ============================================================
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      try {
+        const { data: logoData } = await supabase.storage.from("assets").download("ucc_logo.png");
+        if (logoData) {
+          const logoBuffer = await (logoData as any).arrayBuffer();
+          const logoUint8Array = new Uint8Array(logoBuffer);
+          const logoImage = await pdfDoc.embedPng(logoUint8Array);
+          
+          page.drawImage(logoImage, {
+            x: width / 2 - 150,
+            y: height / 2 - 150,
+            width: 300,
+            height: 300,
+            opacity: 0.08,
+          });
+        }
+      } catch (err) {
+        console.warn("Watermark could not be embedded");
+      }
+    }
+  } catch (err) {
+    console.warn("Watermark setup skipped");
+  }
+
+  // ============================================================
+  // HEADER SECTION
+  // ============================================================
+  centerText(page, "UNIVERSITY OF CALOOCAN CITY", 11, yPosition, accentColor);
+  yPosition -= 16;
+  centerText(page, "INTELLECTUAL PROPERTY OFFICE", 10, yPosition, darkColor);
+  yPosition -= 20;
+
+  const docTitle = documentType === "full_documentation" 
+    ? `FULL DOCUMENTATION - ${record.title}` 
+    : `IP DISCLOSURE FORM - ${record.title}`;
+  
+  page.drawText(docTitle, {
+    x: margin,
+    y: yPosition,
+    size: 13,
+    color: accentColor,
+    maxWidth: contentWidth,
+  });
+  yPosition -= 20;
+
+  // Draw divider line
+  page.drawLine({
+    start: { x: margin, y: yPosition },
+    end: { x: width - margin, y: yPosition },
+    thickness: 1,
+    color: goldColor,
+  });
+  yPosition -= 20;
+
+  // ============================================================
+  // METADATA SECTION
+  // ============================================================
+  const applicant = record.applicant || {};
+  const details = record.details || {};
+
+  page.drawText("SUBMISSION INFORMATION", {
+    x: margin,
+    y: yPosition,
+    size: 10,
+    color: accentColor,
+  });
+  yPosition -= 16;
+
+  // Background for metadata
+  const metadataY = yPosition - 90;
+  page.drawRectangle({
+    x: margin,
+    y: metadataY,
+    width: contentWidth,
+    height: 100,
+    color: lightBgColor,
+    borderColor: accentColor,
+    borderWidth: 1,
+  });
+
+  const metaX = margin + 10;
+  let metaY = yPosition - 8;
+  
+  page.drawText(`Reference: ${record.reference_number}`, { x: metaX, y: metaY, size: 9, color: darkColor });
+  metaY -= 14;
+  page.drawText(`Title: ${record.title}`, { x: metaX, y: metaY, size: 9, color: darkColor, maxWidth: contentWidth - 20 });
+  metaY -= 14;
+  page.drawText(`Category: ${record.category}`, { x: metaX, y: metaY, size: 9, color: darkColor });
+  metaY -= 14;
+  page.drawText(`Status: ${record.status}`, { x: metaX, y: metaY, size: 9, color: darkColor });
+  metaY -= 14;
+  page.drawText(`Applicant: ${applicant.full_name} (${applicant.email})`, { x: metaX, y: metaY, size: 9, color: darkColor, maxWidth: contentWidth - 20 });
+
+  yPosition = metadataY - 20;
+
+  // ============================================================
+  // CONTENT SECTIONS
+  // ============================================================
+  if (details.description) {
+    page.drawText("DESCRIPTION", {
+      x: margin,
+      y: yPosition,
+      size: 10,
+      color: accentColor,
+    });
+    yPosition -= 14;
+
+    page.drawText(details.description, {
+      x: margin + 10,
+      y: yPosition,
+      size: 9,
+      color: darkColor,
+      maxWidth: contentWidth - 20,
+      lineHeight: 14,
+    });
+    yPosition -= 50;
+  }
+
+  if (record.abstract) {
+    page.drawText("ABSTRACT", {
+      x: margin,
+      y: yPosition,
+      size: 10,
+      color: accentColor,
+    });
+    yPosition -= 14;
+
+    page.drawText(record.abstract, {
+      x: margin + 10,
+      y: yPosition,
+      size: 9,
+      color: darkColor,
+      maxWidth: contentWidth - 20,
+      lineHeight: 14,
+    });
+    yPosition -= 50;
+  }
+
+  if (details.inventors && Array.isArray(details.inventors) && details.inventors.length > 0) {
+    page.drawText("INVENTORS & CONTRIBUTORS", {
+      x: margin,
+      y: yPosition,
+      size: 10,
+      color: accentColor,
+    });
+    yPosition -= 16;
+
+    for (const inventor of details.inventors) {
+      page.drawText(`• ${inventor.name} (${inventor.affiliation || "N/A"})`, {
+        x: margin + 10,
+        y: yPosition,
+        size: 8,
+        color: darkColor,
+      });
+      yPosition -= 12;
+    }
+    yPosition -= 10;
+  }
+
+  // ============================================================
+  // QR CODE SECTION
+  // ============================================================
+  try {
+    const qrText = `UCC-IP-${record.reference_number}-${record.id}`;
+    const qrDataUrl = await generateQRCodeImage(qrText);
+    const qrUint8 = dataUrlToUint8Array(qrDataUrl);
+    const qrImage = await pdfDoc.embedPng(qrUint8);
+
+    // Position QR code at bottom right
+    const qrSize = 80;
+    page.drawImage(qrImage, {
+      x: width - margin - qrSize,
+      y: margin,
+      width: qrSize,
+      height: qrSize,
+    });
+
+    // QR label
+    page.drawText("Document ID", {
+      x: width - margin - qrSize,
+      y: margin - 12,
+      size: 7,
+      color: accentColor,
+    });
+  } catch (err) {
+    console.warn("QR code could not be embedded");
+  }
+
+  // ============================================================
+  // FOOTER
+  // ============================================================
+  const footerY = 30;
+  page.drawLine({
+    start: { x: margin, y: footerY + 20 },
+    end: { x: width - margin, y: footerY + 20 },
+    thickness: 1,
+    color: goldColor,
+  });
+
+  centerText(page, "UNIVERSITY CONFIDENTIAL CONSORTIUM", 8, footerY + 10, darkColor);
+  centerText(page, `Generated: ${new Date().toLocaleString()}`, 7, footerY, darkColor);
+
+  return await pdfDoc.save();
+}
 
 function generateFullDocumentationHTML(record: any): string {
   const applicant = record.applicant || {};
@@ -1148,67 +1381,59 @@ function generateFullDisclosureHTML(record: any): string {
   `;
 }
 
-// Simple HTML to PDF conversion using pdf-lib
-async function convertHTMLToPDF(htmlContent: string, pdfDoc: PDFDocument): Promise<Uint8Array> {
-  const page = pdfDoc.addPage([612, 792]); // Letter size
-  
-  // Extract clean text from HTML
-  const cleanText = htmlContent
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/<[^>]+>/g, '\n') // Replace tags with newlines
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n\n+/g, '\n') // Remove multiple newlines
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0)
-    .join('\n');
-
-  const fontSize = 10;
-  const margin = 30;
-  const lineHeight = fontSize + 2;
-  const maxLinesPerPage = Math.floor((792 - 2 * margin) / lineHeight);
-  
-  const lines = cleanText.split('\n');
-  let currentPage = page;
-  let yPosition = 792 - margin;
-  let lineCount = 0;
-
-  for (const line of lines) {
-    if (lineCount >= maxLinesPerPage) {
-      // Add new page
-      currentPage = pdfDoc.addPage([612, 792]);
-      yPosition = 792 - margin;
-      lineCount = 0;
-    }
-
-    // Break long lines
-    const maxCharsPerLine = 80;
-    const wrappedLines = line.match(new RegExp(`.{1,${maxCharsPerLine}}`, 'g')) || [line];
-    
-    for (const wrappedLine of wrappedLines) {
-      if (lineCount >= maxLinesPerPage) {
-        currentPage = pdfDoc.addPage([612, 792]);
-        yPosition = 792 - margin;
-        lineCount = 0;
-      }
-
-      currentPage.drawText(wrappedLine, {
-        x: margin,
-        y: yPosition,
-        size: fontSize,
-        color: rgb(0, 0, 0),
-      });
-
-      yPosition -= lineHeight;
-      lineCount++;
-    }
+// Generate QR Code as data URL
+async function generateQRCodeImage(text: string): Promise<string> {
+  try {
+    const qrCodeDataUrl = await QRCode.toDataURL(text, {
+      errorCorrectionLevel: "H",
+      type: "image/png",
+      quality: 0.95,
+      margin: 1,
+      width: 200,
+    });
+    return qrCodeDataUrl;
+  } catch (error: any) {
+    console.error("QR Code generation error:", error);
+    throw new Error(`Failed to generate QR code: ${error?.message || String(error)}`);
   }
+}
 
-  return await pdfDoc.save();
+// Helper to convert data URL to Uint8Array
+function dataUrlToUint8Array(dataUrl: string): Uint8Array {
+  const parts = dataUrl.split(",");
+  const base64 = parts[1] || "";
+  const binaryString = typeof atob === "function" ? atob(base64) : Buffer.from(base64, "base64").toString("binary");
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+// Helper text centering
+function centerText(page: any, text: string, size: number, y: number, color: ReturnType<typeof rgb> = rgb(0, 0, 0)): void {
+  page.drawText(text, {
+    x: page.getWidth() / 2,
+    y,
+    size,
+    color,
+    align: "center",
+  });
+}
+
+// Helper to draw labeled field
+function drawField(page: any, label: string, value: string, x: number, y: number, pageWidth: number, maxWidth: number = 150): number {
+  const labelSize = 9;
+  const valueSize = 10;
+  const labelColor = rgb(0.15, 0.35, 0.65); // Professional blue
+  const valueColor = rgb(0.2, 0.2, 0.2); // Dark grey
+
+  // Draw label
+  page.drawText(label, { x, y, size: labelSize, color: labelColor });
+  
+  // Draw value below
+  page.drawText(value, { x: x + 10, y: y - 16, size: valueSize, color: valueColor, maxWidth });
+  
+  return y - 35;
 }
