@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Download, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Download, FileText, CheckCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -20,6 +20,7 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
   const [loading, setLoading] = useState(true);
   const [generatingDoc, setGeneratingDoc] = useState(false);
   const [generatingDisclosure, setGeneratingDisclosure] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -65,10 +66,11 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
         }
         
         try {
-          await supabase
+          const { error: deleteError } = await supabase
             .from('submission_documents')
             .delete()
             .eq('id', existingDoc.id);
+          if (deleteError) throw deleteError;
         } catch (e) {
           console.error('Database deletion error:', e);
         }
@@ -142,10 +144,11 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
         }
         
         try {
-          await supabase
+          const { error: deleteError } = await supabase
             .from('submission_documents')
             .delete()
             .eq('id', existingDoc.id);
+          if (deleteError) throw deleteError;
         } catch (e) {
           console.error('Database deletion error:', e);
         }
@@ -191,6 +194,21 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
       setError(err.message);
     } finally {
       setGeneratingDisclosure(false);
+    }
+  };
+
+  const regenerateAllDocuments = async () => {
+    setRegenerating(true);
+    setError('');
+    try {
+      // Regenerate both Full Documentation and Full Disclosure
+      await generateFullDocumentation();
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between generations
+      await generateFullDisclosure();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setRegenerating(false);
     }
   };
 
@@ -254,23 +272,36 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
         )}
 
         <div className="space-y-3">
-          <button
-            onClick={generateFullDocumentation}
-            disabled={generatingDoc}
-            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
-          >
-            <FileText className="h-5 w-5" />
-            {generatingDoc ? 'Generating...' : 'Generate Full Documentation'}
-          </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <button
+              onClick={generateFullDocumentation}
+              disabled={generatingDoc || regenerating}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              <FileText className="h-5 w-5" />
+              {generatingDoc ? 'Generating...' : 'Generate Full Documentation'}
+            </button>
 
-          <button
-            onClick={generateFullDisclosure}
-            disabled={generatingDisclosure}
-            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
-          >
-            <FileText className="h-5 w-5" />
-            {generatingDisclosure ? 'Generating...' : 'Generate Full Disclosure'}
-          </button>
+            <button
+              onClick={generateFullDisclosure}
+              disabled={generatingDisclosure || regenerating}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              <FileText className="h-5 w-5" />
+              {generatingDisclosure ? 'Generating...' : 'Generate Full Disclosure'}
+            </button>
+          </div>
+
+          {documents.length > 0 && (
+            <button
+              onClick={regenerateAllDocuments}
+              disabled={regenerating || generatingDoc || generatingDisclosure}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+            >
+              <RefreshCw className={`h-5 w-5 ${regenerating ? 'animate-spin' : ''}`} />
+              {regenerating ? 'Regenerating All Documents...' : 'Regenerate All Documents'}
+            </button>
+          )}
         </div>
       </div>
 
