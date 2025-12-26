@@ -94,43 +94,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      console.error("Invalid email format:", email);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Invalid email address format",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-
-    // Validate fullName is not just whitespace
-    if (fullName.trim().length === 0) {
-      console.error("Full name is empty or whitespace");
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Full name cannot be empty",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-
     // Validate password strength
     if (password.length < 6) {
       return new Response(
@@ -156,11 +119,13 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (checkError && checkError.code !== 'PGRST116') {
+      console.error("Error checking existing user:", checkError);
       throw checkError;
     }
 
     // If user profile exists in users table, account is complete
     if (existingUser) {
+      console.log("User already exists:", existingUser.id);
       return new Response(
         JSON.stringify({
           success: true,
@@ -176,6 +141,8 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    console.log("User does not exist, proceeding with creation");
 
     // Note: Removed stale auth user cleanup to prevent cascade deletes of user profiles
     // Auth users will be managed through proper lifecycle management
