@@ -311,9 +311,26 @@ export function SupervisorDashboard() {
         metadata: { remarks },
       });
 
-      if (selectedRecord.applicant?.email) {
+      // Fetch applicant details to ensure we have email (in case it's not in the record)
+      let applicantEmail = selectedRecord.applicant?.email;
+      let applicantName = selectedRecord.applicant?.full_name;
+
+      if (!applicantEmail) {
+        const { data: applicantData } = await supabase
+          .from('users')
+          .select('email, full_name')
+          .eq('id', selectedRecord.applicant_id)
+          .single();
+
+        if (applicantData) {
+          applicantEmail = applicantData.email;
+          applicantName = applicantData.full_name;
+        }
+      }
+
+      if (applicantEmail) {
         try {
-          console.log(`[SupervisorDashboard] Sending email notification to ${selectedRecord.applicant.email}`);
+          console.log(`[SupervisorDashboard] Sending email notification to ${applicantEmail}`);
           const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-status-notification`, {
             method: 'POST',
             headers: {
@@ -322,8 +339,8 @@ export function SupervisorDashboard() {
               'Accept': 'application/json',
             },
             body: JSON.stringify({
-              applicantEmail: selectedRecord.applicant.email,
-              applicantName: selectedRecord.applicant.full_name,
+              applicantEmail: applicantEmail,
+              applicantName: applicantName,
               recordTitle: selectedRecord.title,
               referenceNumber: selectedRecord.reference_number,
               oldStatus: selectedRecord.status,
@@ -340,21 +357,25 @@ export function SupervisorDashboard() {
             console.error('[SupervisorDashboard] Email service error:', {
               status: response.status,
               error: error,
-              to: selectedRecord.applicant.email,
+              to: applicantEmail,
             });
           } else {
             const result = await response.json();
             console.log('[SupervisorDashboard] Status notification email sent successfully', {
-              to: selectedRecord.applicant.email,
+              to: applicantEmail,
               emailId: result.data?.emailId,
             });
           }
         } catch (emailError) {
           console.error('[SupervisorDashboard] Error sending email notification:', {
             error: emailError,
-            to: selectedRecord.applicant?.email,
+            to: applicantEmail,
           });
         }
+      } else {
+        console.warn('[SupervisorDashboard] Could not send email: applicant email not found', {
+          applicant_id: selectedRecord.applicant_id,
+        });
       }
 
       setShowReviewModal(false);
