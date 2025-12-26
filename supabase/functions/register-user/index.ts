@@ -42,26 +42,43 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    console.log("=== REGISTER USER FUNCTION CALLED ===");
+    console.log("Request method:", req.method);
+    console.log("Request headers:", Object.fromEntries(req.headers.entries()));
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing Supabase environment variables");
       throw new Error("Missing Supabase configuration");
     }
+
+    console.log("Supabase configured:", !!supabaseUrl);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body
     let requestData: RegisterUserRequest;
+    let rawBody = "";
     try {
-      requestData = await req.json();
-      console.log("Request data received:", requestData);
+      rawBody = await req.text();
+      console.log("Raw request body:", rawBody);
+      
+      if (!rawBody) {
+        throw new Error("Empty request body");
+      }
+      
+      requestData = JSON.parse(rawBody);
+      console.log("Parsed request data:", JSON.stringify(requestData));
     } catch (parseError) {
       console.error("JSON parse error:", parseError);
+      console.error("Raw body was:", rawBody);
       return new Response(
         JSON.stringify({
           success: false,
           error: "Invalid request body. Please provide valid JSON.",
+          details: String(parseError),
         }),
         {
           status: 400,
@@ -74,7 +91,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const { email, fullName, password, departmentId } = requestData;
-    console.log("Extracted fields - email:", email, "fullName:", fullName, "password:", !!password, "departmentId:", departmentId);
+    console.log("Extracted fields:", { email, fullName: fullName ? "***" : undefined, password: password ? "***" : undefined, departmentId });
 
     // Validate input
     if (!email || !fullName || !password) {
@@ -148,6 +165,7 @@ Deno.serve(async (req: Request) => {
     // Auth users will be managed through proper lifecycle management
 
     // Create auth user with email_confirm=false (requires email verification)
+    console.log("Attempting to create auth user with email:", email);
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -159,15 +177,33 @@ Deno.serve(async (req: Request) => {
     });
 
     if (authError) {
-      console.error("Auth error:", authError);
+      console.error("Auth error when creating user:", authError);
       console.error("Auth error message:", authError.message);
       console.error("Auth error status:", authError.status);
-      console.error("Auth error details:", JSON.stringify(authError, null, 2));
+      console.error("Auth error code:", (authError as any).code);
+      
+      // If user already exists, return appropriate response
+      if ((authError as any).message && (authError as any).message.includes("already registered")) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Account already exists. Please sign in.",
+            alreadyExists: true,
+          }),
+          {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+
       return new Response(
         JSON.stringify({
           success: false,
-          error: authError.message || "Failed to create account",
-          details: authError.message
+          error: authError.message || "Failed to create account. " + JSON.stringify(authError),
         }),
         {
           status: 400,
@@ -195,6 +231,8 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    console.log("Auth user created successfully:", authData.user.id);
 
     console.log("Auth user created successfully:", authData.user.id);
 
