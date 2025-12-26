@@ -62,13 +62,11 @@ Deno.serve(async (req: Request) => {
     let requestData: RegisterUserRequest;
     try {
       requestData = await req.json();
-      console.log("Parsed request data successfully");
     } catch (parseError) {
-      console.error("Failed to parse JSON:", parseError);
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Invalid request body",
+          error: "ERR_JSON",
         }),
         {
           status: 400,
@@ -87,7 +85,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing required fields",
+          error: "ERR_MISSING",
         }),
         {
           status: 400,
@@ -165,7 +163,6 @@ Deno.serve(async (req: Request) => {
     });
 
     if (authError) {
-      console.error("Auth creation failed:", authError.message);
       // Check if user already exists
       if (authError.message && authError.message.includes("already registered")) {
         return new Response(
@@ -187,7 +184,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: authError.message || "Failed to create account",
+          error: "ERR_AUTH: " + (authError.message || "Unknown"),
         }),
         {
           status: 400,
