@@ -9,12 +9,17 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
+// Force redeploy with timestamp tracking
+const DEPLOYMENT_VERSION = "v2.0-modern-pdf-styling";
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders, status: 200 });
   }
 
   try {
+    console.log(`[${DEPLOYMENT_VERSION}] Starting PDF generation request`);
+    
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -25,6 +30,8 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { recordId, documentType } = await req.json();
+
+    console.log(`[${DEPLOYMENT_VERSION}] Request received - recordId: ${recordId}, documentType: ${documentType}`);
 
     if (!recordId || !documentType) {
       return new Response(
@@ -47,25 +54,34 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (recordError || !record) {
+      console.error(`[${DEPLOYMENT_VERSION}] Record fetch error:`, recordError);
       throw new Error("Record not found");
     }
+
+    console.log(`[${DEPLOYMENT_VERSION}] Record found: ${record.title}`);
 
     // Generate HTML content based on document type
     let htmlContent = "";
 
     if (documentType === "full_documentation") {
       htmlContent = generateFullDocumentationHTML(record);
+      console.log(`[${DEPLOYMENT_VERSION}] Generated full documentation HTML`);
     } else if (documentType === "full_disclosure") {
       htmlContent = generateFullDisclosureHTML(record);
+      console.log(`[${DEPLOYMENT_VERSION}] Generated full disclosure HTML`);
     }
 
     // Convert HTML to PDF
     const pdfDoc = await PDFDocument.create();
     const pdfBytes = await convertHTMLToPDF(htmlContent, pdfDoc);
 
+    console.log(`[${DEPLOYMENT_VERSION}] PDF generated, size: ${pdfBytes.length} bytes`);
+
     // Save as PDF file
     const fileName = `${recordId}_${documentType}_${Date.now()}.pdf`;
     const filePath = `${recordId}/${fileName}`;
+
+    console.log(`[${DEPLOYMENT_VERSION}] Uploading to storage: ${filePath}`);
 
     // Upload the generated document
     const { error: uploadError } = await supabase.storage
@@ -75,8 +91,11 @@ Deno.serve(async (req: Request) => {
       });
 
     if (uploadError) {
+      console.error(`[${DEPLOYMENT_VERSION}] Upload error:`, uploadError);
       throw uploadError;
     }
+
+    console.log(`[${DEPLOYMENT_VERSION}] PDF successfully uploaded: ${filePath}`);
 
     return new Response(
       JSON.stringify({
@@ -87,7 +106,7 @@ Deno.serve(async (req: Request) => {
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: any) {
-    console.error("Error:", error.message);
+    console.error(`[${DEPLOYMENT_VERSION}] Error:`, error.message);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
