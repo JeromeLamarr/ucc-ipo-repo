@@ -99,13 +99,112 @@ function generateFullDocumentationHTML(record: any): string {
   const details = record.details || {};
   const documents = record.documents || [];
 
-  return `
+  const docHTML = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <title>IP Submission Documentation - ${record.reference_number}</title>
   <style>
+    @page { size: letter; margin: 0.75in; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 12px; line-height: 1.4; color: #000; }
+    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 18px; }
+    .inst-name { font-weight: bold; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+    .doc-title { font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 6px 0; }
+    .ref-info { font-size: 11px; margin: 4px 0; }
+    .meta-box { background: #efefef; border: 1px solid #999; padding: 8px; margin-bottom: 12px; font-size: 10px; }
+    .meta-row { margin-bottom: 4px; display: flex; }
+    .meta-label { font-weight: bold; width: 120px; }
+    .meta-value { flex: 1; }
+    .section { margin-bottom: 12px; }
+    .sec-title { font-weight: bold; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #000; padding-bottom: 4px; }
+    .content { font-size: 11px; line-height: 1.4; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }
+    th, td { border: 1px solid #000; padding: 4px; text-align: left; }
+    th { background: #ccc; font-weight: bold; font-size: 9px; text-transform: uppercase; }
+    ul { margin-left: 16px; margin-top: 4px; }
+    li { margin-bottom: 3px; font-size: 10px; }
+    .confidential { background: #000; color: #fff; padding: 6px; text-align: center; font-weight: bold; font-size: 11px; margin: 12px 0; text-transform: uppercase; }
+    .footer { font-size: 9px; text-align: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid #000; }
+    p { font-size: 10px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="inst-name">University Confidential Consortium</div>
+    <div class="inst-name">Intellectual Property Office</div>
+    <div class="doc-title">IP Submission Documentation</div>
+    <div class="ref-info"><strong>Reference:</strong> ${record.reference_number}</div>
+    <div class="ref-info"><strong>Generated:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
+  </div>
+
+  <div class="meta-box">
+    <div class="meta-row"><div class="meta-label"><strong>Title:</strong></div><div class="meta-value">${record.title}</div></div>
+    <div class="meta-row"><div class="meta-label"><strong>Category:</strong></div><div class="meta-value">${record.category}</div></div>
+    <div class="meta-row"><div class="meta-label"><strong>Status:</strong></div><div class="meta-value">${record.status}</div></div>
+    <div class="meta-row"><div class="meta-label"><strong>Submitted:</strong></div><div class="meta-value">${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div>
+    <div class="meta-row"><div class="meta-label"><strong>Applicant:</strong></div><div class="meta-value">${applicant.full_name} (${applicant.email})</div></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">I. INVENTION DETAILS</div>
+    <div class="content"><strong>Abstract/Summary:</strong><br/>${record.abstract || 'Not provided'}</div>
+    <div class="content"><strong>Description:</strong><br/>${details.description || 'Not provided'}</div>
+  </div>
+
+  ${details.technicalField || details.backgroundArt || details.problemStatement || details.solution ? `
+  <div class="section">
+    <div class="sec-title">II. TECHNICAL INFORMATION</div>
+    ${details.technicalField ? `<div class="content"><strong>Technical Field:</strong><br/>${details.technicalField}</div>` : ''}
+    ${details.backgroundArt ? `<div class="content"><strong>Background:</strong><br/>${details.backgroundArt}</div>` : ''}
+    ${details.problemStatement ? `<div class="content"><strong>Problem:</strong><br/>${details.problemStatement}</div>` : ''}
+    ${details.solution ? `<div class="content"><strong>Solution:</strong><br/>${details.solution}</div>` : ''}
+    ${details.advantages ? `<div class="content"><strong>Advantages:</strong><br/>${details.advantages}</div>` : ''}
+  </div>
+  ` : ''}
+
+  ${details.inventors && Array.isArray(details.inventors) && details.inventors.length > 0 ? `
+  <div class="section">
+    <div class="sec-title">III. INVENTORS & CONTRIBUTORS</div>
+    <table>
+      <tr><th>Name</th><th>Affiliation</th><th>Role</th><th>Contact</th></tr>
+      ${details.inventors.map((inv: any) => `<tr><td>${inv.name || ''}</td><td>${inv.affiliation || ''}</td><td>${inv.contribution || ''}</td><td>${inv.email || ''}</td></tr>`).join('')}
+    </table>
+  </div>
+  ` : ''}
+
+  ${details.keywords ? `
+  <div class="section">
+    <div class="sec-title">IV. KEYWORDS</div>
+    <div class="content">${Array.isArray(details.keywords) ? details.keywords.join(', ') : details.keywords}</div>
+  </div>
+  ` : ''}
+
+  ${documents.length > 0 ? `
+  <div class="section">
+    <div class="sec-title">V. UPLOADED DOCUMENTS</div>
+    <ul>
+      ${documents.map((doc: any) => `<li>${doc.file_name}</li>`).join('')}
+    </ul>
+  </div>
+  ` : ''}
+
+  <div class="confidential">CONFIDENTIAL - FOR OFFICIAL UNIVERSITY RECORDS</div>
+
+  <div class="footer">
+    <p>University Confidential Consortium | Intellectual Property Office</p>
+    <p>Record: ${record.id} | Generated: ${new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+  </div>
+</body>
+</html>
+  `;
+  
+  return docHTML;
+}
+
+// Simple HTML to PDF conversion using pdf-lib
+async function convertHTMLToPDF(htmlContent: string, pdfDoc: PDFDocument): Promise<Uint8Array> {
     * { margin: 0; padding: 0; }
     body { 
       font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
