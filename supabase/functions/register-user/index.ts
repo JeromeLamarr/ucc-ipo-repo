@@ -94,6 +94,43 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.error("Invalid email format:", email);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid email address format",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    // Validate fullName is not just whitespace
+    if (fullName.trim().length === 0) {
+      console.error("Full name is empty or whitespace");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Full name cannot be empty",
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
     // Validate password strength
     if (password.length < 6) {
       return new Response(
@@ -156,10 +193,14 @@ Deno.serve(async (req: Request) => {
 
     if (authError) {
       console.error("Auth error:", authError);
+      console.error("Auth error message:", authError.message);
+      console.error("Auth error status:", authError.status);
+      console.error("Auth error details:", JSON.stringify(authError, null, 2));
       return new Response(
         JSON.stringify({
           success: false,
           error: authError.message || "Failed to create account",
+          details: authError.message
         }),
         {
           status: 400,
@@ -172,6 +213,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!authData.user) {
+      console.error("No user returned from auth creation");
       return new Response(
         JSON.stringify({
           success: false,
@@ -186,6 +228,8 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    console.log("Auth user created successfully:", authData.user.id);
 
     // Wait for trigger to create the profile
     await new Promise(resolve => setTimeout(resolve, 1500));
