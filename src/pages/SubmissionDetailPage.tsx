@@ -22,6 +22,7 @@ import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
 import { CompletionButton } from '../components/CompletionButton';
 import { CertificateManager } from '../components/CertificateManager';
+import { FullDisclosureManager } from '../components/FullDisclosureManager';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -648,6 +649,16 @@ export function SubmissionDetailPage() {
         applicantEmail={record.applicant?.email || ''}
         coCreators={(record.details as any)?.coCreators}
         evaluationScore={(record.details as any)?.evaluationScore}
+      />
+
+      <FullDisclosureManager
+        recordId={record.id}
+        recordTitle={record.title}
+        recordCategory={record.category}
+        recordStatus={record.status}
+        referenceNumber={record.reference_number || ''}
+        applicantName={record.applicant?.full_name || ''}
+        applicantEmail={record.applicant?.email || ''}
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
