@@ -55,7 +55,9 @@ Deno.serve(async (req: Request) => {
     let requestData: RegisterUserRequest;
     try {
       requestData = await req.json();
+      console.log("Request data received:", requestData);
     } catch (parseError) {
+      console.error("JSON parse error:", parseError);
       return new Response(
         JSON.stringify({
           success: false,
@@ -72,9 +74,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const { email, fullName, password, departmentId } = requestData;
+    console.log("Extracted fields - email:", email, "fullName:", fullName, "password:", !!password, "departmentId:", departmentId);
 
     // Validate input
     if (!email || !fullName || !password) {
+      console.error("Validation failed - missing fields:", { email: !!email, fullName: !!fullName, password: !!password });
       return new Response(
         JSON.stringify({
           success: false,
