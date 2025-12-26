@@ -99,103 +99,409 @@ function generateFullDocumentationHTML(record: any): string {
   const applicant = record.applicant || {};
   const details = record.details || {};
   const documents = record.documents || [];
+  
+  // Generate professional title with submission title
+  const docTitle = `Full Documentation - ${record.title}`;
+  const pdfFileName = `${record.reference_number}_Full_Documentation_${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
   const docHTML = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>IP Submission Documentation - ${record.reference_number}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${docTitle}</title>
   <style>
-    @page { size: letter; margin: 0.75in; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Times New Roman', Times, serif; font-size: 12px; line-height: 1.4; color: #000; }
-    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 18px; }
-    .inst-name { font-weight: bold; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
-    .doc-title { font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 6px 0; }
-    .ref-info { font-size: 11px; margin: 4px 0; }
-    .meta-box { background: #efefef; border: 1px solid #999; padding: 8px; margin-bottom: 12px; font-size: 10px; }
-    .meta-row { margin-bottom: 4px; display: flex; }
-    .meta-label { font-weight: bold; width: 120px; }
-    .meta-value { flex: 1; }
-    .section { margin-bottom: 12px; }
-    .sec-title { font-weight: bold; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #000; padding-bottom: 4px; }
-    .content { font-size: 11px; line-height: 1.4; margin-bottom: 8px; }
-    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }
-    th, td { border: 1px solid #000; padding: 4px; text-align: left; }
-    th { background: #ccc; font-weight: bold; font-size: 9px; text-transform: uppercase; }
-    ul { margin-left: 16px; margin-top: 4px; }
-    li { margin-bottom: 3px; font-size: 10px; }
-    .confidential { background: #000; color: #fff; padding: 6px; text-align: center; font-weight: bold; font-size: 11px; margin: 12px 0; text-transform: uppercase; }
-    .footer { font-size: 9px; text-align: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid #000; }
-    p { font-size: 10px; }
+    @page { 
+      size: letter; 
+      margin: 0.75in;
+      @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+      }
+    }
+    
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
+    
+    body { 
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; 
+      font-size: 11px; 
+      line-height: 1.6; 
+      color: #2c3e50;
+      background: #ffffff;
+    }
+    
+    /* HEADER SECTION */
+    .document-header {
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    
+    .institution-name {
+      font-size: 10px;
+      color: #2563eb;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    
+    .document-title {
+      font-size: 20px;
+      color: #1e293b;
+      font-weight: 700;
+      margin: 12px 0 8px 0;
+      line-height: 1.3;
+    }
+    
+    .ref-info {
+      font-size: 10px;
+      color: #64748b;
+      margin: 6px 0;
+      font-weight: 500;
+    }
+    
+    /* METADATA SECTION */
+    .metadata-section {
+      background: linear-gradient(to right, #f0f9ff, #f8fafc);
+      border-left: 4px solid #2563eb;
+      padding: 16px 18px;
+      margin-bottom: 24px;
+      border-radius: 4px;
+    }
+    
+    .metadata-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    
+    .metadata-item {
+      page-break-inside: avoid;
+    }
+    
+    .metadata-label {
+      font-weight: 700;
+      color: #2563eb;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    
+    .metadata-value {
+      color: #334155;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    
+    /* CONTENT SECTIONS */
+    .section {
+      margin-bottom: 24px;
+      page-break-inside: avoid;
+    }
+    
+    .section-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: #1e293b;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .section-number {
+      background: #2563eb;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    
+    .content-block {
+      margin-bottom: 12px;
+      line-height: 1.7;
+    }
+    
+    .field-label {
+      font-weight: 600;
+      color: #2563eb;
+      font-size: 10px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    
+    .field-value {
+      color: #334155;
+      font-size: 11px;
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    
+    /* TABLE STYLING */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 10px;
+    }
+    
+    th {
+      background: linear-gradient(to right, #2563eb, #1d4ed8);
+      color: white;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      border: 1px solid #2563eb;
+    }
+    
+    td {
+      padding: 9px 12px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      font-size: 10px;
+    }
+    
+    tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    
+    tr:nth-child(odd) {
+      background: #ffffff;
+    }
+    
+    /* LIST STYLING */
+    ul {
+      margin: 10px 0 10px 24px;
+      list-style-type: disc;
+    }
+    
+    li {
+      margin-bottom: 6px;
+      color: #334155;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    
+    /* FOOTER SECTION */
+    .footer {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 2px solid #e2e8f0;
+      text-align: center;
+      font-size: 9px;
+      color: #64748b;
+    }
+    
+    .footer-text {
+      margin: 4px 0;
+      line-height: 1.6;
+    }
+    
+    .confidential-banner {
+      background: #fee2e2;
+      border: 2px solid #dc2626;
+      color: #991b1b;
+      padding: 12px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 10px;
+      margin: 20px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-radius: 4px;
+    }
+    
+    /* PAGE BREAK */
+    .page-break {
+      page-break-after: always;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="inst-name">University Confidential Consortium</div>
-    <div class="inst-name">Intellectual Property Office</div>
-    <div class="doc-title">IP Submission Documentation</div>
-    <div class="ref-info"><strong>Reference:</strong> ${record.reference_number}</div>
-    <div class="ref-info"><strong>Generated:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
+  <!-- HEADER -->
+  <div class="document-header">
+    <div class="institution-name">University Confidential Consortium</div>
+    <div class="institution-name">Intellectual Property Office</div>
+    <div class="document-title">${docTitle}</div>
+    <div class="ref-info"><strong>Reference Number:</strong> ${record.reference_number}</div>
+    <div class="ref-info"><strong>Generated:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
   </div>
 
-  <div class="meta-box">
-    <div class="meta-row"><div class="meta-label"><strong>Title:</strong></div><div class="meta-value">${record.title}</div></div>
-    <div class="meta-row"><div class="meta-label"><strong>Category:</strong></div><div class="meta-value">${record.category}</div></div>
-    <div class="meta-row"><div class="meta-label"><strong>Status:</strong></div><div class="meta-value">${record.status}</div></div>
-    <div class="meta-row"><div class="meta-label"><strong>Submitted:</strong></div><div class="meta-value">${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div>
-    <div class="meta-row"><div class="meta-label"><strong>Applicant:</strong></div><div class="meta-value">${applicant.full_name} (${applicant.email})</div></div>
-  </div>
-
+  <!-- SUBMISSION METADATA -->
   <div class="section">
-    <div class="sec-title">I. INVENTION DETAILS</div>
-    <div class="content"><strong>Abstract/Summary:</strong><br/>${record.abstract || 'Not provided'}</div>
-    <div class="content"><strong>Description:</strong><br/>${details.description || 'Not provided'}</div>
+    <div class="metadata-section">
+      <div class="metadata-grid">
+        <div class="metadata-item">
+          <div class="metadata-label">Submission Title</div>
+          <div class="metadata-value">${record.title}</div>
+        </div>
+        <div class="metadata-item">
+          <div class="metadata-label">Category</div>
+          <div class="metadata-value">${record.category.charAt(0).toUpperCase() + record.category.slice(1)}</div>
+        </div>
+        <div class="metadata-item">
+          <div class="metadata-label">Current Status</div>
+          <div class="metadata-value">${record.status.replace(/_/g, ' ').toUpperCase()}</div>
+        </div>
+        <div class="metadata-item">
+          <div class="metadata-label">Submission Date</div>
+          <div class="metadata-value">${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+        </div>
+        <div class="metadata-item">
+          <div class="metadata-label">Primary Applicant</div>
+          <div class="metadata-value">${applicant.full_name}</div>
+        </div>
+        <div class="metadata-item">
+          <div class="metadata-label">Contact Email</div>
+          <div class="metadata-value">${applicant.email}</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  ${details.technicalField || details.backgroundArt || details.problemStatement || details.solution ? `
+  <!-- INVENTION DETAILS -->
   <div class="section">
-    <div class="sec-title">II. TECHNICAL INFORMATION</div>
-    ${details.technicalField ? `<div class="content"><strong>Technical Field:</strong><br/>${details.technicalField}</div>` : ''}
-    ${details.backgroundArt ? `<div class="content"><strong>Background:</strong><br/>${details.backgroundArt}</div>` : ''}
-    ${details.problemStatement ? `<div class="content"><strong>Problem:</strong><br/>${details.problemStatement}</div>` : ''}
-    ${details.solution ? `<div class="content"><strong>Solution:</strong><br/>${details.solution}</div>` : ''}
-    ${details.advantages ? `<div class="content"><strong>Advantages:</strong><br/>${details.advantages}</div>` : ''}
+    <div class="section-title">
+      <div class="section-number">1</div>
+      Invention Details
+    </div>
+    <div class="content-block">
+      <div class="field-label">Abstract / Summary</div>
+      <div class="field-value">${record.abstract || 'Not provided'}</div>
+    </div>
+    <div class="content-block">
+      <div class="field-label">Detailed Description</div>
+      <div class="field-value">${details.description || 'Not provided'}</div>
+    </div>
+  </div>
+
+  <!-- TECHNICAL INFORMATION -->
+  ${details.technicalField || details.backgroundArt || details.problemStatement || details.solution || details.advantages ? `
+  <div class="section">
+    <div class="section-title">
+      <div class="section-number">2</div>
+      Technical Information
+    </div>
+    ${details.technicalField ? `
+    <div class="content-block">
+      <div class="field-label">Technical Field</div>
+      <div class="field-value">${details.technicalField}</div>
+    </div>
+    ` : ''}
+    ${details.backgroundArt ? `
+    <div class="content-block">
+      <div class="field-label">Background & Prior Art</div>
+      <div class="field-value">${details.backgroundArt}</div>
+    </div>
+    ` : ''}
+    ${details.problemStatement ? `
+    <div class="content-block">
+      <div class="field-label">Problem Statement</div>
+      <div class="field-value">${details.problemStatement}</div>
+    </div>
+    ` : ''}
+    ${details.solution ? `
+    <div class="content-block">
+      <div class="field-label">Proposed Solution</div>
+      <div class="field-value">${details.solution}</div>
+    </div>
+    ` : ''}
+    ${details.advantages ? `
+    <div class="content-block">
+      <div class="field-label">Key Advantages</div>
+      <div class="field-value">${details.advantages}</div>
+    </div>
+    ` : ''}
   </div>
   ` : ''}
 
+  <!-- INVENTORS & CONTRIBUTORS -->
   ${details.inventors && Array.isArray(details.inventors) && details.inventors.length > 0 ? `
   <div class="section">
-    <div class="sec-title">III. INVENTORS & CONTRIBUTORS</div>
+    <div class="section-title">
+      <div class="section-number">3</div>
+      Inventors & Contributors
+    </div>
     <table>
-      <tr><th>Name</th><th>Affiliation</th><th>Role</th><th>Contact</th></tr>
-      ${details.inventors.map((inv: any) => `<tr><td>${inv.name || ''}</td><td>${inv.affiliation || ''}</td><td>${inv.contribution || ''}</td><td>${inv.email || ''}</td></tr>`).join('')}
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Affiliation</th>
+          <th>Contribution</th>
+          <th>Contact</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${details.inventors.map((inv: any) => `
+        <tr>
+          <td>${inv.name || '-'}</td>
+          <td>${inv.affiliation || '-'}</td>
+          <td>${inv.contribution || '-'}</td>
+          <td>${inv.email || '-'}</td>
+        </tr>
+        `).join('')}
+      </tbody>
     </table>
   </div>
   ` : ''}
 
+  <!-- KEYWORDS -->
   ${details.keywords ? `
   <div class="section">
-    <div class="sec-title">IV. KEYWORDS</div>
-    <div class="content">${Array.isArray(details.keywords) ? details.keywords.join(', ') : details.keywords}</div>
+    <div class="section-title">
+      <div class="section-number">4</div>
+      Keywords & Classifications
+    </div>
+    <div class="field-value">
+      ${Array.isArray(details.keywords) ? details.keywords.join(' • ') : details.keywords}
+    </div>
   </div>
   ` : ''}
 
+  <!-- UPLOADED DOCUMENTS -->
   ${documents.length > 0 ? `
   <div class="section">
-    <div class="sec-title">V. UPLOADED DOCUMENTS</div>
+    <div class="section-title">
+      <div class="section-number">5</div>
+      Supporting Documents
+    </div>
     <ul>
       ${documents.map((doc: any) => `<li>${doc.file_name}</li>`).join('')}
     </ul>
   </div>
   ` : ''}
 
-  <div class="confidential">CONFIDENTIAL - FOR OFFICIAL UNIVERSITY RECORDS</div>
+  <!-- CONFIDENTIAL BANNER -->
+  <div class="confidential-banner">
+    CONFIDENTIAL - FOR OFFICIAL UNIVERSITY RECORDS ONLY
+  </div>
 
+  <!-- FOOTER -->
   <div class="footer">
-    <p>University Confidential Consortium | Intellectual Property Office</p>
-    <p>Record: ${record.id} | Generated: ${new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+    <div class="footer-text">This document was automatically generated by the University Confidential Consortium Intellectual Property Management System</div>
+    <div class="footer-text">Record ID: ${record.id} | PDF: ${pdfFileName}</div>
+    <div class="footer-text">Generated on ${new Date().toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
   </div>
 </body>
 </html>
@@ -442,106 +748,381 @@ async function convertHTMLToPDF(htmlContent: string, pdfDoc: PDFDocument): Promi
 function generateFullDisclosureHTML(record: any): string {
   const applicant = record.applicant || {};
   const details = record.details || {};
+  
+  // Generate professional title with submission title
+  const docTitle = `IP Disclosure Form - ${record.title}`;
+  const pdfFileName = `${record.reference_number}_Disclosure_${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
 
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>IP Disclosure Form - ${record.reference_number}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${docTitle}</title>
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 40px; }
-    h1 { color: #0066cc; border-bottom: 2px solid #0066cc; padding-bottom: 10px; }
-    h2 { color: #0066cc; margin-top: 30px; }
-    .section { margin-bottom: 30px; page-break-inside: avoid; }
-    .field { margin-bottom: 15px; }
-    .field-label { font-weight: bold; color: #0066cc; display: block; margin-bottom: 5px; }
-    .field-value { padding: 10px; background: #f9f9f9; border-left: 3px solid #0066cc; }
+    @page { 
+      size: letter; 
+      margin: 0.75in;
+    }
+    
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
+    
+    body { 
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; 
+      font-size: 11px; 
+      line-height: 1.6; 
+      color: #2c3e50;
+      background: #ffffff;
+    }
+    
+    /* HEADER SECTION */
+    .document-header {
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    
+    .institution-name {
+      font-size: 10px;
+      color: #2563eb;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    
+    .document-title {
+      font-size: 20px;
+      color: #1e293b;
+      font-weight: 700;
+      margin: 12px 0 8px 0;
+      line-height: 1.3;
+    }
+    
+    .ref-info {
+      font-size: 10px;
+      color: #64748b;
+      margin: 6px 0;
+      font-weight: 500;
+    }
+    
+    /* FORM SECTION */
+    .section {
+      margin-bottom: 24px;
+      page-break-inside: avoid;
+    }
+    
+    .section-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: #1e293b;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .section-number {
+      background: #2563eb;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+    
+    .field {
+      margin-bottom: 14px;
+      page-break-inside: avoid;
+    }
+    
+    .field-label {
+      font-weight: 600;
+      color: #2563eb;
+      font-size: 10px;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    
+    .field-value {
+      background: linear-gradient(to right, #f0f9ff, #f8fafc);
+      border-left: 3px solid #2563eb;
+      padding: 10px 12px;
+      color: #334155;
+      font-size: 11px;
+      line-height: 1.6;
+      border-radius: 2px;
+    }
+    
+    /* TABLE STYLING */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 10px;
+    }
+    
+    th {
+      background: linear-gradient(to right, #2563eb, #1d4ed8);
+      color: white;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      border: 1px solid #2563eb;
+    }
+    
+    td {
+      padding: 9px 12px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      font-size: 10px;
+    }
+    
+    tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    
+    tr:nth-child(odd) {
+      background: #ffffff;
+    }
+    
+    /* SIGNATURE BLOCK */
+    .signature-block {
+      margin-top: 32px;
+      border-top: 2px solid #e2e8f0;
+      padding-top: 20px;
+    }
+    
+    .signature-line {
+      margin-top: 24px;
+      display: flex;
+      gap: 40px;
+    }
+    
+    .signature-item {
+      flex: 1;
+    }
+    
+    .signature-underline {
+      border-bottom: 1px solid #334155;
+      height: 30px;
+      margin-bottom: 4px;
+    }
+    
+    .signature-label {
+      font-size: 9px;
+      color: #64748b;
+      font-weight: 500;
+    }
+    
+    /* FOOTER SECTION */
+    .confidential-banner {
+      background: #fee2e2;
+      border: 2px solid #dc2626;
+      color: #991b1b;
+      padding: 12px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 10px;
+      margin: 20px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-radius: 4px;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 2px solid #e2e8f0;
+      text-align: center;
+      font-size: 9px;
+      color: #64748b;
+    }
+    
+    .footer-text {
+      margin: 4px 0;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body>
-  <h1>Complete IP Disclosure</h1>
-  <p>Reference Number: <strong>${record.reference_number}</strong></p>
-  <p>Disclosure Date: <strong>${new Date(record.created_at).toLocaleDateString()}</strong></p>
-
-  <h2>1. Disclosure Party Information</h2>
-  <div class="field">
-    <span class="field-label">Name:</span>
-    <div class="field-value">${applicant.full_name}</div>
-  </div>
-  <div class="field">
-    <span class="field-label">Email:</span>
-    <div class="field-value">${applicant.email}</div>
-  </div>
-  <div class="field">
-    <span class="field-label">Department/Affiliation:</span>
-    <div class="field-value">${applicant.affiliation || 'Not provided'}</div>
+  <!-- HEADER -->
+  <div class="document-header">
+    <div class="institution-name">University Confidential Consortium</div>
+    <div class="institution-name">Intellectual Property Office</div>
+    <div class="document-title">${docTitle}</div>
+    <div class="ref-info"><strong>Reference Number:</strong> ${record.reference_number}</div>
+    <div class="ref-info"><strong>Disclosure Date:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
   </div>
 
-  <h2>2. Invention/IP Description</h2>
-  <div class="field">
-    <span class="field-label">Title:</span>
-    <div class="field-value">${record.title}</div>
-  </div>
-  <div class="field">
-    <span class="field-label">Category:</span>
-    <div class="field-value">${record.category}</div>
-  </div>
-  <div class="field">
-    <span class="field-label">Abstract:</span>
-    <div class="field-value">${record.abstract || 'Not provided'}</div>
-  </div>
-  <div class="field">
-    <span class="field-label">Detailed Description:</span>
-    <div class="field-value">${details.description || 'Not provided'}</div>
+  <!-- DISCLOSER INFORMATION -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-number">1</div>
+      Discloser Information
+    </div>
+    <div class="field">
+      <div class="field-label">Full Name</div>
+      <div class="field-value">${applicant.full_name}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Email Address</div>
+      <div class="field-value">${applicant.email}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Department / Affiliation</div>
+      <div class="field-value">${applicant.affiliation || 'Not provided'}</div>
+    </div>
   </div>
 
-  <h2>3. Technical Details</h2>
-  ${details.technicalField ? `
-  <div class="field">
-    <span class="field-label">Technical Field:</span>
-    <div class="field-value">${details.technicalField}</div>
+  <!-- INVENTION DESCRIPTION -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-number">2</div>
+      Invention / IP Description
+    </div>
+    <div class="field">
+      <div class="field-label">Title of Invention</div>
+      <div class="field-value">${record.title}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Category of IP</div>
+      <div class="field-value">${record.category.charAt(0).toUpperCase() + record.category.slice(1)}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Abstract / Summary</div>
+      <div class="field-value">${record.abstract || 'Not provided'}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">Detailed Description</div>
+      <div class="field-value">${details.description || 'Not provided'}</div>
+    </div>
+  </div>
+
+  <!-- TECHNICAL INFORMATION -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-number">3</div>
+      Technical Information
+    </div>
+    ${details.technicalField ? `
+    <div class="field">
+      <div class="field-label">Technical Field</div>
+      <div class="field-value">${details.technicalField}</div>
+    </div>
+    ` : ''}
+    ${details.backgroundArt ? `
+    <div class="field">
+      <div class="field-label">Background Art / Prior Art</div>
+      <div class="field-value">${details.backgroundArt}</div>
+    </div>
+    ` : ''}
+    ${details.problemStatement ? `
+    <div class="field">
+      <div class="field-label">Problem Statement</div>
+      <div class="field-value">${details.problemStatement}</div>
+    </div>
+    ` : ''}
+    ${details.solution ? `
+    <div class="field">
+      <div class="field-label">Proposed Solution</div>
+      <div class="field-value">${details.solution}</div>
+    </div>
+    ` : ''}
+  </div>
+
+  <!-- INVENTORS AND CONTRIBUTORS -->
+  ${details.inventors && Array.isArray(details.inventors) && details.inventors.length > 0 ? `
+  <div class="section">
+    <div class="section-title">
+      <div class="section-number">4</div>
+      Inventors & Contributors
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Affiliation</th>
+          <th>Contribution</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${details.inventors.map((inv: any) => `
+        <tr>
+          <td>${inv.name || '-'}</td>
+          <td>${inv.affiliation || '-'}</td>
+          <td>${inv.contribution || '-'}</td>
+        </tr>
+        `).join('')}
+      </tbody>
+    </table>
   </div>
   ` : ''}
-  
-  ${details.backgroundArt ? `
-  <div class="field">
-    <span class="field-label">Background Art/Prior Art:</span>
-    <div class="field-value">${details.backgroundArt}</div>
-  </div>
-  ` : ''}
 
-  <h2>4. Inventors and Contributors</h2>
-  ${details.inventors && details.inventors.length > 0 ? `
-  <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-    <tr style="background: #0066cc; color: white;">
-      <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Name</th>
-      <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Affiliation</th>
-      <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Contribution</th>
-    </tr>
-    ${details.inventors.map((inv: any) => `
-    <tr>
-      <td style="padding: 10px; border: 1px solid #ddd;">${inv.name}</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">${inv.affiliation || '-'}</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">${inv.contribution || '-'}</td>
-    </tr>
-    `).join('')}
-  </table>
-  ` : '<p>No inventors listed</p>'}
-
-  <h2>5. Commercial Potential</h2>
+  <!-- COMMERCIAL POTENTIAL -->
   ${details.commercialPotential ? `
-  <div class="field-value">${details.commercialPotential}</div>
-  ` : '<p>Not provided</p>'}
+  <div class="section">
+    <div class="section-title">
+      <div class="section-number">5</div>
+      Commercial Potential & Advantages
+    </div>
+    <div class="field">
+      <div class="field-value">${details.commercialPotential}</div>
+    </div>
+  </div>
+  ` : ''}
 
-  <h2>6. Acknowledgment and Declaration</h2>
-  <p>The undersigned hereby disclose the above-described invention/intellectual property to the University for review and processing in accordance with applicable university policies and procedures.</p>
-  <p style="margin-top: 30px;">___________________________ _______________</p>
-  <p>Signature of Discloser Date</p>
+  <!-- SIGNATURE SECTION -->
+  <div class="section signature-block">
+    <h3 style="font-size: 12px; color: #1e293b; margin-bottom: 12px; font-weight: 700;">
+      6. Disclosure Acknowledgment & Declaration
+    </h3>
+    <p style="font-size: 10px; margin-bottom: 12px; line-height: 1.7;">
+      The undersigned hereby disclose the above-described invention/intellectual property to the University for review 
+      and processing in accordance with applicable university policies and procedures. I understand that this disclosure 
+      is part of the institutional intellectual property management process.
+    </p>
+    <div class="signature-line">
+      <div class="signature-item">
+        <div class="signature-underline"></div>
+        <div class="signature-label">Discloser Signature</div>
+      </div>
+      <div class="signature-item">
+        <div class="signature-underline"></div>
+        <div class="signature-label">Date</div>
+      </div>
+    </div>
+  </div>
 
-  <div style="margin-top: 50px; border-top: 1px solid #ddd; padding-top: 20px; text-align: center; font-size: 12px; color: #666;">
-    <p>This disclosure document was generated by the UCC IP Management System</p>
-    <p>Generated: ${new Date().toLocaleString()}</p>
+  <!-- CONFIDENTIAL BANNER -->
+  <div class="confidential-banner">
+    CONFIDENTIAL - FOR OFFICIAL UNIVERSITY RECORDS ONLY
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-text">This document was automatically generated by the University Confidential Consortium Intellectual Property Management System</div>
+    <div class="footer-text">Record ID: ${record.id} | PDF: ${pdfFileName}</div>
+    <div class="footer-text">Generated on ${new Date().toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
   </div>
 </body>
 </html>
