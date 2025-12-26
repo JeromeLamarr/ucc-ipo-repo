@@ -96,31 +96,177 @@ function generateFullDisclosureHTML(record: any): string {
   <meta charset="UTF-8">
   <title>Full IP Disclosure - ${record.reference_number}</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.8; color: #333; margin: 40px; }
-    h1 { color: #0066cc; border-bottom: 3px solid #0066cc; padding-bottom: 15px; text-align: center; }
-    h2 { color: #0066cc; margin-top: 40px; border-left: 4px solid #0066cc; padding-left: 15px; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .section { margin-bottom: 40px; page-break-inside: avoid; }
-    .field { margin-bottom: 20px; }
-    .field-label { font-weight: bold; color: #0066cc; font-size: 14px; text-transform: uppercase; }
-    .field-value { margin-top: 5px; padding: 12px; background: #f5f9ff; border-left: 4px solid #0066cc; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { padding: 12px; text-align: left; border: 1px solid #ddd; }
-    th { background-color: #0066cc; color: white; font-weight: bold; }
-    tr:nth-child(even) { background-color: #f9f9f9; }
-    .signature-block { margin-top: 50px; padding-top: 30px; border-top: 1px solid #ddd; }
-    .signature-line { margin-top: 40px; }
-    .footer { margin-top: 60px; border-top: 2px solid #0066cc; padding-top: 20px; text-align: center; font-size: 11px; color: #666; }
-    .watermark { opacity: 0.1; font-size: 80px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); z-index: -1; }
+    * { margin: 0; padding: 0; }
+    body { 
+      font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      line-height: 1.8; 
+      color: #1a1a1a; 
+      margin: 0; 
+      padding: 40px 50px;
+      background: #ffffff;
+    }
+    
+    .document-header {
+      border-bottom: 3px solid #1a472a;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .institution-name {
+      font-size: 12px;
+      color: #1a472a;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    
+    .document-title {
+      font-size: 18px;
+      color: #1a1a1a;
+      font-weight: bold;
+      margin: 15px 0 10px 0;
+    }
+    
+    .ref-info {
+      font-size: 11px;
+      color: #333;
+      margin: 10px 0;
+      font-weight: 500;
+    }
+    
+    h1 { 
+      display: none;
+    }
+    
+    h2 { 
+      color: #1a472a;
+      margin-top: 35px;
+      margin-bottom: 15px;
+      border-left: 5px solid #1a472a;
+      padding-left: 15px;
+      font-size: 14px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .section { 
+      margin-bottom: 30px;
+      page-break-inside: avoid;
+    }
+    
+    .field { 
+      margin-bottom: 18px;
+      page-break-inside: avoid;
+    }
+    
+    .field-label { 
+      font-weight: bold; 
+      color: #1a472a; 
+      font-size: 11px; 
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+    
+    .field-value { 
+      margin-top: 6px; 
+      padding: 12px 14px;
+      background: #f8f8f8;
+      border-left: 3px solid #1a472a;
+      font-size: 11px;
+      line-height: 1.7;
+      color: #333;
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 15px;
+      font-size: 11px;
+    }
+    
+    th, td { 
+      padding: 11px 12px;
+      text-align: left;
+      border: 1px solid #ccc;
+      font-size: 11px;
+    }
+    
+    th { 
+      background-color: #1a472a;
+      color: white;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    tr:nth-child(even) { 
+      background-color: #f8f8f8;
+    }
+    
+    tr:nth-child(odd) {
+      background-color: #ffffff;
+    }
+    
+    .signature-block { 
+      margin-top: 50px; 
+      padding-top: 30px; 
+      border-top: 2px solid #1a472a;
+    }
+    
+    .signature-section {
+      margin-top: 35px;
+      page-break-inside: avoid;
+    }
+    
+    .signature-line { 
+      margin-top: 40px;
+      display: inline-block;
+      width: 45%;
+    }
+    
+    .sig-line {
+      border-top: 1px solid #000;
+      margin-top: 40px;
+      padding-top: 5px;
+      width: 200px;
+    }
+    
+    .sig-label {
+      font-size: 10px;
+      margin-top: 8px;
+      font-weight: 500;
+    }
+    
+    .footer { 
+      margin-top: 70px; 
+      border-top: 2px solid #1a472a;
+      padding-top: 25px;
+      text-align: center;
+      font-size: 10px;
+      color: #666;
+      line-height: 1.6;
+    }
+    
+    .footer-separator {
+      margin: 15px 0;
+      border-top: 1px solid #ccc;
+      padding-top: 15px;
+    }
+    
+    p { margin-bottom: 12px; font-size: 11px; }
+    li { margin-left: 20px; font-size: 11px; margin-bottom: 6px; }
+    ul { margin: 10px 0; }
   </style>
 </head>
 <body>
-  <div class="watermark">DISCLOSURE</div>
-  
-  <div class="header">
-    <h1>University Confidential Intellectual Property Disclosure Form</h1>
-    <p><strong>Reference Number:</strong> ${record.reference_number}</p>
-    <p><strong>Disclosure Date:</strong> ${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+  <div class="document-header">
+    <div class="institution-name">UNIVERSITY CONFIDENTIAL CONSORTIUM</div>
+    <div class="institution-name">INTELLECTUAL PROPERTY OFFICE</div>
+    <div class="document-title">INTELLECTUAL PROPERTY DISCLOSURE FORM</div>
+    <div class="ref-info"><strong>Reference Number:</strong> ${record.reference_number}</div>
+    <div class="ref-info"><strong>Disclosure Date:</strong> ${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
   </div>
 
   <div class="section">
@@ -293,18 +439,26 @@ function generateFullDisclosureHTML(record: any): string {
 
     <p>I/We further declare that, to the best of my/our knowledge, the information contained in this disclosure is true and accurate.</p>
 
-    <div class="signature-line">
-      <p style="border-top: 1px solid #000; padding-top: 5px;">Signature of Inventor/Creator</p>
-      <p style="margin-top: 5px; font-size: 12px;">_________________________</p>
-      <p style="font-size: 12px;">Date</p>
+    <div class="signature-section">
+      <div class="signature-line">
+        <div class="sig-line"></div>
+        <div class="sig-label">Signature of Inventor/Creator</div>
+      </div>
+      
+      <div class="signature-line">
+        <div class="sig-line"></div>
+        <div class="sig-label">Date</div>
+      </div>
     </div>
   </div>
 
   <div class="footer">
-    <p>This disclosure form was generated by the University Intellectual Property Management System</p>
+    <p>This disclosure form was generated by the University Confidential Consortium Intellectual Property Management System</p>
     <p>Record ID: ${record.id}</p>
     <p>Generated: ${new Date().toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-    <p style="margin-top: 10px; border-top: 1px solid #ddd; padding-top: 10px;">CONFIDENTIAL - For University Use Only</p>
+    <div class="footer-separator">
+      <p><strong>CONFIDENTIAL - For University Use Only</strong></p>
+    </div>
   </div>
 </body>
 </html>

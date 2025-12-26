@@ -106,52 +106,187 @@ function generateFullDocumentationHTML(record: any): string {
   <meta charset="UTF-8">
   <title>IP Submission Documentation - ${record.reference_number}</title>
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 40px; }
-    h1 { color: #0066cc; border-bottom: 2px solid #0066cc; padding-bottom: 10px; }
-    h2 { color: #0066cc; margin-top: 30px; }
-    .section { margin-bottom: 30px; page-break-inside: avoid; }
-    .metadata { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-    .field { margin-bottom: 10px; }
-    .field-label { font-weight: bold; color: #0066cc; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { padding: 10px; text-align: left; border: 1px solid #ddd; }
-    th { background-color: #0066cc; color: white; }
-    .footer { margin-top: 50px; border-top: 1px solid #ddd; padding-top: 20px; text-align: center; font-size: 12px; color: #666; }
+    * { margin: 0; padding: 0; }
+    body { 
+      font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      line-height: 1.8; 
+      color: #1a1a1a; 
+      margin: 0;
+      padding: 40px 50px;
+      background: #ffffff;
+    }
+    
+    .document-header {
+      border-bottom: 3px solid #1a472a;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .institution-name {
+      font-size: 12px;
+      color: #1a472a;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    
+    .document-title {
+      font-size: 18px;
+      color: #1a1a1a;
+      font-weight: bold;
+      margin: 15px 0 10px 0;
+    }
+    
+    .ref-info {
+      font-size: 11px;
+      color: #333;
+      margin: 8px 0;
+      font-weight: 500;
+    }
+    
+    h1 { 
+      display: none;
+    }
+    
+    h2 { 
+      color: #1a472a;
+      margin-top: 35px;
+      margin-bottom: 15px;
+      border-left: 5px solid #1a472a;
+      padding-left: 15px;
+      font-size: 14px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .section { 
+      margin-bottom: 30px;
+      page-break-inside: avoid;
+    }
+    
+    .metadata { 
+      background: #f8f8f8;
+      padding: 18px;
+      border-left: 5px solid #1a472a;
+      margin-bottom: 25px;
+    }
+    
+    .field { 
+      margin-bottom: 15px;
+      page-break-inside: avoid;
+      font-size: 11px;
+    }
+    
+    .field-label { 
+      font-weight: bold; 
+      color: #1a472a;
+      font-size: 11px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      letter-spacing: 0.5px;
+    }
+    
+    .field-value {
+      margin-left: 15px;
+      padding: 8px 0;
+      line-height: 1.7;
+      color: #333;
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 15px;
+      font-size: 11px;
+    }
+    
+    th, td { 
+      padding: 11px 12px;
+      text-align: left;
+      border: 1px solid #ccc;
+      font-size: 11px;
+    }
+    
+    th { 
+      background-color: #1a472a;
+      color: white;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    tr:nth-child(even) { 
+      background-color: #f8f8f8;
+    }
+    
+    tr:nth-child(odd) {
+      background-color: #ffffff;
+    }
+    
+    .footer { 
+      margin-top: 70px; 
+      border-top: 2px solid #1a472a;
+      padding-top: 25px;
+      text-align: center;
+      font-size: 10px;
+      color: #666;
+      line-height: 1.6;
+    }
+    
+    .footer-separator {
+      margin: 15px 0;
+      border-top: 1px solid #ccc;
+      padding-top: 15px;
+    }
+    
+    p { margin-bottom: 10px; font-size: 11px; line-height: 1.7; }
+    li { margin-left: 20px; font-size: 11px; margin-bottom: 6px; }
+    ul { margin: 10px 0; }
   </style>
 </head>
 <body>
-  <h1>IP Submission Full Documentation</h1>
-  <p>Reference Number: <strong>${record.reference_number}</strong></p>
-  <p>Generated: <strong>${new Date().toLocaleString()}</strong></p>
+  <div class="document-header">
+    <div class="institution-name">UNIVERSITY CONFIDENTIAL CONSORTIUM</div>
+    <div class="institution-name">INTELLECTUAL PROPERTY OFFICE</div>
+    <div class="document-title">IP SUBMISSION DOCUMENTATION</div>
+    <div class="ref-info"><strong>Reference Number:</strong> ${record.reference_number}</div>
+    <div class="ref-info"><strong>Document Generated:</strong> ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+  </div>
 
   <div class="section metadata">
     <h2>Submission Information</h2>
     <div class="field">
-      <span class="field-label">Title:</span> ${record.title}
+      <div class="field-label">Title of Submission:</div>
+      <div class="field-value">${record.title}</div>
     </div>
     <div class="field">
-      <span class="field-label">Category:</span> ${record.category}
+      <div class="field-label">Category of Intellectual Property:</div>
+      <div class="field-value">${record.category.toUpperCase()}</div>
     </div>
     <div class="field">
-      <span class="field-label">Status:</span> ${record.status}
+      <div class="field-label">Current Status:</div>
+      <div class="field-value">${record.status}</div>
     </div>
     <div class="field">
-      <span class="field-label">Submitted Date:</span> ${new Date(record.created_at).toLocaleString()}
+      <div class="field-label">Submission Date:</div>
+      <div class="field-value">${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
     </div>
     <div class="field">
-      <span class="field-label">Applicant:</span> ${applicant.full_name} (${applicant.email})
+      <div class="field-label">Applicant/Inventor:</div>
+      <div class="field-value">${applicant.full_name}<br/>${applicant.email}</div>
     </div>
   </div>
 
   <div class="section">
-    <h2>Submission Details</h2>
+    <h2>Invention Details</h2>
     <div class="field">
-      <span class="field-label">Abstract:</span>
-      <p>${record.abstract || 'Not provided'}</p>
+      <div class="field-label">Abstract/Summary:</div>
+      <div class="field-value">${record.abstract || 'Not provided'}</div>
     </div>
     <div class="field">
-      <span class="field-label">Description:</span>
-      <p>${details.description || 'Not provided'}</p>
+      <div class="field-label">Detailed Description:</div>
+      <div class="field-value">${details.description || 'Not provided'}</div>
     </div>
   </div>
 
@@ -192,8 +327,12 @@ function generateFullDocumentationHTML(record: any): string {
   ` : ''}
 
   <div class="footer">
-    <p>This document was automatically generated by the UCC IP Management System.</p>
-    <p>Generated on ${new Date().toLocaleString()}</p>
+    <p>This document was automatically generated by the University Confidential Consortium Intellectual Property Management System.</p>
+    <p>Record ID: ${record.id}</p>
+    <p>Generated: ${new Date().toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+    <div class="footer-separator">
+      <p><strong>CONFIDENTIAL - For Official University Records</strong></p>
+    </div>
   </div>
 </body>
 </html>
