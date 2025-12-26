@@ -250,7 +250,7 @@ export function SupervisorDashboard() {
                 message: `A ${selectedRecord.category} intellectual property submission has been approved by supervisor and assigned to you for evaluation.`,
                 submissionTitle: selectedRecord.title,
                 submissionCategory: selectedRecord.category,
-                applicantName: selectedRecord.applicant_name || 'Unknown',
+                applicantName: selectedRecord.applicant?.full_name || 'Unknown',
               }),
             });
           } catch (emailError) {
