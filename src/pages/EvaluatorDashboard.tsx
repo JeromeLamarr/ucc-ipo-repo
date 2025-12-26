@@ -288,6 +288,7 @@ export function EvaluatorDashboard() {
             headers: {
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
               'Content-Type': 'application/json',
+              'Accept': 'application/json',
             },
             body: JSON.stringify({
               applicantEmail: selectedRecord.applicant.email,

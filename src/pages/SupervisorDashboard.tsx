@@ -249,6 +249,9 @@ export function SupervisorDashboard() {
               headers: {
                 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+                'Content-Type': 'application/json',
               },
               body: JSON.stringify({
                 to: evaluatorData.email,
@@ -318,6 +321,7 @@ export function SupervisorDashboard() {
             headers: {
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
               'Content-Type': 'application/json',
+              'Accept': 'application/json',
             },
             body: JSON.stringify({
               applicantEmail: selectedRecord.applicant.email,
