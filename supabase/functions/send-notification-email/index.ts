@@ -11,6 +11,47 @@ interface EmailRequest {
   subject: string;
   html?: string;
   text?: string;
+  title?: string;
+  message?: string;
+  submissionTitle?: string;
+  submissionCategory?: string;
+  applicantName?: string;
+}
+
+function generateHtmlFromMessage(title: string, message: string, additionalInfo?: Record<string, string>): string {
+  const detailsHtml = additionalInfo ? Object.entries(additionalInfo)
+    .filter(([, value]) => value)
+    .map(([key, value]) => `<p style="margin: 12px 0; color: #4b5563;"><strong>${key}:</strong> ${value}</p>`)
+    .join('') : '';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">UCC IP Office</h1>
+        <p style="color: #e0e7ff; margin: 8px 0 0 0; font-size: 14px;">Intellectual Property Management System</p>
+      </div>
+      <div style="padding: 30px;">
+        <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px; font-weight: 600;">${title}</h2>
+        <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 16px; line-height: 1.5;">${message}</p>
+        ${detailsHtml}
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+          <p style="color: #6b7280; font-size: 12px; margin: 0;">University Intellectual Property Management System</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
 }
 
 Deno.serve(async (req: Request) => {
@@ -22,11 +63,38 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { to, subject, html, text }: EmailRequest = await req.json();
+    const body: EmailRequest = await req.json();
+    const { to, subject, html, text, title, message, submissionTitle, submissionCategory, applicantName } = body;
 
-    if (!to || !subject || (!html && !text)) {
+    if (!to || !subject) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: to, subject, and html or text" }),
+        JSON.stringify({ error: "Missing required fields: to and subject" }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    // Generate HTML if not provided but message is available
+    let finalHtml = html;
+    let finalText = text;
+
+    if (!finalHtml && message && title) {
+      const additionalInfo: Record<string, string> = {};
+      if (applicantName) additionalInfo['Applicant'] = applicantName;
+      if (submissionTitle) additionalInfo['Submission Title'] = submissionTitle;
+      if (submissionCategory) additionalInfo['Category'] = submissionCategory;
+      finalHtml = generateHtmlFromMessage(title, message, additionalInfo);
+      finalText = `${title}\n\n${message}`;
+    }
+
+    if (!finalHtml && !finalText) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: provide html and text, or title and message" }),
         {
           status: 400,
           headers: {
@@ -64,8 +132,8 @@ Deno.serve(async (req: Request) => {
       from: `${senderName} <${senderEmail}>`,
       to: [to],
       subject: subject,
-      html: html,
-      text: text,
+      html: finalHtml,
+      text: finalText,
     };
 
     const response = await fetch("https://api.resend.com/emails", {
