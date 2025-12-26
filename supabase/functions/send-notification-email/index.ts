@@ -3,7 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, Accept, Origin",
 };
 
 interface EmailRequest {
@@ -91,6 +91,16 @@ Deno.serve(async (req: Request) => {
   try {
     const body: EmailRequest = await req.json();
     const { to, subject, html, text, title, message, submissionTitle, submissionCategory, applicantName } = body;
+
+    console.log("Received email request:", {
+      to,
+      subject,
+      title,
+      hasHtml: !!html,
+      hasText: !!text,
+      hasMessage: !!message,
+      timestamp: new Date().toISOString(),
+    });
 
     if (!to || !subject) {
       return new Response(
@@ -205,6 +215,13 @@ Deno.serve(async (req: Request) => {
       
       throw new Error(errorDetails);
     }
+
+    console.log("Email sent successfully:", {
+      to,
+      subject,
+      emailId: result.id,
+      timestamp: new Date().toISOString(),
+    });
 
     return new Response(
       JSON.stringify({
