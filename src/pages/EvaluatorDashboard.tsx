@@ -300,24 +300,46 @@ export function EvaluatorDashboard() {
       if (applicantEmail) {
         try {
           console.log(`[EvaluatorDashboard] Sending email notification to ${applicantEmail}`);
-          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-status-notification`, {
+          
+          // Define status-specific email content
+          const statusEmailContent: Record<string, { subject: string; title: string; message: string }> = {
+            evaluator_approved: {
+              subject: '✓ Evaluation Complete - Approved!',
+              title: 'Evaluation Complete - Approved!',
+              message: `Congratulations! Your submission "${selectedRecord.title}" has been approved by the evaluator and is now approved for legal filing. Your intellectual property is moving forward in the process.`,
+            },
+            evaluator_revision: {
+              subject: '🔄 Revision Requested by Evaluator',
+              title: 'Revision Requested',
+              message: `The evaluator has reviewed your submission "${selectedRecord.title}" and requested revisions. Please review the comments below and resubmit your updated work.`,
+            },
+            rejected: {
+              subject: '✗ Submission Decision',
+              title: 'Submission Decision',
+              message: `After careful review, your submission "${selectedRecord.title}" has been declined. Please review the comments for more information and contact us if you have questions.`,
+            },
+          };
+          
+          const emailContent = statusEmailContent[newStatus] || {
+            subject: `Status Update: ${currentStage}`,
+            title: currentStage,
+            message: `Your submission status has been updated to: ${currentStage}`,
+          };
+
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
               'Content-Type': 'application/json',
-              'Accept': 'application/json',
             },
             body: JSON.stringify({
-              applicantEmail: applicantEmail,
+              to: applicantEmail,
+              subject: emailContent.subject,
+              title: emailContent.title,
+              message: emailContent.message,
+              submissionTitle: selectedRecord.title,
+              submissionCategory: selectedRecord.category,
               applicantName: applicantName,
-              recordTitle: selectedRecord.title,
-              referenceNumber: selectedRecord.reference_number,
-              oldStatus: selectedRecord.status,
-              newStatus: newStatus,
-              currentStage: currentStage,
-              remarks: evaluationForm.remarks,
-              actorName: profile.full_name,
-              actorRole: 'Evaluator',
             }),
           });
 
@@ -330,9 +352,10 @@ export function EvaluatorDashboard() {
             });
           } else {
             const result = await response.json();
-            console.log('[EvaluatorDashboard] Status notification email sent successfully', {
+            console.log('[EvaluatorDashboard] Email sent successfully:', {
               to: applicantEmail,
-              emailId: result.data?.emailId,
+              status: newStatus,
+              subject: emailContent.subject,
             });
           }
         } catch (emailError) {

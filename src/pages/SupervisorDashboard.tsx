@@ -331,24 +331,51 @@ export function SupervisorDashboard() {
       if (applicantEmail) {
         try {
           console.log(`[SupervisorDashboard] Sending email notification to ${applicantEmail}`);
-          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-status-notification`, {
+          
+          // Define status-specific email content
+          const statusEmailContent: Record<string, { subject: string; title: string; message: string }> = {
+            supervisor_approved: {
+              subject: '✓ Supervisor Approved Your Submission',
+              title: 'Supervisor Approved Your Submission',
+              message: `Great news! Your submission "${selectedRecord.title}" has been approved by the supervisor and is now in the evaluation stage. Your submission will be evaluated by our technical expert team shortly.`,
+            },
+            supervisor_revision: {
+              subject: '🔄 Revision Requested by Supervisor',
+              title: 'Revision Requested',
+              message: `The supervisor has reviewed your submission "${selectedRecord.title}" and requested revisions. Please review the comments below and resubmit your updated work.`,
+            },
+            rejected: {
+              subject: '✗ Submission Decision',
+              title: 'Submission Decision',
+              message: `After careful review, your submission "${selectedRecord.title}" has been declined. Please review the comments for more information and contact us if you have questions.`,
+            },
+            waiting_evaluation: {
+              subject: '📋 Submission In Evaluation',
+              title: 'Submission In Evaluation',
+              message: `Your submission "${selectedRecord.title}" is now being evaluated by our technical expert team. We will notify you once the evaluation is complete.`,
+            },
+          };
+          
+          const emailContent = statusEmailContent[newStatus] || {
+            subject: `Status Update: ${currentStage}`,
+            title: currentStage,
+            message: `Your submission status has been updated to: ${currentStage}`,
+          };
+
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
               'Content-Type': 'application/json',
-              'Accept': 'application/json',
             },
             body: JSON.stringify({
-              applicantEmail: applicantEmail,
+              to: applicantEmail,
+              subject: emailContent.subject,
+              title: emailContent.title,
+              message: emailContent.message,
+              submissionTitle: selectedRecord.title,
+              submissionCategory: selectedRecord.category,
               applicantName: applicantName,
-              recordTitle: selectedRecord.title,
-              referenceNumber: selectedRecord.reference_number,
-              oldStatus: selectedRecord.status,
-              newStatus: newStatus,
-              currentStage: currentStage,
-              remarks: remarks,
-              actorName: profile.full_name,
-              actorRole: 'Supervisor',
             }),
           });
 
@@ -361,9 +388,10 @@ export function SupervisorDashboard() {
             });
           } else {
             const result = await response.json();
-            console.log('[SupervisorDashboard] Status notification email sent successfully', {
+            console.log('[SupervisorDashboard] Email sent successfully:', {
               to: applicantEmail,
-              emailId: result.data?.emailId,
+              status: newStatus,
+              subject: emailContent.subject,
             });
           }
         } catch (emailError) {
