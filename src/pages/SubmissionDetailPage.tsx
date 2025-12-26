@@ -22,7 +22,6 @@ import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
 import { CompletionButton } from '../components/CompletionButton';
 import { CertificateManager } from '../components/CertificateManager';
-import { DocumentGenerator } from '../components/DocumentGenerator';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -649,12 +648,6 @@ export function SubmissionDetailPage() {
         applicantEmail={record.applicant?.email || ''}
         coCreators={(record.details as any)?.coCreators}
         evaluationScore={(record.details as any)?.evaluationScore}
-      />
-
-      <DocumentGenerator
-        recordId={record.id}
-        record={record}
-        userRole={profile?.role || 'viewer'}
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
