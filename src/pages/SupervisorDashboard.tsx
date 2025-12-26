@@ -228,6 +228,36 @@ export function SupervisorDashboard() {
           payload: { ip_record_id: selectedRecord.id },
         });
 
+        // Send email notification to evaluator
+        const { data: evaluatorData } = await supabase
+          .from('users')
+          .select('email, full_name')
+          .eq('id', evaluatorId)
+          .single();
+
+        if (evaluatorData?.email) {
+          try {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                to: evaluatorData.email,
+                subject: 'New IP Submission Assigned for Evaluation',
+                title: 'New IP Submission Assigned',
+                message: `A ${selectedRecord.category} intellectual property submission has been approved by supervisor and assigned to you for evaluation.`,
+                submissionTitle: selectedRecord.title,
+                submissionCategory: selectedRecord.category,
+                applicantName: selectedRecord.applicant_name || 'Unknown',
+              }),
+            });
+          } catch (emailError) {
+            console.error('Error sending evaluator email:', emailError);
+          }
+        }
+
         // Track the assignment
         await supabase.from('activity_logs').insert({
           user_id: profile.id,
