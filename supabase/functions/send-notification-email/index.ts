@@ -20,8 +20,14 @@ interface EmailRequest {
 
 function generateHtmlFromMessage(title: string, message: string, additionalInfo?: Record<string, string>): string {
   const detailsHtml = additionalInfo ? Object.entries(additionalInfo)
-    .filter(([, value]) => value)
-    .map(([key, value]) => `<p style="margin: 12px 0; color: #4b5563;"><strong>${key}:</strong> ${value}</p>`)
+    .filter(([, value]) => value && value !== 'Unknown')
+    .map(([key, value]) => `
+      <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+          <strong style="color: #374151;">${key}:</strong> <span style="color: #4b5563;">${value}</span>
+        </td>
+      </tr>
+    `)
     .join('') : '';
 
   return `
@@ -32,21 +38,41 @@ function generateHtmlFromMessage(title: string, message: string, additionalInfo?
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa;">
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">UCC IP Office</h1>
-        <p style="color: #e0e7ff; margin: 8px 0 0 0; font-size: 14px;">Intellectual Property Management System</p>
+    <!-- Header with gradient -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; border-radius: 8px 8px 0 0; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">UCC IP Office</h1>
+      <p style="color: #e0e7ff; margin: 8px 0 0 0; font-size: 14px; font-weight: 500;">Intellectual Property Management System</p>
+    </div>
+
+    <!-- Main content -->
+    <div style="background-color: #ffffff; padding: 40px 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.07);">
+      <h2 style="color: #1f2937; margin: 0 0 8px 0; font-size: 22px; font-weight: 700;">${title}</h2>
+      <p style="color: #7c3aed; margin: 0 0 24px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Submission Assignment Notification</p>
+      
+      <p style="color: #4b5563; margin: 0 0 28px 0; font-size: 15px; line-height: 1.6;">${message}</p>
+
+      ${detailsHtml ? `
+      <div style="background-color: #f9fafb; padding: 20px; border-radius: 6px; margin: 30px 0;">
+        <h3 style="color: #1f2937; margin: 0 0 16px 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Submission Details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tbody>
+            ${detailsHtml}
+          </tbody>
+        </table>
       </div>
-      <div style="padding: 30px;">
-        <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px; font-weight: 600;">${title}</h2>
-        <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 16px; line-height: 1.5;">${message}</p>
-        ${detailsHtml}
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
-          <p style="color: #6b7280; font-size: 12px; margin: 0;">University Intellectual Property Management System</p>
-        </div>
+      ` : ''}
+
+      <div style="margin-top: 32px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
+        <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px 0; font-weight: 500;">University Intellectual Property Management System</p>
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© 2025 University Central. All rights reserved.</p>
       </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+      <p style="margin: 0;">This is an automated message. Please do not reply to this email.</p>
     </div>
   </div>
 </body>
