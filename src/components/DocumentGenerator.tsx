@@ -48,6 +48,8 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
     setGeneratingDoc(true);
     setError('');
     try {
+      console.log('Generating Full Documentation...');
+      
       // First, fetch the latest documents to ensure we have current state
       const { data: latestDocs } = await supabase
         .from('submission_documents')
@@ -58,25 +60,30 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
       const existingDoc = latestDocs?.find(d => d.document_type === 'full_documentation');
       if (existingDoc?.generated_file_path) {
         try {
+          console.log(`Deleting old Full Documentation from storage: ${existingDoc.generated_file_path}`);
           await supabase.storage
             .from('generated-documents')
             .remove([existingDoc.generated_file_path]);
+          console.log('Old Full Documentation deleted from storage');
         } catch (e) {
           console.error('Storage deletion error:', e);
         }
         
         try {
+          console.log(`Deleting old Full Documentation record from database: ${existingDoc.id}`);
           const { error: deleteError } = await supabase
             .from('submission_documents')
             .delete()
             .eq('id', existingDoc.id);
           if (deleteError) throw deleteError;
+          console.log('Old Full Documentation record deleted');
         } catch (e) {
           console.error('Database deletion error:', e);
         }
       }
 
       // Call edge function to generate PDF
+      console.log('Calling generate-documentation edge function...');
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-documentation`,
         {
@@ -93,10 +100,12 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to generate documentation');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate documentation');
       }
 
       const result = await response.json();
+      console.log('Full Documentation generated successfully:', result);
 
       // Save new document record
       const userId = (await supabase.auth.getUser()).data.user?.id;
@@ -114,8 +123,10 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
 
       if (saveError) throw saveError;
 
-      fetchDocuments();
+      console.log('Full Documentation record saved to database');
+      await fetchDocuments();
     } catch (err: any) {
+      console.error('Full Documentation generation error:', err);
       setError(err.message);
     } finally {
       setGeneratingDoc(false);
@@ -126,6 +137,8 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
     setGeneratingDisclosure(true);
     setError('');
     try {
+      console.log('Generating Full Disclosure...');
+      
       // First, fetch the latest documents to ensure we have current state
       const { data: latestDocs } = await supabase
         .from('submission_documents')
@@ -136,24 +149,29 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
       const existingDoc = latestDocs?.find(d => d.document_type === 'full_disclosure');
       if (existingDoc?.generated_file_path) {
         try {
+          console.log(`Deleting old Full Disclosure from storage: ${existingDoc.generated_file_path}`);
           await supabase.storage
             .from('generated-documents')
             .remove([existingDoc.generated_file_path]);
+          console.log('Old Full Disclosure deleted from storage');
         } catch (e) {
           console.error('Storage deletion error:', e);
         }
         
         try {
+          console.log(`Deleting old Full Disclosure record from database: ${existingDoc.id}`);
           const { error: deleteError } = await supabase
             .from('submission_documents')
             .delete()
             .eq('id', existingDoc.id);
           if (deleteError) throw deleteError;
+          console.log('Old Full Disclosure record deleted');
         } catch (e) {
           console.error('Database deletion error:', e);
         }
       }
 
+      console.log('Calling generate-disclosure edge function...');
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-disclosure`,
         {
@@ -169,10 +187,12 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to generate disclosure');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate disclosure');
       }
 
       const result = await response.json();
+      console.log('Full Disclosure generated successfully:', result);
 
       const userId = (await supabase.auth.getUser()).data.user?.id;
       const { error: saveError } = await (supabase
@@ -189,8 +209,10 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
 
       if (saveError) throw saveError;
 
-      fetchDocuments();
+      console.log('Full Disclosure record saved to database');
+      await fetchDocuments();
     } catch (err: any) {
+      console.error('Full Disclosure generation error:', err);
       setError(err.message);
     } finally {
       setGeneratingDisclosure(false);
@@ -201,12 +223,127 @@ export function DocumentGenerator({ recordId }: DocumentGeneratorProps) {
     setRegenerating(true);
     setError('');
     try {
-      // Regenerate both Full Documentation and Full Disclosure
-      await generateFullDocumentation();
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between generations
-      await generateFullDisclosure();
+      console.log('Starting regeneration of all documents...');
+      
+      // Fetch current documents to delete
+      const { data: latestDocs } = await supabase
+        .from('submission_documents')
+        .select('*')
+        .eq('ip_record_id', recordId);
+
+      // Delete both old documents from storage and database
+      for (const doc of (latestDocs || [])) {
+        if (doc.generated_file_path) {
+          try {
+            console.log(`Deleting old document from storage: ${doc.generated_file_path}`);
+            await supabase.storage
+              .from('generated-documents')
+              .remove([doc.generated_file_path]);
+          } catch (e) {
+            console.warn('Storage deletion warning:', e);
+          }
+        }
+
+        try {
+          console.log(`Deleting old document record from database: ${doc.id}`);
+          const { error: deleteError } = await supabase
+            .from('submission_documents')
+            .delete()
+            .eq('id', doc.id);
+          if (deleteError) throw deleteError;
+        } catch (e) {
+          console.warn('Database deletion warning:', e);
+        }
+      }
+
+      console.log('Old documents deleted. Starting generation of Full Documentation...');
+      
+      // Generate Full Documentation
+      const docResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-documentation`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            recordId,
+            documentType: 'full_documentation',
+          }),
+        }
+      );
+
+      if (!docResponse.ok) {
+        throw new Error('Failed to generate Full Documentation');
+      }
+
+      const docResult = await docResponse.json();
+      console.log('Full Documentation generated successfully');
+
+      // Save Full Documentation record
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      const { error: docSaveError } = await (supabase
+        .from('submission_documents') as any)
+        .insert([{
+          ip_record_id: recordId,
+          document_type: 'full_documentation',
+          status: 'completed',
+          generated_file_path: docResult.filePath,
+          generated_at: new Date().toISOString(),
+          completed_by: userId || null,
+          completed_at: new Date().toISOString(),
+        }]);
+
+      if (docSaveError) throw docSaveError;
+
+      // Wait 1 second between generations
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      console.log('Starting generation of Full Disclosure...');
+
+      // Generate Full Disclosure
+      const discResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-disclosure`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            recordId,
+          }),
+        }
+      );
+
+      if (!discResponse.ok) {
+        throw new Error('Failed to generate Full Disclosure');
+      }
+
+      const discResult = await discResponse.json();
+      console.log('Full Disclosure generated successfully');
+
+      // Save Full Disclosure record
+      const { error: discSaveError } = await (supabase
+        .from('submission_documents') as any)
+        .insert([{
+          ip_record_id: recordId,
+          document_type: 'full_disclosure',
+          status: 'completed',
+          generated_file_path: discResult.filePath,
+          generated_at: new Date().toISOString(),
+          completed_by: userId || null,
+          completed_at: new Date().toISOString(),
+        }]);
+
+      if (discSaveError) throw discSaveError;
+
+      console.log('All documents regenerated successfully');
+      await fetchDocuments();
     } catch (err: any) {
-      setError(err.message);
+      console.error('Regeneration error:', err);
+      setError(err.message || 'Failed to regenerate documents');
     } finally {
       setRegenerating(false);
     }
