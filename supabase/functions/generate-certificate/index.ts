@@ -506,7 +506,7 @@ async function generateCertificatePDF(
   const abstractMaxWidth = contentWidth - 50;
   
   page.drawText("Abstract:", { x: abstractX, y: yPosition, size: 9, color: accentColor });
-  yPosition = moveDown(yPosition, 50);
+  yPosition = moveDown(yPosition, 14);
   
   page.drawText(abstractText, { 
     x: abstractX, 
