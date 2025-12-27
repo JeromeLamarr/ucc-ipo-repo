@@ -617,9 +617,9 @@ async function generateCertificatePDF(
   const sigLineY = yPosition;
 
   // Align signature blocks with content margins
-  const sig1X = margin + 25;
+  const sig1X = margin + 20;
   const sig2X = margin + contentWidth / 3;
-  const sig3X = margin + contentWidth * 2 / 3 - 25;
+  const sig3X = margin + contentWidth * 2 / 3 - 20;
 
   // Signature lines
   page.drawLine({ start: { x: sig1X, y: sigLineY }, end: { x: sig1X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
@@ -627,9 +627,9 @@ async function generateCertificatePDF(
   page.drawLine({ start: { x: sig3X, y: sigLineY }, end: { x: sig3X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
 
   // Signature titles
-  page.drawText("Director", { x: sig1X + 55, y: sigLineY - 13, size: 8, color: darkColor });
-  page.drawText("Dean", { x: sig2X + 60, y: sigLineY - 13, size: 8, color: darkColor });
-  page.drawText("President", { x: sig3X + 45, y: sigLineY - 13, size: 8, color: darkColor });
+  page.drawText("Director", { x: sig1X + 53, y: sigLineY - 13, size: 8, color: darkColor });
+  page.drawText("Dean", { x: sig2X + 58, y: sigLineY - 13, size: 8, color: darkColor });
+  page.drawText("President", { x: sig3X + 50, y: sigLineY - 13, size: 8, color: darkColor });
 
   yPosition = moveDown(yPosition, 20);
 
