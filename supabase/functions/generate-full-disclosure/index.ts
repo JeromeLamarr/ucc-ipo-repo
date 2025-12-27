@@ -251,7 +251,7 @@ async function generateFullDisclosurePDF(
   yPosition = moveDown(yPosition, 40);
 
   // TITLE
-  const titleBoxY = yPosition - 20;
+  const titleBoxY = yPosition - 30;
   page.drawRectangle({
     x: margin + 10,
     y: titleBoxY,
