@@ -421,14 +421,14 @@ async function generateCertificatePDF(
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
-    y: yPosition - 8,
+    y: yPosition - 13,
     size: fontSize,
     color: accentColor,
   });
 
   page.drawText(line2, {
     x: boxCenterX - approxCharWidth2,
-    y: yPosition - 23,
+    y: yPosition - 28,
     size: fontSize,
     color: accentColor,
   });
@@ -486,7 +486,7 @@ async function generateCertificatePDF(
 
   // Center IP title text in box
   const ipTitle = `"${ipRecord.title}"`;
-  const ipTitleFontSize = 12;
+  const ipTitleFontSize = 16;
   // Estimate text width (Helvetica: ~5pt per character at size 12)
   const ipTitleCharWidth = (ipTitle.length * 5.0) / 2;
 
