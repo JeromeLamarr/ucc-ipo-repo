@@ -47,12 +47,28 @@ export function DisclosureVerifyPage() {
           return;
         }
 
-        // Fetch disclosure by tracking ID
-        const { data: discData, error: discError } = await supabase
+        // Fetch disclosure by tracking ID first
+        let { data: discData, error: discError } = await supabase
           .from('full_disclosures')
           .select('*')
           .eq('tracking_id', trackingId)
           .maybeSingle();
+
+        // If not found by tracking_id, try by ip_record_id (for legacy disclosures)
+        if (discError || !discData) {
+          const { data: legacyDiscData, error: legacyError } = await supabase
+            .from('full_disclosures')
+            .select('*')
+            .eq('ip_record_id', trackingId)
+            .maybeSingle();
+          
+          if (!legacyError && legacyDiscData) {
+            discData = legacyDiscData;
+            discError = null;
+          } else {
+            discError = legacyError;
+          }
+        }
 
         if (discError || !discData) {
           setError('Disclosure document not found. This may be an invalid or forged document.');
