@@ -55,44 +55,58 @@ export function CertificateVerifyPage() {
           .eq('certificate_number', trackingId)
           .maybeSingle();
 
-        if (certError || !certData) {
-          setError('Certificate not found. This may be an invalid or forged certificate.');
+        if (!certError && certData) {
+          // Found a certificate
+          setCertificate(certData);
+
+          // Fetch IP record
+          const { data: ipData, error: ipError } = await supabase
+            .from('ip_records')
+            .select('*')
+            .eq('id', certData.ip_record_id)
+            .maybeSingle();
+
+          if (ipError || !ipData) {
+            setError('IP record not found');
+            setLoading(false);
+            return;
+          }
+
+          setIpRecord(ipData);
+
+          // Fetch creator details
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('full_name, email')
+            .eq('id', ipData.applicant_id)
+            .maybeSingle();
+
+          if (userError || !userData) {
+            setError('Creator information not found');
+            setLoading(false);
+            return;
+          }
+
+          setCreator(userData);
+          setIsAuthentic(true);
           setLoading(false);
           return;
         }
 
-        setCertificate(certData);
-
-        // Fetch IP record
-        const { data: ipData, error: ipError } = await supabase
-          .from('ip_records')
+        // Certificate not found, check if it's a disclosure by IP record ID (legacy support)
+        const { data: discData, error: discError } = await supabase
+          .from('full_disclosures')
           .select('*')
-          .eq('id', certData.ip_record_id)
+          .eq('ip_record_id', trackingId)
           .maybeSingle();
 
-        if (ipError || !ipData) {
-          setError('IP record not found');
-          setLoading(false);
+        if (!discError && discData) {
+          // Redirect to disclosure verify page
+          window.location.href = `/verify-disclosure/${discData.tracking_id || trackingId}`;
           return;
         }
 
-        setIpRecord(ipData);
-
-        // Fetch creator details
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('full_name, email')
-          .eq('id', ipData.applicant_id)
-          .maybeSingle();
-
-        if (userError || !userData) {
-          setError('Creator information not found');
-          setLoading(false);
-          return;
-        }
-
-        setCreator(userData);
-        setIsAuthentic(true);
+        setError('Certificate not found. This may be an invalid or forged certificate.');
         setLoading(false);
       } catch (err) {
         setError(`Verification error: ${err instanceof Error ? err.message : 'Unknown error'}`);
