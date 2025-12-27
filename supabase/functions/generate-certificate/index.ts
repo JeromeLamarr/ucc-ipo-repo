@@ -619,7 +619,7 @@ async function generateCertificatePDF(
   // Align signature blocks with content margins
   const sig1X = margin + 20;
   const sig2X = margin + contentWidth / 3;
-  const sig3X = margin + contentWidth * 2 / 3 - 20;
+  const sig3X = margin + contentWidth * 2 / 3 - 10;
 
   // Signature lines
   page.drawLine({ start: { x: sig1X, y: sigLineY }, end: { x: sig1X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
