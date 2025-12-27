@@ -417,7 +417,7 @@ async function generateCertificatePDF(
   const boxX = margin + 5;
   const boxWidth = contentWidth - 30;
   const boxCenterX = boxX + boxWidth / 2;
-  const fontSize = 12;
+  const fontSize = 14;
   const line1 = "CERTIFICATE OF INTELLECTUAL";
   const line2 = "PROPERTY REGISTRATION";
   
