@@ -4,9 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 
 // Create a public Supabase client for disclosure verification
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Using hardcoded values for deployment compatibility
+const SUPABASE_URL = 'https://mqfftubqlwiemtxpagps.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmZ0dWJxbHdpZW10eHBhZ3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMTM4NTksImV4cCI6MjA3ODc4OTg1OX0.Rii5NfSVySQKsd3-u2qyCGRAIqS8AreBfXQAFJ3sbhE';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 interface Disclosure {
   id: string;
