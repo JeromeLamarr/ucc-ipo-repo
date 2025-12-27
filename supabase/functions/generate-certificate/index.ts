@@ -623,9 +623,9 @@ async function generateCertificatePDF(
   page.drawLine({ start: { x: sig3X, y: sigLineY }, end: { x: sig3X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
 
   // Signature titles
-  page.drawText("Director", { x: sig1X + 40, y: sigLineY - 13, size: 8, color: darkColor });
-  page.drawText("Dean", { x: sig2X + 45, y: sigLineY - 13, size: 8, color: darkColor });
-  page.drawText("President", { x: sig3X + 35, y: sigLineY - 13, size: 8, color: darkColor });
+  page.drawText("Director", { x: sig1X + 40, y: sigLineY - 15, size: 8, color: darkColor });
+  page.drawText("Dean", { x: sig2X + 45, y: sigLineY - 15, size: 8, color: darkColor });
+  page.drawText("President", { x: sig3X + 35, y: sigLineY - 15, size: 8, color: darkColor });
 
   yPosition = moveDown(yPosition, 20);
 
