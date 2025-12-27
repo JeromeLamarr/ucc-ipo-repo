@@ -273,14 +273,14 @@ async function generateFullDisclosurePDF(
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
-    y: yPosition - 1,
+    y: yPosition - 0,
     size: 11,
     color: accentColor,
   });
 
   page.drawText(line2, {
     x: boxCenterX - approxCharWidth2,
-    y: yPosition - 10,
+    y: yPosition - 12,
     size: 11,
     color: accentColor,
   });
