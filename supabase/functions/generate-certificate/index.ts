@@ -503,7 +503,7 @@ async function generateCertificatePDF(
   // ============================================================
   const abstractText = ipRecord.abstract || "No abstract provided.";
   const abstractX = margin + 35;
-  const abstractMaxWidth = contentWidth - 50;
+  const abstractMaxWidth = contentWidth - 100;
   
   page.drawText("Abstract:", { x: abstractX, y: yPosition, size: 9, color: accentColor });
   yPosition = moveDown(yPosition, 14);
@@ -516,7 +516,7 @@ async function generateCertificatePDF(
     maxWidth: abstractMaxWidth,
     lineHeight: 14
   });
-  yPosition = moveDown(yPosition, 48);
+  yPosition = moveDown(yPosition, 20);
 
   // ============================================================
   // DETAILS TABLE - STYLED BOX
