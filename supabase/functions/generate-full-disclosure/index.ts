@@ -316,14 +316,14 @@ async function generateFullDisclosurePDF(
   yPosition = moveDown(yPosition, 12);
   page.drawText(`Registration Date: ${formatDate(ipRecord.created_at)}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
 
-  yPosition = moveDown(yPosition, 20);
+  yPosition = moveDown(yPosition, 25);
 
   // Abstract
   if (ipRecord.abstract) {
     page.drawText("ABSTRACT", { x: margin + 25, y: yPosition, size: 10, color: accentColor, fontStyle: "bold" });
     yPosition = moveDown(yPosition, 14);
     page.drawText(ipRecord.abstract, { x: margin + 25, y: yPosition, size: 8, color: darkColor, maxWidth: contentWidth - 200, lineHeight: 12 });
-    yPosition = moveDown(yPosition, 98);
+    yPosition = moveDown(yPosition, 78);
   }
 
   // Evaluations
