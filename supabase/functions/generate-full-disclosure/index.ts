@@ -322,8 +322,8 @@ async function generateFullDisclosurePDF(
   if (ipRecord.abstract) {
     page.drawText("ABSTRACT", { x: margin + 25, y: yPosition, size: 10, color: accentColor, fontStyle: "bold" });
     yPosition = moveDown(yPosition, 14);
-    page.drawText(ipRecord.abstract, { x: margin + 25, y: yPosition, size: 8, color: darkColor, maxWidth: contentWidth - 200, lineHeight: 15 });
-    yPosition = moveDown(yPosition, 68);
+    page.drawText(ipRecord.abstract, { x: margin + 25, y: yPosition, size: 8, color: darkColor, maxWidth: contentWidth - 200, lineHeight: 12 });
+    yPosition = moveDown(yPosition, 98);
   }
 
   // Evaluations
