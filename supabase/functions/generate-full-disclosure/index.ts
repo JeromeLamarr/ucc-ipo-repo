@@ -253,7 +253,7 @@ async function generateFullDisclosurePDF(
   // TITLE
   const titleBoxY = yPosition - 20;
   page.drawRectangle({
-    x: margin + 15,
+    x: margin + 10,
     y: titleBoxY,
     width: contentWidth - 30,
     height: 48,
@@ -273,14 +273,14 @@ async function generateFullDisclosurePDF(
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
-    y: yPosition - 8,
+    y: yPosition - 3,
     size: 11,
     color: accentColor,
   });
 
   page.drawText(line2, {
     x: boxCenterX - approxCharWidth2,
-    y: yPosition - 23,
+    y: yPosition - 18,
     size: 11,
     color: accentColor,
   });
