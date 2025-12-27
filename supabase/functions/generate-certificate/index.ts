@@ -416,19 +416,19 @@ async function generateCertificatePDF(
   const line2 = "PROPERTY REGISTRATION";
   
   // Estimate text width (Helvetica: ~4.2pt per character at size 14)
-  const approxCharWidth1 = (line1.length * 7.4) / 2;
-  const approxCharWidth2 = (line2.length * 7.8) / 2;
+  const approxCharWidth1 = (line1.length * 8.4) / 2;
+  const approxCharWidth2 = (line2.length * 8.8) / 2;
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
-    y: yPosition - 13,
+    y: yPosition - 8,
     size: fontSize,
     color: accentColor,
   });
 
   page.drawText(line2, {
     x: boxCenterX - approxCharWidth2,
-    y: yPosition - 28,
+    y: yPosition - 23,
     size: fontSize,
     color: accentColor,
   });
