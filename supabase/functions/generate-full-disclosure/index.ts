@@ -295,7 +295,7 @@ async function generateFullDisclosurePDF(
   yPosition = moveDown(yPosition, 14);
 
   page.drawText("INTELLECTUAL PROPERTY OFFICE", { x: headerX, y: yPosition, size: 11, color: darkColor });
-  yPosition = moveDown(yPosition, 40);
+  yPosition = moveDown(yPosition, 60);
 
   // TITLE
   const titleBoxY = yPosition - 25;
