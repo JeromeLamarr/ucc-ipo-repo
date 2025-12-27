@@ -262,7 +262,7 @@ async function generateFullDisclosurePDF(
     borderWidth: 3,
   });
 
-  const boxX = margin + 5;
+  const boxX = margin + 10;
   const boxWidth = contentWidth - 30;
   const boxCenterX = boxX + boxWidth / 2;
   const line1 = "INTELLECTUAL PROPERTY";
@@ -273,14 +273,14 @@ async function generateFullDisclosurePDF(
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
-    y: yPosition - 3,
+    y: yPosition - 1,
     size: 11,
     color: accentColor,
   });
 
   page.drawText(line2, {
     x: boxCenterX - approxCharWidth2,
-    y: yPosition - 18,
+    y: yPosition - 10,
     size: 11,
     color: accentColor,
   });
