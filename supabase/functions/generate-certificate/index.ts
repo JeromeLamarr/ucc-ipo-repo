@@ -516,7 +516,7 @@ async function generateCertificatePDF(
     maxWidth: abstractMaxWidth,
     lineHeight: 14
   });
-  yPosition = moveDown(yPosition, 20);
+  yPosition = moveDown(yPosition, 80);
 
   // ============================================================
   // DETAILS TABLE - STYLED BOX
