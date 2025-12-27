@@ -604,7 +604,7 @@ async function generateCertificatePDF(
     maxWidth: contentWidth - 96,
   });
   
-  yPosition = moveDown(yPosition, spaceAfterMainText);
+  yPosition = moveDown(yPosition, 14);
 
   // ============================================================
   // SIGNATURE BLOCK
