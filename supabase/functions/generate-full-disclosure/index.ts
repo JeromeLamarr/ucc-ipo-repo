@@ -463,7 +463,7 @@ async function generateFullDisclosurePDF(
   try {
     const siteUrl = Deno.env.get("SITE_URL") || "https://ucc-ipo.com";
     const cleanUrl = siteUrl.replace(/\/$/, '').replace(/^https?:\/\//, 'https://');
-    const verificationUrl = `${cleanUrl}/verify/${trackingId}`;
+    const verificationUrl = `${cleanUrl}/verify-disclosure/${trackingId}`;
     
     const qrCodeDataUrl = await generateQRCodeImage(verificationUrl);
     const qrBytes = dataUrlToUint8Array(qrCodeDataUrl);
@@ -479,7 +479,7 @@ async function generateFullDisclosurePDF(
       height: qrSize,
     });
 
-    page.drawText("Verify Record", {
+    page.drawText("Verify Disclosure", {
       x: qrX - 2,
       y: qrY - 11,
       size: 6.5,
@@ -500,7 +500,7 @@ async function generateFullDisclosurePDF(
 
   const issuedDate = formatDate(new Date().toISOString());
   page.drawText(
-    `Document Issued: ${issuedDate} | Verify at: https://ucc-ipo.com/verify/${trackingId}`,
+    `Document Generated: ${issuedDate} | Verify at: https://ucc-ipo.com/verify-disclosure/${trackingId}`,
     {
       x: margin + 25,
       y: margin + 2,
