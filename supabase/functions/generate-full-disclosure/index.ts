@@ -575,7 +575,11 @@ Deno.serve(async (req: Request) => {
       console.warn("Evaluations fetch warning:", evalError);
     }
 
-    const trackingId = record.tracking_id || record.id;
+    const trackingId = record.tracking_id || (() => {
+      // Generate tracking ID in the same format as certificates
+      const year = new Date(record.created_at).getFullYear();
+      return `UCC-${year}-${String(record.id).substring(0, 5).toUpperCase()}`;
+    })();
     const creator = record.applicant || { id: record.applicant_id, full_name: "Unknown", email: "" };
     const supervisor = record.supervisor || null;
 
@@ -634,6 +638,8 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log("[Full Disclosure] PDF generated successfully");
+    console.log(`[Full Disclosure] Tracking ID: ${trackingId}`);
+    console.log(`[Full Disclosure] Verify URL: /verify-disclosure/${trackingId}`);
     return new Response(
       JSON.stringify({
         success: true,
