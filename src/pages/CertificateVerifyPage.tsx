@@ -17,6 +17,14 @@ interface Certificate {
   ip_record_id: string;
 }
 
+interface Disclosure {
+  id: string;
+  tracking_id: string;
+  pdf_url: string;
+  generated_at: string;
+  ip_record_id: string;
+}
+
 interface IPRecord {
   id: string;
   title: string;
@@ -35,9 +43,11 @@ export function CertificateVerifyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
+  const [disclosure, setDisclosure] = useState<Disclosure | null>(null);
   const [ipRecord, setIpRecord] = useState<IPRecord | null>(null);
   const [creator, setCreator] = useState<Creator | null>(null);
   const [isAuthentic, setIsAuthentic] = useState(false);
+  const [documentType, setDocumentType] = useState<'certificate' | 'disclosure' | null>(null);
 
   useEffect(() => {
     const verifyCertificate = async () => {
@@ -48,26 +58,43 @@ export function CertificateVerifyPage() {
           return;
         }
 
-        // Fetch certificate by tracking ID
+        // First try to fetch certificate by tracking ID
         const { data: certData, error: certError } = await supabase
           .from('certificates')
           .select('*')
           .eq('certificate_number', trackingId)
           .maybeSingle();
 
-        if (certError || !certData) {
-          setError('Certificate not found. This may be an invalid or forged certificate.');
-          setLoading(false);
-          return;
-        }
+        let recordIpId: string | null = null;
+        
+        if (!certError && certData) {
+          setCertificate(certData);
+          setDocumentType('certificate');
+          recordIpId = certData.ip_record_id;
+        } else {
+          // If certificate not found, try to fetch disclosure
+          const { data: discData, error: discError } = await supabase
+            .from('full_disclosures')
+            .select('*')
+            .eq('tracking_id', trackingId)
+            .maybeSingle();
 
-        setCertificate(certData);
+          if (!discError && discData) {
+            setDisclosure(discData);
+            setDocumentType('disclosure');
+            recordIpId = discData.ip_record_id;
+          } else {
+            setError('Certificate or Disclosure not found. This may be an invalid or forged document.');
+            setLoading(false);
+            return;
+          }
+        }
 
         // Fetch IP record
         const { data: ipData, error: ipError } = await supabase
           .from('ip_records')
           .select('*')
-          .eq('id', certData.ip_record_id)
+          .eq('id', recordIpId)
           .maybeSingle();
 
         if (ipError || !ipData) {
@@ -108,7 +135,7 @@ export function CertificateVerifyPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
           <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-700 font-semibold">Verifying Certificate...</p>
+          <p className="text-gray-700 font-semibold">Verifying Document...</p>
         </div>
       </div>
     );
@@ -128,15 +155,15 @@ export function CertificateVerifyPage() {
               <>
                 <CheckCircle className="w-16 h-16 text-green-600" />
                 <div>
-                  <h1 className="text-3xl font-bold text-green-700">Certificate Verified</h1>
-                  <p className="text-green-600">This is an authentic UCC IP certificate</p>
+                  <h1 className="text-3xl font-bold text-green-700">{documentType === 'certificate' ? 'Certificate' : 'Disclosure'} Verified</h1>
+                  <p className="text-green-600">This is an authentic UCC IP {documentType === 'certificate' ? 'certificate' : 'disclosure document'}</p>
                 </div>
               </>
             ) : (
               <>
                 <AlertCircle className="w-16 h-16 text-red-600" />
                 <div>
-                  <h1 className="text-3xl font-bold text-red-700">Certificate Invalid</h1>
+                  <h1 className="text-3xl font-bold text-red-700">{documentType === 'certificate' ? 'Certificate' : 'Disclosure'} Invalid</h1>
                   <p className="text-red-600">{error}</p>
                 </div>
               </>
@@ -144,13 +171,13 @@ export function CertificateVerifyPage() {
           </div>
         </div>
 
-        {/* Certificate Details */}
-        {isAuthentic && certificate && ipRecord && creator && (
+        {/* Document Details */}
+        {isAuthentic && ipRecord && creator && (
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-8">
-              <h2 className="text-2xl font-bold mb-2">Certificate Details</h2>
-              <p className="text-blue-100">Verification Reference: {certificate.certificate_number}</p>
+              <h2 className="text-2xl font-bold mb-2">{documentType === 'certificate' ? 'Certificate' : 'Disclosure'} Details</h2>
+              <p className="text-blue-100">Verification Reference: {certificate?.certificate_number || disclosure?.tracking_id}</p>
             </div>
 
             {/* Content */}
@@ -197,21 +224,21 @@ export function CertificateVerifyPage() {
                 </div>
               </section>
 
-              {/* Certificate Information */}
+              {/* Certificate/Disclosure Information */}
               <section>
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
                   <span className="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm font-semibold">3</span>
-                  Certificate Information
+                  {documentType === 'certificate' ? 'Certificate' : 'Disclosure'} Information
                 </h3>
                 <div className="bg-gray-50 rounded-lg p-6 space-y-4">
                   <div>
-                    <label className="text-sm font-semibold text-gray-600">Certificate Number</label>
-                    <p className="text-gray-900 font-medium mt-1 font-mono">{certificate.certificate_number}</p>
+                    <label className="text-sm font-semibold text-gray-600">{documentType === 'certificate' ? 'Certificate Number' : 'Tracking ID'}</label>
+                    <p className="text-gray-900 font-medium mt-1 font-mono">{certificate?.certificate_number || disclosure?.tracking_id}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-600">Issued Date</label>
+                    <label className="text-sm font-semibold text-gray-600">{documentType === 'certificate' ? 'Issued' : 'Generated'} Date</label>
                     <p className="text-gray-900 font-medium mt-1">
-                      {new Date(certificate.created_at).toLocaleDateString('en-US', {
+                      {new Date(certificate?.created_at || disclosure?.generated_at || '').toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
@@ -234,12 +261,12 @@ export function CertificateVerifyPage() {
               {/* Action Button */}
               <div className="pt-6">
                 <a
-                  href={certificate.pdf_url}
+                  href={certificate?.pdf_url || disclosure?.pdf_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 px-6 rounded-lg hover:shadow-lg transition text-center"
                 >
-                  View Full Certificate
+                  View Full {documentType === 'certificate' ? 'Certificate' : 'Disclosure Document'}
                 </a>
               </div>
             </div>

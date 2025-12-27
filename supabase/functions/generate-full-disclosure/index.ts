@@ -579,6 +579,14 @@ Deno.serve(async (req: Request) => {
     const creator = record.applicant || { id: record.applicant_id, full_name: "Unknown", email: "" };
     const supervisor = record.supervisor || null;
 
+    // Ensure tracking ID is set on the IP record
+    if (!record.tracking_id) {
+      await supabase
+        .from("ip_records")
+        .update({ tracking_id: trackingId })
+        .eq("id", record_id);
+    }
+
     // Generate PDF
     console.log("[Full Disclosure] Generating PDF...");
     const pdfBytes = await generateFullDisclosurePDF(
@@ -590,7 +598,7 @@ Deno.serve(async (req: Request) => {
     );
 
     // Store in Supabase Storage
-    const fileName = `disclosure_${record_id}_${Date.now()}.pdf`;
+    const fileName = `disclosure_${trackingId}_${Date.now()}.pdf`;
     const { data: storageData, error: storageError } = await supabase.storage
       .from("disclosures")
       .upload(fileName, pdfBytes, {
@@ -605,11 +613,12 @@ Deno.serve(async (req: Request) => {
 
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/disclosures/${fileName}`;
 
-    // Store disclosure record in database
+    // Store disclosure record in database with tracking ID
     const { data: disclosureRecord, error: dbError } = await supabase
       .from("full_disclosures")
       .insert({
         ip_record_id: record_id,
+        tracking_id: trackingId,
         generated_by: user_id,
         pdf_url: publicUrl,
         file_path: fileName,
