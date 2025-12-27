@@ -618,6 +618,35 @@ Deno.serve(async (req: Request) => {
 
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/disclosures/${fileName}`;
 
+    // Delete old disclosures for this IP record (keep only the latest)
+    const { data: oldDisclosures, error: fetchError } = await supabase
+      .from("full_disclosures")
+      .select("id, file_path")
+      .eq("ip_record_id", record_id);
+
+    if (!fetchError && oldDisclosures && oldDisclosures.length > 0) {
+      // Delete old files from storage
+      for (const oldDisc of oldDisclosures) {
+        try {
+          await supabase.storage
+            .from("disclosures")
+            .remove([oldDisc.file_path]);
+        } catch (err) {
+          console.warn("Could not delete old file:", oldDisc.file_path, err);
+        }
+      }
+
+      // Delete old database records
+      const { error: deleteError } = await supabase
+        .from("full_disclosures")
+        .delete()
+        .eq("ip_record_id", record_id);
+
+      if (deleteError) {
+        console.warn("Could not delete old disclosure records:", deleteError);
+      }
+    }
+
     // Store disclosure record in database with tracking ID
     const { data: disclosureRecord, error: dbError } = await supabase
       .from("full_disclosures")
