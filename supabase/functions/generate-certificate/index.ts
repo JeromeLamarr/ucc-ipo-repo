@@ -6,21 +6,6 @@ import { StandardFonts } from "pdf-lib";
 
 const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-page.drawText(line1, {
-  x: boxCenterX - approxCharWidth1,
-  y: titleBoxY + 22,
-  size: fontSize,
-  font: boldFont,   // ← THIS makes it bold
-  color: textColor,
-});
-
-page.drawText(line2, {
-  x: boxCenterX - approxCharWidth2,
-  y: titleBoxY + 8,
-  size: fontSize,
-  font: boldFont,   // ← THIS makes it bold
-  color: textColor,
-});
 
 
 const corsHeaders = {
@@ -251,6 +236,7 @@ async function generateCertificatePDF(
   page.drawLine({ start: { x: width - borderX - 10, y: borderY + 10 }, end: { x: width - borderX - 10 - cornerSize, y: borderY + 10 }, thickness: cornerThickness, color: cornerColor });
   page.drawLine({ start: { x: width - borderX - 10, y: borderY + 10 }, end: { x: width - borderX - 10, y: borderY + 10 + cornerSize }, thickness: cornerThickness, color: cornerColor });
 
+  
   // ============================================================
   // MAIN BORDER
   // ============================================================
