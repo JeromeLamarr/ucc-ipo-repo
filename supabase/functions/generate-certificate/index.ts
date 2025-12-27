@@ -497,7 +497,7 @@ async function generateCertificatePDF(
     color: accentColor,
   });
 
-  yPosition = moveDown(yPosition, spaceAfterMainText);
+  yPosition = moveDown(yPosition, 30);
   // ============================================================
   // ABSTRACT SECTION
   // ============================================================
@@ -514,7 +514,7 @@ async function generateCertificatePDF(
     size: 7.5, 
     color: darkColor, 
     maxWidth: abstractMaxWidth,
-    lineHeight: 1.2
+    lineHeight: 14
   });
   yPosition = moveDown(yPosition, 48);
 
