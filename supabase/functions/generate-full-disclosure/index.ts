@@ -323,13 +323,13 @@ async function generateFullDisclosurePDF(
     page.drawText("ABSTRACT", { x: margin + 25, y: yPosition, size: 10, color: accentColor, fontStyle: "bold" });
     yPosition = moveDown(yPosition, 12);
     page.drawText(ipRecord.abstract, { x: margin + 25, y: yPosition, size: 8, color: darkColor, maxWidth: contentWidth - 50, lineHeight: 1.2 });
-    yPosition = moveDown(yPosition, 18);
+    yPosition = moveDown(yPosition, 24);
   }
 
   // Evaluations
   if (evaluations && evaluations.length > 0) {
     page.drawText("EVALUATION SUMMARY", { x: margin + 25, y: yPosition, size: 10, color: accentColor, fontStyle: "bold" });
-    yPosition = moveDown(yPosition, 14);
+    yPosition = moveDown(yPosition, 12);
 
     for (const evaluation of evaluations) {
       const evaluatorName = evaluation.evaluator?.full_name || "Unknown Evaluator";
