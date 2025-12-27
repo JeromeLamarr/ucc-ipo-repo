@@ -316,7 +316,7 @@ async function generateFullDisclosurePDF(
   yPosition = moveDown(yPosition, 12);
   page.drawText(`Registration Date: ${formatDate(ipRecord.created_at)}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
 
-  yPosition = moveDown(yPosition, 50);
+  yPosition = moveDown(yPosition, 20);
 
   // Abstract
   if (ipRecord.abstract) {
