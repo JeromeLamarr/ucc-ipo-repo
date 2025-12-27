@@ -412,8 +412,8 @@ async function generateCertificatePDF(
   const boxWidth = contentWidth - 30;
   const boxCenterX = boxX + boxWidth / 2;
   const fontSize = 12;
-  const line1 = "CERTIFICATE OF INTELLECTUAL";
-  const line2 = "PROPERTY REGISTRATION";
+  const line1 = "<strong>CERTIFICATE OF INTELLECTUAL</strong>";
+  const line2 = "<strong>PROPERTY REGISTRATION</strong>";
   
   // Estimate text width (Helvetica: ~4.2pt per character at size 14)
   const approxCharWidth1 = (line1.length * 6.3) / 2;
