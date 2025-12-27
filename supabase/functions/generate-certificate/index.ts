@@ -613,7 +613,7 @@ async function generateCertificatePDF(
   // ============================================================
   // SIGNATURE BLOCK
   // ============================================================
-  const sigLineLength = 135;
+  const sigLineLength = 150;
   const sigLineY = yPosition;
 
   // Align signature blocks with content margins
