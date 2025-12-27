@@ -459,26 +459,6 @@ async function generateFullDisclosurePDF(
 
   yPosition = moveDown(yPosition, 60);
 
-  // Issued Date and Verification
-  page.drawRectangle({
-    x: margin,
-    y: margin + 8,
-    width: contentWidth,
-    height: 1.5,
-    color: goldColor,
-  });
-
-  const issuedDate = formatDate(new Date().toISOString());
-  page.drawText(
-    `Document Issued: ${issuedDate} | Reference: ${trackingId}`,
-    {
-      x: margin + 25,
-      y: margin + 2,
-      size: 7,
-      color: accentColor,
-    }
-  );
-
   // QR Code for verification
   try {
     const siteUrl = Deno.env.get("SITE_URL") || "https://ucc-ipo.com";
@@ -508,6 +488,26 @@ async function generateFullDisclosurePDF(
   } catch (error) {
     console.warn("Warning: Could not embed QR code:", error);
   }
+
+  // Issued Date and Verification
+  page.drawRectangle({
+    x: margin,
+    y: margin + 8,
+    width: contentWidth,
+    height: 1.5,
+    color: goldColor,
+  });
+
+  const issuedDate = formatDate(new Date().toISOString());
+  page.drawText(
+    `Document Issued: ${issuedDate} | Verify at: https://ucc-ipo.com/verify/${trackingId}`,
+    {
+      x: margin + 25,
+      y: margin + 2,
+      size: 6.5,
+      color: accentColor,
+    }
+  );
 
   const pdfBytes = await pdfDoc.save();
   return pdfBytes;
