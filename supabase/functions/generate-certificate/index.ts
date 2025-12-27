@@ -421,7 +421,7 @@ async function generateCertificatePDF(
   
   // Estimate text width (Helvetica: ~4.2pt per character at size 14)
   const approxCharWidth1 = (line1.length * 7.7) / 2;
-  const approxCharWidth2 = (line2.length * 7.6) / 2;
+  const approxCharWidth2 = (line2.length * 7.8) / 2;
 
   page.drawText(line1, {
     x: boxCenterX - approxCharWidth1,
