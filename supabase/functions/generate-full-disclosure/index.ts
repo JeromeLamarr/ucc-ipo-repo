@@ -361,7 +361,7 @@ async function generateFullDisclosurePDF(
   page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 150, y: yPosition }, thickness: 1, color: darkColor });
   yPosition = moveDown(yPosition, 8);
   page.drawText("Employee/Applicant Signature & Date", { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  yPosition = moveDown(yPosition, 4);
+  yPosition = moveDown(yPosition, 9);
   page.drawText(creator.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
   yPosition = moveDown(yPosition, 20);
 
@@ -370,7 +370,7 @@ async function generateFullDisclosurePDF(
   yPosition = moveDown(yPosition, 8);
   page.drawText("Supervisor/Advisor Signature & Date", { x: margin + 25, y: yPosition, size: 7, color: darkColor });
   if (supervisor?.full_name) {
-    yPosition = moveDown(yPosition, 4);
+    yPosition = moveDown(yPosition, 9);
     page.drawText(supervisor.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
   }
   yPosition = moveDown(yPosition, 20);
@@ -380,7 +380,7 @@ async function generateFullDisclosurePDF(
   yPosition = moveDown(yPosition, 8);
   page.drawText("Department Head Signature & Date", { x: margin + 25, y: yPosition, size: 7, color: darkColor });
   if (creator.department) {
-    yPosition = moveDown(yPosition, 4);
+    yPosition = moveDown(yPosition, 9);
     page.drawText(`${creator.department} Department`, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
   }
   yPosition = moveDown(yPosition, 20);
