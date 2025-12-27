@@ -1,3 +1,4 @@
+// Version: 2.0.0 - Full disclosure with /verify-disclosure/ tracking
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";

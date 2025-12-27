@@ -74,7 +74,7 @@ export function FullDisclosureManager({
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-full-disclosure`;
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/full-disclosure`;
       const headers = {
         Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json',
