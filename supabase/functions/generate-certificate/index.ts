@@ -2,9 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import QRCode from "npm:qrcode@1.5.3";
-import { StandardFonts } from "pdf-lib";
 
-const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
 
 
@@ -418,11 +416,11 @@ async function generateCertificatePDF(
   const boxWidth = contentWidth - 30;
   const boxCenterX = boxX + boxWidth / 2;
   const fontSize = 14;
-  const line1 = "CERTIFICATE OF INTELLECTUAL";
+  const line1 = "INTERNAL CERTIFICATE OF INTELLECTUAL";
   const line2 = "PROPERTY REGISTRATION";
   
   // Estimate text width (Helvetica: ~4.2pt per character at size 14)
-  const approxCharWidth1 = (line1.length * 6.3) / 2;
+  const approxCharWidth1 = (line1.length * 8.3) / 2;
   const approxCharWidth2 = (line2.length * 6.6) / 2;
 
   page.drawText(line1, {
