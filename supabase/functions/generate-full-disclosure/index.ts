@@ -138,6 +138,7 @@ async function generateFullDisclosurePDF(
   const accentColor = rgb(0.08, 0.32, 0.65);
   const darkColor = rgb(0.1, 0.1, 0.1);
   const lightBgColor = rgb(0.94, 0.96, 1.0);
+  const lightBoxColor = rgb(0.97, 0.99, 1.0);
   const shadowColor = rgb(0.88, 0.88, 0.88);
   const warningColor = rgb(0.92, 0.11, 0.14); // Red for confidential notice
 
@@ -230,24 +231,70 @@ async function generateFullDisclosurePDF(
     console.warn("Watermark setup error:", err);
   }
 
-  // CONFIDENTIAL BANNER
-  const bannerHeight = 25;
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - 5,
-    width: contentWidth,
-    height: bannerHeight,
-    color: warningColor,
-  });
+  // HEADER WITH LOGO
+  let logoEmbedded = false;
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      try {
+        const { data: logoData } = await supabase.storage
+          .from("assets")
+          .download("ucc_logo.png");
 
-  page.drawText("FULL DISCLOSURE RECORD", {
-    x: margin + 10,
-    y: yPosition - 18,
-    size: 11,
-    color: rgb(1, 1, 1),
-    fontStyle: "bold",
-  });
+        if (logoData) {
+          const logoBuffer = await (logoData as any).arrayBuffer();
+          const logoUint8Array = new Uint8Array(logoBuffer);
+          const logoImage = await pdfDoc.embedPng(logoUint8Array);
 
+          page.drawImage(logoImage, {
+            x: margin + 10,
+            y: yPosition - 48,
+            width: 67,
+            height: 67,
+          });
+          logoEmbedded = true;
+        }
+      } catch (err) {
+        console.warn("Could not embed logo:", err);
+      }
+    }
+  } catch (err) {
+    console.warn("Logo setup error:", err);
+  }
+  
+  // Draw fallback if logo not embedded
+  if (!logoEmbedded) {
+    page.drawRectangle({
+      x: margin + 10,
+      y: yPosition - 48,
+      width: 67,
+      height: 67,
+      borderColor: accentColor,
+      borderWidth: 2,
+      color: lightBoxColor,
+    });
+    
+    page.drawText("UCC", {
+      x: margin + 20,
+      y: yPosition - 58,
+      size: 15,
+      color: accentColor,
+    });
+  }
+
+  // Header text (positioned after logo on the left)
+  const headerX = margin + 85;
+  page.drawText("Republic of the Philippines", { x: headerX, y: yPosition, size: 8, color: darkColor });
+  yPosition = moveDown(yPosition, 18);
+
+  page.drawText("UNIVERSITY OF CALOOCAN CITY", { x: headerX, y: yPosition, size: 18, color: accentColor });
+  yPosition = moveDown(yPosition, 14);
+
+  page.drawText("INTELLECTUAL PROPERTY OFFICE", { x: headerX, y: yPosition, size: 11, color: darkColor });
   yPosition = moveDown(yPosition, 40);
 
   // TITLE
