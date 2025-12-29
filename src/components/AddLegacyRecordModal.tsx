@@ -85,23 +85,20 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
 
     setLoading(true);
     try {
-      // Create the IP record
+      // Create the legacy record in the new legacy_ip_records table
       const { data: recordData, error: recordError } = await (
-        (supabase.from('ip_records') as any).insert([
+        (supabase.from('legacy_ip_records') as any).insert([
           {
             title: formData.title,
             category: formData.category,
             abstract: formData.abstract,
             details: {
               inventors: formData.inventors,
-              originalFilingDate: formData.originalFilingDate,
-              ipophilApplicationNo: formData.ipophilApplicationNo,
               remarks: formData.remarks,
             },
-            status: 'completed',
-            applicant_id: user.id,
-            is_legacy_record: true,
             legacy_source: formData.legacySource,
+            original_filing_date: formData.originalFilingDate,
+            ipophil_application_no: formData.ipophilApplicationNo,
             digitized_at: new Date().toISOString(),
             created_by_admin_id: user.id,
           },

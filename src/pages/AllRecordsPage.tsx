@@ -51,7 +51,8 @@ export function AllRecordsPage() {
 
   const fetchRecords = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch workflow records from ip_records
+      const { data: workflowData, error: workflowError } = await supabase
         .from('ip_records')
         .select(`
           *,
@@ -61,15 +62,20 @@ export function AllRecordsPage() {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (workflowError) throw workflowError;
+
+      // Fetch legacy records from legacy_ip_records
+      const { data: legacyData, error: legacyError } = await supabase
+        .from('legacy_ip_records')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (legacyError) throw legacyError;
+
+      const workflow = workflowData || [];
+      const legacy = legacyData || [];
       
-      const records = data || [];
-      setAllRecords(records);
-      
-      // Split into workflow and legacy
-      const workflow = records.filter((r: any) => r.is_legacy_record === false);
-      const legacy = records.filter((r: any) => r.is_legacy_record === true);
-      
+      setAllRecords([...workflow, ...legacy]);
       setWorkflowRecords(workflow);
       setLegacyRecords(legacy);
     } catch (error) {
