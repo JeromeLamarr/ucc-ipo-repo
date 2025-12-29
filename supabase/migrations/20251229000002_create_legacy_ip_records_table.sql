@@ -36,12 +36,7 @@ CREATE TABLE IF NOT EXISTS legacy_ip_records (
   
   -- Timestamps
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  
-  CONSTRAINT legacy_records_source_check CHECK (legacy_source IN (
-    'Physical Archive', 'Email', 'Old System', 
-    'Database Migration', 'Manual Entry', 'Other'
-  ))
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Create indexes for performance
