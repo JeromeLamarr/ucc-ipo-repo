@@ -81,7 +81,13 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const htmlContent = generateFullDisclosureHTML(record);
+    // Check if this is a legacy record
+    const isLegacy = !record.applicant && !record.status;
+
+    // Generate appropriate HTML based on record type
+    const htmlContent = isLegacy 
+      ? generateLegacyDisclosureHTML(record)
+      : generateFullDisclosureHTML(record);
 
     // Convert HTML to PDF
     const pdfDoc = await PDFDocument.create();
@@ -761,4 +767,100 @@ async function convertHTMLToPDF(htmlContent: string, pdfDoc: PDFDocument): Promi
   }
 
   return await pdfDoc.save();
+}
+
+function generateLegacyDisclosureHTML(record: any): string {
+  const details = record.details || {};
+  const inventors = details.inventors || [];
+  const remarks = details.remarks || '';
+
+  const inventorsHTML = inventors.map((inv: any) => `
+    <div class="inventor-item">
+      <p><strong>Name:</strong> ${inv.name || 'N/A'}</p>
+      ${inv.affiliation ? `<p><strong>Affiliation:</strong> ${inv.affiliation}</p>` : ''}
+      ${inv.contribution ? `<p><strong>Contribution:</strong> ${inv.contribution}</p>` : ''}
+    </div>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Legacy IP Record - ${record.title}</title>
+  <style>
+    @page { size: letter; margin: 0.75in; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 12px; line-height: 1.6; color: #000; }
+    .header { text-align: center; border-bottom: 3px solid #D97706; padding-bottom: 15px; margin-bottom: 20px; }
+    .inst-name { font-weight: bold; font-size: 14px; letter-spacing: 1px; }
+    .doc-title { font-weight: bold; font-size: 13px; margin-top: 8px; text-transform: uppercase; }
+    .badge { background: #FCD34D; color: #78350F; padding: 2px 6px; font-size: 10px; font-weight: bold; display: inline-block; margin-top: 4px; border-radius: 3px; }
+    .section { margin-bottom: 15px; }
+    .sec-title { font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 8px; border-bottom: 2px solid #D97706; padding-bottom: 4px; }
+    .field-group { margin-bottom: 8px; }
+    .field-label { font-weight: bold; font-size: 11px; color: #374151; }
+    .field-value { margin: 4px 0 0 0; padding: 4px 0; }
+    .inventor-item { background: #F3F4F6; padding: 8px; margin-bottom: 6px; border-left: 3px solid #D97706; }
+    .inventor-item p { margin: 3px 0; font-size: 11px; }
+    .footer { font-size: 10px; text-align: center; margin-top: 20px; padding-top: 10px; border-top: 1px solid #D1D5DB; color: #6B7280; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="inst-name">University Confidential Consortium</div>
+    <div class="inst-name">Intellectual Property Office</div>
+    <div class="doc-title">Legacy IP Record Disclosure</div>
+    <span class="badge">🔖 LEGACY RECORD</span>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">IP Information</div>
+    <div class="field-group">
+      <div class="field-label">Title</div>
+      <div class="field-value">${record.title || 'N/A'}</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Category</div>
+      <div class="field-value">${record.category || 'N/A'}</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Abstract</div>
+      <div class="field-value">${record.abstract || 'N/A'}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">Legacy Details</div>
+    <div class="field-group">
+      <div class="field-label">Source</div>
+      <div class="field-value">${record.legacy_source || 'N/A'}</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Original Filing Date</div>
+      <div class="field-value">${record.original_filing_date || 'N/A'}</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">IPOPHIL Application Number</div>
+      <div class="field-value">${record.ipophil_application_no || 'N/A'}</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Remarks</div>
+      <div class="field-value">${remarks || 'N/A'}</div>
+    </div>
+  </div>
+
+  ${inventors.length > 0 ? `
+  <div class="section">
+    <div class="sec-title">Inventors / Authors</div>
+    ${inventorsHTML}
+  </div>
+  ` : ''}
+
+  <div class="footer">
+    <p>This disclosure was generated on ${new Date().toLocaleDateString()} for legacy IP record archival purposes.</p>
+  </div>
+</body>
+</html>
+  `;
 }
