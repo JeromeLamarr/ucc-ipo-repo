@@ -30,9 +30,9 @@ CREATE TABLE IF NOT EXISTS legacy_ip_records (
   ipophil_application_no TEXT,
   remarks TEXT,
   
-  -- Admin tracking
-  created_by_admin_id UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
-  updated_by_admin_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  -- Admin tracking (no foreign key to avoid conflicts with legacy admin IDs)
+  created_by_admin_id UUID NOT NULL,
+  updated_by_admin_id UUID,
   
   -- Timestamps
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
