@@ -1,45 +1,79 @@
-# Edge Function Redeployment Guide
+# Edge Function Deployment Guide
 
-## Overview
-The `register-user` edge function has been updated with improved error handling and JWT configuration changes. Follow this guide to redeploy the function.
+## Current Status - URGENT
+
+**PDF Generation for Legacy Records is Failing**
+- Disclosure function: 500 Internal Server Error
+- Certificate function: 400 Bad Request
+
+**Root Cause**: Edge functions have been fixed in code but not redeployed to Supabase
+
+---
+
+## Functions That Need Redeployment
+
+1. **generate-disclosure-legacy**
+   - Fixed database column name: `ip_record_id` → `record_id`
+   - Added detailed logging
+   - Better error handling
+
+2. **generate-certificate-legacy**
+   - Relaxed `user_id` validation (optional, no UUID requirement)
+   - Fixed database column name: `ip_record_id` → `record_id`
+   - Added detailed logging
+   - Better error handling
 
 ---
 
 ## Prerequisites
 
-1. **Supabase CLI** installed: `npm install -g supabase`
-2. **Authentication**: Logged in to Supabase CLI
-3. **Project Directory**: Navigate to your project root
+1. **Supabase CLI** installed:
+   ```powershell
+   npm install -g supabase
+   ```
+
+2. **Authentication**: Login to Supabase
+   ```powershell
+   supabase login
+   ```
+   - When prompted, go to https://app.supabase.com/account/tokens
+   - Create a new access token and paste it
+
+3. **Project Directory**:
+   ```powershell
+   cd "c:\Users\delag\Desktop\ucc ipo\project"
+   ```
 
 ---
 
-## Step 1: Link Your Supabase Project (If Not Already Linked)
+## Step 1: Link Your Supabase Project
 
-```bash
+```powershell
 supabase link --project-ref mqfftubqlwiemtxpagps
 ```
 
-When prompted, enter your database password or access token.
+When prompted, enter your database password.
 
 ---
 
-## Step 2: Deploy the Edge Function
+## Step 2: Deploy the Legacy PDF Functions
 
-### Option A: Deploy Only the `register-user` Function
+### Option A: Deploy Only the Legacy Functions (Recommended)
 
-```bash
-supabase functions deploy register-user
+```powershell
+supabase functions deploy generate-disclosure-legacy
+supabase functions deploy generate-certificate-legacy
 ```
 
 **Expected Output:**
 ```
-✓ Function register-user deployed successfully!
-  Endpoint: https://mqfftubqlwiemtxpagps.supabase.co/functions/v1/register-user
+✓ Function generate-disclosure-legacy deployed successfully!
+✓ Function generate-certificate-legacy deployed successfully!
 ```
 
 ### Option B: Deploy All Functions
 
-```bash
+```powershell
 supabase functions deploy
 ```
 
@@ -47,7 +81,124 @@ supabase functions deploy
 
 ## Step 3: Verify Deployment
 
-### Check Function Status
+### Check Function Status in Dashboard
+1. Go to https://app.supabase.com
+2. Select your project (UCC IP Office)
+3. Go to **Edge Functions** in sidebar
+4. Look for:
+   - `generate-disclosure-legacy` - should show recent deployment time
+   - `generate-certificate-legacy` - should show recent deployment time
+
+### Check via CLI
+```powershell
+supabase functions list
+```
+
+Look for both functions with status "Deployed"
+
+---
+
+## Step 4: Test PDF Generation
+
+1. Go to your app: `/dashboard/legacy-records`
+2. Open any legacy record
+3. Scroll to "Generate Documents" section
+4. Click "Generate Disclosure"
+   - Should see "Disclosure generated successfully!" message
+   - PDF should appear in "Generated Documents" section
+5. Click "Generate Certificate"
+   - Should see "Certificate generated successfully!" message
+   - PDF should appear in "Generated Documents" section
+
+---
+
+## Troubleshooting
+
+### Authentication Error
+```
+Error: Failed to get access token
+```
+**Solution:**
+- Go to https://app.supabase.com/account/tokens
+- Create new access token
+- Run `supabase logout` then `supabase login` again
+- Paste the new token
+
+### Project Link Error
+```
+Error: Project not found
+```
+**Solution:**
+- Verify project ref is correct: `mqfftubqlwiemtxpagps`
+- Make sure you're in the right project directory
+
+### Function Still Errors After Deployment
+
+Check logs:
+1. Supabase Dashboard > Edge Functions
+2. Click on the function name
+3. Go to **Logs** tab
+4. Look for error messages
+
+Common issues:
+- `legacy-generated-documents` bucket doesn't exist
+- RLS policies blocking writes
+- Database columns don't match
+
+### Deployment Hangs
+
+Press `Ctrl+C` to cancel, then retry:
+```powershell
+supabase functions deploy generate-disclosure-legacy --force
+```
+
+---
+
+## Next Steps After Successful Deployment
+
+1. **Test PDF Generation** - Follow Step 4 above
+2. **Check Document Storage** - PDFs should be in `legacy-generated-documents` bucket
+3. **Verify Database** - Documents should appear in `legacy_record_documents` table
+4. **Test Download** - Click "Download" on generated PDFs
+
+---
+
+## Additional Commands
+
+### Redeploy a Single Function with Latest Code
+```powershell
+supabase functions deploy generate-disclosure-legacy --force
+supabase functions deploy generate-certificate-legacy --force
+```
+
+### View Function Logs
+```powershell
+supabase functions logs generate-disclosure-legacy
+supabase functions logs generate-certificate-legacy
+```
+
+### Delete and Redeploy
+```powershell
+supabase functions delete generate-disclosure-legacy
+supabase functions deploy generate-disclosure-legacy
+```
+
+---
+
+## Project Information
+
+- **Project Name**: UCC IP Office
+- **Project Ref**: `mqfftubqlwiemtxpagps`
+- **Repository**: https://github.com/JeromeLamarr/ucc-ipo-repo
+- **Functions Location**: `supabase/functions/`
+- **Related Files**:
+  - `supabase/functions/generate-disclosure-legacy/index.ts`
+  - `supabase/functions/generate-certificate-legacy/index.ts`
+
+---
+
+## Overview
+
 ```bash
 supabase functions list
 ```
