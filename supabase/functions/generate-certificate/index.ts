@@ -883,6 +883,14 @@ Deno.serve(async (req: Request) => {
     let ipRecord;
     let isLegacy = false;
     
+    console.log('[generate-certificate] Payload received:', {
+      record_id,
+      user_id,
+      requester_id,
+      requester_role,
+      timestamp: new Date().toISOString(),
+    });
+
     // First try regular ip_records
     const { data: regularRecords, error: regularError } = await supabase
       .from("ip_records")
@@ -920,8 +928,20 @@ Deno.serve(async (req: Request) => {
       }
       ipRecord = legacyRecords[0];
       isLegacy = true;
+      console.log('[generate-certificate] Found in legacy_ip_records', {
+        recordId: ipRecord.id,
+        title: ipRecord.title,
+        hasDetails: !!ipRecord.details,
+        creatorName: ipRecord.details?.creator_name,
+      });
     } else {
       ipRecord = regularRecords[0];
+      console.log('[generate-certificate] Found in ip_records', {
+        recordId: ipRecord.id,
+        title: ipRecord.title,
+        status: ipRecord.status,
+        applicant_id: ipRecord.applicant_id,
+      });
     }
 
     // Get the latest status from process_tracking table (most recent status change)
@@ -1069,7 +1089,13 @@ Deno.serve(async (req: Request) => {
     const fileName = `${trackingId}.pdf`;
     const filePath = `${year}/${month}/${fileName}`;
 
-    console.log(`Uploading PDF to ${bucketName}: ${filePath}`);
+    console.log('[generate-certificate] Uploading PDF to storage', {
+      bucketName,
+      filePath,
+      fileSize: pdfBuffer.length,
+      isLegacy,
+      trackingId,
+    });
 
     const { error: uploadError } = await supabase.storage
       .from(bucketName)
@@ -1079,8 +1105,20 @@ Deno.serve(async (req: Request) => {
       });
 
     if (uploadError) {
+      console.error('[generate-certificate] Storage upload error:', {
+        bucketName,
+        filePath,
+        error: uploadError.message,
+        errorCode: (uploadError as any).statusCode,
+      });
       throw new Error(`Failed to upload certificate: ${uploadError.message}`);
     }
+
+    console.log('[generate-certificate] PDF uploaded successfully', {
+      bucketName,
+      filePath,
+      fileSize: pdfBuffer.length,
+    });
 
     // Get public URL (legacy records stored privately)
     let publicUrl = null;

@@ -1,11 +1,9 @@
 /**
- * DEPRECATED: This edge function is archived and no longer used.
- * Document generation feature was removed on 2025-12-27.
+ * Edge function to generate disclosure PDFs for IP records.
+ * Supports both regular (ip_records) and legacy (legacy_ip_records) records.
  * 
- * Historical purpose: Generated full disclosure PDF with compliance data
- * 
- * If you need to restore document generation, refer to generate-certificate edge function
- * for the proven PDF generation pattern using pdf-lib.
+ * For regular records: Generates full disclosure form with applicant details
+ * For legacy records: Generates simplified legacy disclosure with archived data
  */
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -48,6 +46,11 @@ Deno.serve(async (req: Request) => {
     // Fetch the IP record with all details - check both tables
     let record;
     
+    console.log('[generate-disclosure] Payload:', {
+      actualRecordId,
+      timestamp: new Date().toISOString(),
+    });
+
     // First try regular ip_records
     const { data: regularRecord, error: regularError } = await supabase
       .from("ip_records")
@@ -62,6 +65,11 @@ Deno.serve(async (req: Request) => {
 
     if (!regularError && regularRecord && regularRecord.length > 0) {
       record = regularRecord[0];
+      console.log('[generate-disclosure] Found in ip_records', {
+        recordId: record.id,
+        hasApplicant: !!record.applicant,
+        status: record.status,
+      });
     } else {
       // Try legacy_ip_records
       const { data: legacyRecord, error: legacyError } = await supabase
@@ -71,6 +79,11 @@ Deno.serve(async (req: Request) => {
 
       if (!legacyError && legacyRecord && legacyRecord.length > 0) {
         record = legacyRecord[0];
+        console.log('[generate-disclosure] Found in legacy_ip_records', {
+          recordId: record.id,
+          hasDetails: !!record.details,
+          creatorName: record.details?.creator_name,
+        });
       } else {
         console.error('[generate-disclosure] Record not found', {
           actualRecordId,
@@ -99,6 +112,13 @@ Deno.serve(async (req: Request) => {
     // Use appropriate bucket based on record type
     const bucketName = isLegacy ? "legacy-generated-documents" : "generated-documents";
 
+    console.log('[generate-disclosure] Uploading PDF', {
+      bucketName,
+      filePath,
+      fileSize: pdfBytes.length,
+      isLegacy,
+    });
+
     const { error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(filePath, pdfBytes, {
@@ -106,8 +126,18 @@ Deno.serve(async (req: Request) => {
       });
 
     if (uploadError) {
+      console.error('[generate-disclosure] Upload error:', {
+        bucketName,
+        filePath,
+        error: uploadError.message,
+      });
       throw uploadError;
     }
+
+    console.log('[generate-disclosure] PDF uploaded successfully', {
+      bucketName,
+      filePath,
+    });
 
     return new Response(
       JSON.stringify({
@@ -815,6 +845,14 @@ function generateLegacyDisclosureHTML(record: any): string {
     <div class="inst-name">Intellectual Property Office</div>
     <div class="doc-title">Legacy IP Record Disclosure</div>
     <span class="badge">🔖 LEGACY RECORD</span>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">Creator Information</div>
+    <div class="field-group">
+      <div class="field-label">Creator / Applicant</div>
+      <div class="field-value">${details.creator_name || 'N/A'}</div>
+    </div>
   </div>
 
   <div class="section">
