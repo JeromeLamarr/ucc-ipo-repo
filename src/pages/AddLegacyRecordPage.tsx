@@ -69,7 +69,11 @@ export function AddLegacyRecordPage() {
         throw new Error('Please fill in all required fields');
       }
 
-      // Create legacy record
+      // Get current user ID for admin tracking
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Create legacy record with correct table columns
       const { data: newRecord, error: recordError } = await supabase
         .from('legacy_ip_records')
         .insert([
@@ -78,6 +82,8 @@ export function AddLegacyRecordPage() {
             category: formData.category,
             abstract: formData.abstract,
             legacy_source: formData.legacy_source,
+            original_filing_date: formData.date_created,
+            remarks: formData.remarks,
             details: {
               creator_name: formData.inventor_name,
               creator_email: formData.inventor_email,
@@ -89,10 +95,9 @@ export function AddLegacyRecordPage() {
               solution: formData.solution || '',
               advantages: formData.advantages || '',
               remarks: formData.remarks,
-              original_filing_date: formData.date_created,
             },
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
+            created_by_admin_id: user.id,
+            updated_by_admin_id: user.id,
           },
         ])
         .select();
