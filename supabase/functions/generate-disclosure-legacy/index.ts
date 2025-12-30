@@ -130,12 +130,11 @@ Deno.serve(async (req: Request) => {
     const { error: dbError } = await supabase
       .from("legacy_record_documents")
       .insert({
-        ip_record_id: actualRecordId,
+        record_id: actualRecordId,
         document_type: "disclosure",
         file_path: filePath,
         file_name: fileName,
-        file_size: pdfBytes.length,
-        tracking_id: `DISCLOSURE-${actualRecordId}-${Date.now()}`,
+        pdf_data: null,
       });
 
     if (dbError) {
