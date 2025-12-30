@@ -410,71 +410,24 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse request body with better error handling
-    let requestData: LegacyCertificateRequest;
+    // Parse request body safely with better error recovery
+    let requestData: any = {};
     try {
-      const contentType = req.headers.get('content-type');
-      console.log('[generate-certificate-legacy] Content-Type:', contentType);
-      
-      if (contentType && contentType.includes('application/json')) {
-        const bodyText = await req.text();
-        console.log('[generate-certificate-legacy] Raw body:', bodyText);
-        
-        if (bodyText && bodyText.length > 0) {
-          requestData = JSON.parse(bodyText);
-          console.log('[generate-certificate-legacy] Parsed body:', requestData);
-        } else {
-          console.error('[generate-certificate-legacy] Empty request body');
-          return new Response(
-            JSON.stringify({ error: "Empty request body" }),
-            {
-              status: 400,
-              headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json",
-              },
-            }
-          );
-        }
-      } else {
-        console.error('[generate-certificate-legacy] Invalid Content-Type:', contentType);
-        return new Response(
-          JSON.stringify({ error: "Invalid Content-Type: expected application/json" }),
-          {
-            status: 400,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-      }
+      const body = await req.json();
+      requestData = body || {};
+      console.log('[generate-certificate-legacy] Body parsed:', requestData);
     } catch (e) {
-      console.error('[generate-certificate-legacy] JSON parse error:', String(e));
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Invalid JSON in request body: " + String(e),
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      console.warn('[generate-certificate-legacy] JSON parse failed:', String(e));
+      // Continue with empty body
     }
 
-    // Validate input payload
-    const validation = validateRequest(requestData);
-    if (!validation.valid) {
-      console.error('[generate-certificate-legacy] Validation failed:', validation.error);
-      console.error('[generate-certificate-legacy] Request data was:', JSON.stringify(requestData));
+    // Validate the request
+    const record_id = requestData.record_id || requestData.recordId;
+    if (!record_id) {
+      console.error('[generate-certificate-legacy] Validation failed - no record ID', { requestData });
       return new Response(
         JSON.stringify({
-          success: false,
-          error: "Validation failed: " + validation.error,
+          error: "Missing record_id",
           received: requestData,
         }),
         {
@@ -487,9 +440,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const record_id = typeof requestData.record_id === 'string' 
-      ? requestData.record_id
-      : String(requestData.record_id);
     const { user_id } = requestData;
 
     console.log('[generate-certificate-legacy] Generating certificate for legacy record', {

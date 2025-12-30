@@ -54,29 +54,15 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse request body with better error handling
+    // Parse request body safely
     let bodyData: any = {};
     try {
-      const contentType = req.headers.get('content-type');
-      console.log('[generate-disclosure-legacy] Content-Type:', contentType);
-      
-      if (contentType && contentType.includes('application/json')) {
-        const bodyText = await req.text();
-        console.log('[generate-disclosure-legacy] Raw body:', bodyText);
-        
-        if (bodyText && bodyText.length > 0) {
-          bodyData = JSON.parse(bodyText);
-          console.log('[generate-disclosure-legacy] Parsed body:', bodyData);
-        } else {
-          console.warn('[generate-disclosure-legacy] Empty body received');
-        }
-      }
+      const body = await req.json();
+      bodyData = body || {};
+      console.log('[generate-disclosure-legacy] Body parsed:', bodyData);
     } catch (e) {
-      console.error('[generate-disclosure-legacy] Body parse error:', String(e));
-      return new Response(
-        JSON.stringify({ error: "Invalid request body: " + String(e) }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      console.warn('[generate-disclosure-legacy] JSON parse failed, trying empty body:', String(e));
+      // Continue with empty body - might come from query params or headers
     }
 
     // Accept both recordId and record_id for compatibility
@@ -84,16 +70,11 @@ Deno.serve(async (req: Request) => {
     const actualRecordId = recordId || record_id;
 
     if (!actualRecordId) {
-      return new Response(
-        JSON.stringify({ error: "Missing recordId or record_id. Received: " + JSON.stringify(bodyData) }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      console.error('[generate-disclosure-legacy] No record ID provided', { bodyData });
+      throw new Error("Missing recordId or record_id. Received: " + JSON.stringify(bodyData));
     }
 
-    console.log('[generate-disclosure-legacy] Payload received:', {
-      actualRecordId,
-      timestamp: new Date().toISOString(),
-    });
+    console.log('[generate-disclosure-legacy] Processing record:', actualRecordId);
 
     // Fetch ONLY from legacy_ip_records table
     const { data: legacyRecord, error: legacyError } = await supabase
@@ -106,7 +87,7 @@ Deno.serve(async (req: Request) => {
         actualRecordId,
         error: legacyError?.message,
       });
-      throw new Error("Legacy record not found");
+      throw new Error("Legacy record not found: " + actualRecordId);
     }
 
     const record = legacyRecord[0] as LegacyIPRecord;
