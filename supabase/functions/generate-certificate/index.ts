@@ -1051,17 +1051,18 @@ Deno.serve(async (req: Request) => {
     // Calculate checksum
     const checksum = await generateChecksum(pdfBuffer);
 
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage - use appropriate bucket based on record type
+    const bucketName = isLegacy ? "legacy-generated-documents" : "certificates";
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const fileName = `${trackingId}.pdf`;
     const filePath = `${year}/${month}/${fileName}`;
 
-    console.log(`Uploading PDF to storage: ${filePath}`);
+    console.log(`Uploading PDF to ${bucketName}: ${filePath}`);
 
     const { error: uploadError } = await supabase.storage
-      .from("certificates")
+      .from(bucketName)
       .upload(filePath, pdfBuffer, {
         contentType: "application/pdf",
         upsert: true,
@@ -1071,12 +1072,14 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Failed to upload certificate: ${uploadError.message}`);
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from("certificates")
-      .getPublicUrl(filePath);
-
-    const publicUrl = urlData.publicUrl;
+    // Get public URL (legacy records stored privately)
+    let publicUrl = null;
+    if (!isLegacy) {
+      const { data: urlData } = supabase.storage
+        .from("certificates")
+        .getPublicUrl(filePath);
+      publicUrl = urlData.publicUrl;
+    }
 
     // Check if a certificate already exists for this record
     const { data: existingCert } = await supabase

@@ -93,11 +93,14 @@ Deno.serve(async (req: Request) => {
     const pdfDoc = await PDFDocument.create();
     const pdfBytes = await convertHTMLToPDF(htmlContent, pdfDoc);
 
-    const fileName = `${recordId}_full_disclosure_${Date.now()}.pdf`;
-    const filePath = `${recordId}/${fileName}`;
+    const fileName = `${actualRecordId}_full_disclosure_${Date.now()}.pdf`;
+    const filePath = `${actualRecordId}/${fileName}`;
+
+    // Use appropriate bucket based on record type
+    const bucketName = isLegacy ? "legacy-generated-documents" : "generated-documents";
 
     const { error: uploadError } = await supabase.storage
-      .from("generated-documents")
+      .from(bucketName)
       .upload(filePath, pdfBytes, {
         contentType: "application/pdf",
       });
