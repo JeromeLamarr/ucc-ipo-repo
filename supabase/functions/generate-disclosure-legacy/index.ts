@@ -15,6 +15,15 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
+// Helper to convert Uint8Array to base64
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
 interface LegacyIPRecord {
   id: string;
   title: string;
@@ -137,7 +146,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Convert PDF to base64 for download
-    const base64Pdf = btoa(String.fromCharCode.apply(null, Array.from(pdfBytes)));
+    const base64Pdf = uint8ArrayToBase64(pdfBytes);
 
     return new Response(
       JSON.stringify({
