@@ -467,6 +467,26 @@ Deno.serve(async (req: Request) => {
       fileSize: pdfBuffer.length,
     });
 
+    // Save document record to database
+    const { error: dbError } = await supabase
+      .from("legacy_record_documents")
+      .insert({
+        ip_record_id: record.id,
+        document_type: "certificate",
+        file_path: filePath,
+        file_name: fileName,
+        file_size: pdfBuffer.length,
+        checksum,
+        tracking_id: trackingId,
+      });
+
+    if (dbError) {
+      console.warn('[generate-certificate-legacy] Database record error (non-critical):', dbError.message);
+      // Don't throw - PDF was uploaded successfully, just warn about DB record
+    } else {
+      console.log('[generate-certificate-legacy] Database record created:', { trackingId });
+    }
+
     // Convert PDF to base64 for download
     const base64Pdf = btoa(String.fromCharCode.apply(null, Array.from(pdfBuffer)));
 
