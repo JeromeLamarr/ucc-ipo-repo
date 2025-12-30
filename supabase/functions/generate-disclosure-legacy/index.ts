@@ -59,19 +59,25 @@ Deno.serve(async (req: Request) => {
     try {
       const body = await req.json();
       bodyData = body || {};
-      console.log('[generate-disclosure-legacy] Body parsed:', bodyData);
+      console.log('[generate-disclosure-legacy] Parsed body:', bodyData);
     } catch (e) {
-      console.warn('[generate-disclosure-legacy] JSON parse failed, trying empty body:', String(e));
-      // Continue with empty body - might come from query params or headers
+      console.warn('[generate-disclosure-legacy] JSON parse failed:', String(e));
     }
 
-    // Accept both recordId and record_id for compatibility
-    const { recordId, record_id } = bodyData;
-    const actualRecordId = recordId || record_id;
+    // Try to get record_id from body or query params
+    const url = new URL(req.url);
+    const queryRecordId = url.searchParams.get('record_id');
+    const actualRecordId = bodyData.record_id || bodyData.recordId || queryRecordId;
 
     if (!actualRecordId) {
-      console.error('[generate-disclosure-legacy] No record ID provided', { bodyData });
-      throw new Error("Missing recordId or record_id. Received: " + JSON.stringify(bodyData));
+      console.error('[generate-disclosure-legacy] No record ID found', { bodyData, queryRecordId });
+      return new Response(
+        JSON.stringify({
+          error: "Missing record_id in body or query params",
+          received: { body: bodyData, queryRecordId },
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     console.log('[generate-disclosure-legacy] Processing record:', actualRecordId);
