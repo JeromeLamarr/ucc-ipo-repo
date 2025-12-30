@@ -17,6 +17,7 @@ export function LegacyRecordDetailPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [documents, setDocuments] = useState<any[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
 
   // Redirect if not admin
   useEffect(() => {
@@ -29,6 +30,7 @@ export function LegacyRecordDetailPage() {
     if (profile?.role === 'admin' && id) {
       fetchRecord();
       fetchDocuments();
+      fetchUploadedFiles();
     }
   }, [profile, id]);
 
@@ -61,6 +63,24 @@ export function LegacyRecordDetailPage() {
       setDocuments(data || []);
     } catch (err) {
       console.error('Failed to fetch documents:', err);
+    }
+  };
+
+  const fetchUploadedFiles = async () => {
+    try {
+      // List files in the storage bucket for this record
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .list(`legacy-records/${id}`, {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'created_at', order: 'desc' },
+        });
+
+      if (error) throw error;
+      setUploadedFiles(data || []);
+    } catch (err) {
+      console.error('Failed to fetch uploaded files:', err);
     }
   };
 
@@ -187,6 +207,30 @@ export function LegacyRecordDetailPage() {
     setError('Email sending not yet implemented');
   };
 
+  const handleDownloadUploadedFile = async (file: any) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .download(`legacy-records/${id}/${file.name}`);
+
+      if (error) throw error;
+
+      const url = window.URL.createObjectURL(data);
+      const a = window.document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      window.document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      window.document.body.removeChild(a);
+
+      setSuccess(`Downloaded ${file.name}`);
+    } catch (err) {
+      console.error('Download error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to download file');
+    }
+  };
+
   if (!profile || profile.role !== 'admin') {
     return null;
   }
@@ -270,11 +314,11 @@ export function LegacyRecordDetailPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date Created</label>
-                <p className="text-gray-900">{new Date(record.created_at).toLocaleDateString()}</p>
+                <p className="text-gray-900">{record.original_filing_date || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
-                <p className="text-gray-900">{record.details?.legacy_source || 'N/A'}</p>
+                <p className="text-gray-900">{record.legacy_source || 'N/A'}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Record ID</label>
@@ -290,10 +334,66 @@ export function LegacyRecordDetailPage() {
             </div>
           )}
 
-          {record.details?.remarks && (
-            <div className="p-6">
+          {record.remarks && (
+            <div className="p-6 border-b border-gray-200">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Remarks</h3>
-              <p className="text-gray-600 whitespace-pre-wrap">{record.details.remarks}</p>
+              <p className="text-gray-600 whitespace-pre-wrap">{record.remarks}</p>
+            </div>
+          )}
+
+          {/* Technical Details Section */}
+          {(record.details?.technical_field || record.details?.prior_art || record.details?.problem || record.details?.solution || record.details?.advantages) && (
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-4">Technical Details</h3>
+              <div className="space-y-4">
+                {record.details?.technical_field && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Technical Field</label>
+                    <p className="text-gray-600">{record.details.technical_field}</p>
+                  </div>
+                )}
+                {record.details?.prior_art && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Prior Art</label>
+                    <p className="text-gray-600">{record.details.prior_art}</p>
+                  </div>
+                )}
+                {record.details?.problem && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Problem Statement</label>
+                    <p className="text-gray-600">{record.details.problem}</p>
+                  </div>
+                )}
+                {record.details?.solution && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Solution</label>
+                    <p className="text-gray-600">{record.details.solution}</p>
+                  </div>
+                )}
+                {record.details?.advantages && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Advantages</label>
+                    <p className="text-gray-600">{record.details.advantages}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Keywords Section */}
+          {record.details?.keywords && record.details.keywords.length > 0 && (
+            <div className="p-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Keywords</h3>
+              <div className="flex flex-wrap gap-2">
+                {record.details.keywords.map((keyword: string, idx: number) => (
+                  <span
+                    key={idx}
+                    className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium"
+                  >
+                    {keyword}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -397,6 +497,42 @@ export function LegacyRecordDetailPage() {
                         Email
                       </button>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Uploaded Files */}
+        <div className="bg-white rounded-lg shadow mb-6">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Uploaded Files</h2>
+            {uploadedFiles.length === 0 ? (
+              <p className="text-gray-600">No files uploaded yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {uploadedFiles.map((file) => (
+                  <div
+                    key={file.name}
+                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-gray-900">{file.name}</p>
+                        <p className="text-sm text-gray-600">
+                          {(file.metadata?.size ? (file.metadata.size / 1024).toFixed(2) : '0')} KB • {new Date(file.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDownloadUploadedFile(file)}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </button>
                   </div>
                 ))}
               </div>
