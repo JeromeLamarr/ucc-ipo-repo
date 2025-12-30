@@ -54,7 +54,7 @@ export function LegacyRecordDetailPage() {
       const { data, error: fetchError } = await supabase
         .from('legacy_record_documents')
         .select('*')
-        .eq('ip_record_id', id)
+        .eq('record_id', id)
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
@@ -118,36 +118,36 @@ export function LegacyRecordDetailPage() {
     }
   };
 
-  const handleDownloadDocument = async (document: any) => {
+  const handleDownloadDocument = async (doc: any) => {
     try {
-      if (document.pdf_data) {
+      if (doc.pdf_data) {
         // Base64 download
-        const binaryString = atob(document.pdf_data);
+        const binaryString = atob(doc.pdf_data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
         const blob = new Blob([bytes], { type: 'application/pdf' });
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = window.document.createElement('a');
         a.href = url;
-        a.download = document.file_name || 'document.pdf';
-        document.body.appendChild(a);
+        a.download = doc.file_name || 'document.pdf';
+        window.document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else if (document.file_path) {
+        window.document.body.removeChild(a);
+      } else if (doc.file_path) {
         // Storage download
         const { data, error } = await supabase.storage
           .from('legacy-generated-documents')
-          .download(document.file_path);
+          .download(doc.file_path);
 
         if (error) throw error;
 
         const url = window.URL.createObjectURL(data);
-        const a = document.createElement('a');
+        const a = window.document.createElement('a');
         a.href = url;
-        a.download = document.file_name || 'document.pdf';
+        a.download = doc.file_name || 'document.pdf';
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
