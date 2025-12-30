@@ -98,9 +98,8 @@ export function LegacyRecordDetailModal({ isOpen, onClose, record }: LegacyRecor
         method: 'POST',
         headers,
         body: JSON.stringify({
-          record_id: record.id,
+          recordId: record.id,  // Using recordId for generate-disclosure compatibility
           user_id: user.id,
-          is_legacy: true,
         }),
       });
 

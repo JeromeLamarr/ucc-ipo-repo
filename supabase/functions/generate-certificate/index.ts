@@ -879,31 +879,49 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Fetch IP record
-    const { data: ipRecord, error: ipError } = await supabase
+    // Fetch IP record - check both ip_records and legacy_ip_records tables
+    let ipRecord;
+    let isLegacy = false;
+    
+    // First try regular ip_records
+    const { data: regularRecord, error: regularError } = await supabase
       .from("ip_records")
       .select("*")
       .eq("id", record_id)
       .single();
 
-    if (ipError || !ipRecord) {
-      console.error('[generate-certificate] IP record fetch error', {
-        record_id,
-        error: ipError?.message || "Record not found",
-      });
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "IP record not found",
-        }),
-        {
-          status: 404,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+    // If not found, try legacy_ip_records
+    if (regularError || !regularRecord) {
+      const { data: legacyRecord, error: legacyError } = await supabase
+        .from("legacy_ip_records")
+        .select("*")
+        .eq("id", record_id)
+        .single();
+
+      if (legacyError || !legacyRecord) {
+        console.error('[generate-certificate] Record fetch error', {
+          record_id,
+          regularError: regularError?.message,
+          legacyError: legacyError?.message,
+        });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "IP record not found",
+          }),
+          {
+            status: 404,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+      ipRecord = legacyRecord;
+      isLegacy = true;
+    } else {
+      ipRecord = regularRecord;
     }
 
     // Get the latest status from process_tracking table (most recent status change)

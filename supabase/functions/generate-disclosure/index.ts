@@ -34,17 +34,23 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { recordId } = await req.json();
+    // Accept both recordId and record_id for compatibility
+    const { recordId, record_id } = await req.json();
+    const actualRecordId = recordId || record_id;
 
-    if (!recordId) {
+    if (!actualRecordId) {
       return new Response(
-        JSON.stringify({ error: "Missing recordId" }),
+        JSON.stringify({ error: "Missing recordId or record_id" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Fetch the IP record with all details
-    const { data: record, error: recordError } = await supabase
+    // Fetch the IP record with all details - check both tables
+    let record;
+    let recordError;
+    
+    // First try regular ip_records
+    const { data: regularRecord, error: regularError } = await supabase
       .from("ip_records")
       .select(`
         *,
@@ -53,10 +59,26 @@ Deno.serve(async (req: Request) => {
         evaluator:users!evaluator_id(*),
         documents:ip_documents(*)
       `)
-      .eq("id", recordId)
+      .eq("id", actualRecordId)
       .single();
 
-    if (recordError || !record) {
+    if (regularError || !regularRecord) {
+      // Try legacy_ip_records
+      const { data: legacyRecord, error: legacyError } = await supabase
+        .from("legacy_ip_records")
+        .select("*")
+        .eq("id", actualRecordId)
+        .single();
+
+      if (legacyError || !legacyRecord) {
+        throw new Error("Record not found in either ip_records or legacy_ip_records");
+      }
+      record = legacyRecord;
+    } else {
+      record = regularRecord;
+    }
+
+    if (!record) {
       throw new Error("Record not found");
     }
 
