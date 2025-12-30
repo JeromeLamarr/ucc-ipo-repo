@@ -15,8 +15,10 @@ CREATE INDEX IF NOT EXISTS idx_legacy_ip_records_legacy_source ON legacy_ip_reco
 CREATE INDEX IF NOT EXISTS idx_legacy_ip_records_admin_id ON legacy_ip_records(admin_id);
 
 -- 3. Ensure legacy_record_documents table has correct structure
--- If table doesn't exist, create it
-CREATE TABLE IF NOT EXISTS public.legacy_record_documents (
+-- Drop and recreate to ensure correct columns
+DROP TABLE IF EXISTS public.legacy_record_documents CASCADE;
+
+CREATE TABLE public.legacy_record_documents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   record_id UUID NOT NULL REFERENCES public.legacy_ip_records(id) ON DELETE CASCADE,
   document_type VARCHAR(50) NOT NULL, -- 'disclosure' or 'certificate'
