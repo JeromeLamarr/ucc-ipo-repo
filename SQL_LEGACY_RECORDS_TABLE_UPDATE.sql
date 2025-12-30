@@ -36,8 +36,14 @@ CREATE INDEX IF NOT EXISTS idx_legacy_record_documents_document_type ON public.l
 ALTER TABLE public.legacy_record_documents ENABLE ROW LEVEL SECURITY;
 
 -- 6. Create RLS policies for legacy_record_documents
+-- Drop existing policies first
+DROP POLICY IF EXISTS legacy_record_documents_insert_policy ON public.legacy_record_documents;
+DROP POLICY IF EXISTS legacy_record_documents_select_policy ON public.legacy_record_documents;
+DROP POLICY IF EXISTS legacy_record_documents_update_policy ON public.legacy_record_documents;
+DROP POLICY IF EXISTS legacy_record_documents_delete_policy ON public.legacy_record_documents;
+
 -- Allow admin users to insert
-CREATE POLICY IF NOT EXISTS legacy_record_documents_insert_policy 
+CREATE POLICY legacy_record_documents_insert_policy 
   ON public.legacy_record_documents 
   FOR INSERT 
   WITH CHECK (EXISTS (
@@ -47,7 +53,7 @@ CREATE POLICY IF NOT EXISTS legacy_record_documents_insert_policy
   ));
 
 -- Allow admin users to select
-CREATE POLICY IF NOT EXISTS legacy_record_documents_select_policy 
+CREATE POLICY legacy_record_documents_select_policy 
   ON public.legacy_record_documents 
   FOR SELECT 
   USING (EXISTS (
@@ -57,7 +63,7 @@ CREATE POLICY IF NOT EXISTS legacy_record_documents_select_policy
   ));
 
 -- Allow admin users to update
-CREATE POLICY IF NOT EXISTS legacy_record_documents_update_policy 
+CREATE POLICY legacy_record_documents_update_policy 
   ON public.legacy_record_documents 
   FOR UPDATE 
   USING (EXISTS (
@@ -67,7 +73,7 @@ CREATE POLICY IF NOT EXISTS legacy_record_documents_update_policy
   ));
 
 -- Allow admin users to delete
-CREATE POLICY IF NOT EXISTS legacy_record_documents_delete_policy 
+CREATE POLICY legacy_record_documents_delete_policy 
   ON public.legacy_record_documents 
   FOR DELETE 
   USING (EXISTS (
