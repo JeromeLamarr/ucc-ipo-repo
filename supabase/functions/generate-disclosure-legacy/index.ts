@@ -54,14 +54,38 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Parse request body with better error handling
+    let bodyData: any = {};
+    try {
+      const contentType = req.headers.get('content-type');
+      console.log('[generate-disclosure-legacy] Content-Type:', contentType);
+      
+      if (contentType && contentType.includes('application/json')) {
+        const bodyText = await req.text();
+        console.log('[generate-disclosure-legacy] Raw body:', bodyText);
+        
+        if (bodyText && bodyText.length > 0) {
+          bodyData = JSON.parse(bodyText);
+          console.log('[generate-disclosure-legacy] Parsed body:', bodyData);
+        } else {
+          console.warn('[generate-disclosure-legacy] Empty body received');
+        }
+      }
+    } catch (e) {
+      console.error('[generate-disclosure-legacy] Body parse error:', String(e));
+      return new Response(
+        JSON.stringify({ error: "Invalid request body: " + String(e) }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Accept both recordId and record_id for compatibility
-    const bodyData = await req.json();
     const { recordId, record_id } = bodyData;
     const actualRecordId = recordId || record_id;
 
     if (!actualRecordId) {
       return new Response(
-        JSON.stringify({ error: "Missing recordId or record_id" }),
+        JSON.stringify({ error: "Missing recordId or record_id. Received: " + JSON.stringify(bodyData) }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }

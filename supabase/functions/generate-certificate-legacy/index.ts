@@ -418,17 +418,51 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse request body
+    // Parse request body with better error handling
     let requestData: LegacyCertificateRequest;
     try {
-      requestData = await req.json();
-      console.log('[generate-certificate-legacy] Request parsed:', { record_id: requestData.record_id });
+      const contentType = req.headers.get('content-type');
+      console.log('[generate-certificate-legacy] Content-Type:', contentType);
+      
+      if (contentType && contentType.includes('application/json')) {
+        const bodyText = await req.text();
+        console.log('[generate-certificate-legacy] Raw body:', bodyText);
+        
+        if (bodyText && bodyText.length > 0) {
+          requestData = JSON.parse(bodyText);
+          console.log('[generate-certificate-legacy] Parsed body:', requestData);
+        } else {
+          console.error('[generate-certificate-legacy] Empty request body');
+          return new Response(
+            JSON.stringify({ error: "Empty request body" }),
+            {
+              status: 400,
+              headers: {
+                ...corsHeaders,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+        }
+      } else {
+        console.error('[generate-certificate-legacy] Invalid Content-Type:', contentType);
+        return new Response(
+          JSON.stringify({ error: "Invalid Content-Type: expected application/json" }),
+          {
+            status: 400,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
     } catch (e) {
       console.error('[generate-certificate-legacy] JSON parse error:', String(e));
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Invalid request body. Please provide valid JSON.",
+          error: "Invalid JSON in request body: " + String(e),
         }),
         {
           status: 400,
