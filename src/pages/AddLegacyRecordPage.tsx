@@ -76,6 +76,7 @@ export function AddLegacyRecordPage() {
           {
             title: formData.title,
             category: formData.category,
+            abstract: formData.abstract,
             legacy_source: formData.legacy_source,
             details: {
               creator_name: formData.inventor_name,
@@ -90,6 +91,8 @@ export function AddLegacyRecordPage() {
               remarks: formData.remarks,
               original_filing_date: formData.date_created,
             },
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
         ])
         .select();
