@@ -15,7 +15,8 @@ import {
   ClipboardList,
   Star,
   PieChart,
-  UserCheck
+  UserCheck,
+  Archive
 } from 'lucide-react';
 import type { UserRole } from '../lib/database.types';
 
@@ -71,6 +72,12 @@ const navItems: NavItem[] = [
     label: 'All Records',
     path: '/dashboard/records',
     icon: FileText,
+    roles: ['admin'],
+  },
+  {
+    label: 'Legacy Records',
+    path: '/dashboard/legacy-records',
+    icon: Archive,
     roles: ['admin'],
   },
   {

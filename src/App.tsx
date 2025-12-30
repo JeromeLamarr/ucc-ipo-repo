@@ -14,6 +14,9 @@ import { AdminDashboard } from '@pages/AdminDashboard';
 import { UserManagement } from '@pages/UserManagement';
 import { SubmissionDetailPage } from '@pages/SubmissionDetailPage';
 import { AllRecordsPage } from '@pages/AllRecordsPage';
+import { LegacyRecordsPage } from '@pages/LegacyRecordsPage';
+import { AddLegacyRecordPage } from '@pages/AddLegacyRecordPage';
+import { LegacyRecordDetailPage } from '@pages/LegacyRecordDetailPage';
 import { AssignmentManagementPage } from '@pages/AssignmentManagementPage';
 import { DepartmentManagementPage } from '@pages/DepartmentManagementPage';
 import { SettingsPage } from '@pages/SettingsPage';
@@ -52,6 +55,9 @@ function DashboardRouter() {
         <Route path="evaluations" element={<EvaluatorDashboard />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="records" element={<AllRecordsPage />} />
+        <Route path="legacy-records" element={<LegacyRecordsPage />} />
+        <Route path="legacy-records/new" element={<AddLegacyRecordPage />} />
+        <Route path="legacy-records/:id" element={<LegacyRecordDetailPage />} />
         <Route path="assignments" element={<AssignmentManagementPage />} />
         <Route path="departments" element={<DepartmentManagementPage />} />
         <Route path="analytics" element={<AdminDashboard />} />
