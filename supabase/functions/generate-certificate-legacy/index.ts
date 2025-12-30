@@ -123,7 +123,7 @@ function centerText(page: any, text: string, size: number, y: number, color: Ret
   });
 }
 
-// Generate legacy certificate PDF
+// Generate legacy certificate PDF - using professional workflow design
 async function generateCertificatePDF(
   record: LegacyIPRecord,
   creator: UserData,
@@ -135,6 +135,7 @@ async function generateCertificatePDF(
   const { width, height } = page.getSize();
   const margin = 40;
   const innerPadding = 20;
+  const contentWidth = width - 2 * margin;
   const borderX = margin - innerPadding;
   const borderY = innerPadding + 15;
   const borderWidth = width - 2 * borderX;
@@ -143,6 +144,7 @@ async function generateCertificatePDF(
   const goldColor = rgb(0.78, 0.58, 0.05);
   const accentColor = rgb(0.08, 0.32, 0.65);
   const darkColor = rgb(0.1, 0.1, 0.1);
+  const lightBgColor = rgb(0.94, 0.96, 1.0);
   const shadowColor = rgb(0.88, 0.88, 0.88);
   
   let yPosition = height - 70;
@@ -178,6 +180,18 @@ async function generateCertificatePDF(
     borderWidth: 1,
   });
 
+  // Decorative corner ornaments
+  const cornerSize = 12;
+  const cornerThickness = 1.5;
+  
+  // Top-left corner
+  page.drawLine({ start: { x: borderX + 12, y: height - borderY - 12 }, end: { x: borderX + 12 + cornerSize, y: height - borderY - 12 }, thickness: cornerThickness, color: goldColor });
+  page.drawLine({ start: { x: borderX + 12, y: height - borderY - 12 }, end: { x: borderX + 12, y: height - borderY - 12 - cornerSize }, thickness: cornerThickness, color: goldColor });
+  
+  // Top-right corner
+  page.drawLine({ start: { x: width - borderX - 12, y: height - borderY - 12 }, end: { x: width - borderX - 12 - cornerSize, y: height - borderY - 12 }, thickness: cornerThickness, color: goldColor });
+  page.drawLine({ start: { x: width - borderX - 12, y: height - borderY - 12 }, end: { x: width - borderX - 12, y: height - borderY - 12 - cornerSize }, thickness: cornerThickness, color: goldColor });
+
   // Header
   yPosition -= 30;
   centerText(page, "University Confidential Consortium", 11, yPosition, darkColor);
@@ -187,7 +201,7 @@ async function generateCertificatePDF(
   centerText(page, "LEGACY RECORD", 10, yPosition, goldColor);
   yPosition -= 40;
 
-  // Certificate content
+  // Certificate declaration
   page.drawText("This is to certify that the following Intellectual Property has been", {
     x: margin,
     y: yPosition,
@@ -195,137 +209,175 @@ async function generateCertificatePDF(
     color: darkColor,
   });
   yPosition -= 18;
-  page.drawText("recorded and archived in the University system:", {
+  page.drawText("duly registered and archived in the University system:", {
     x: margin,
     y: yPosition,
     size: 11,
     color: darkColor,
   });
-  yPosition -= 35;
+  yPosition -= 32;
+
+  // IP Information section in light background box
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - 95,
+    width: contentWidth,
+    height: 95,
+    color: lightBgColor,
+    borderColor: accentColor,
+    borderWidth: 1,
+  });
+
+  let boxY = yPosition;
 
   // Title
-  page.drawText("Title of IP:", {
-    x: margin,
-    y: yPosition,
+  page.drawText("Title:", {
+    x: margin + 8,
+    y: boxY,
     size: 10,
     color: accentColor,
   });
-  yPosition -= 15;
-  page.drawText(record.title, {
-    x: margin + 20,
-    y: yPosition,
+  boxY -= 3;
+  page.drawText(record.title || 'N/A', {
+    x: margin + 8,
+    y: boxY,
     size: 11,
     color: darkColor,
   });
-  yPosition -= 25;
+  boxY -= 20;
 
   // Category
   page.drawText("Category:", {
-    x: margin,
-    y: yPosition,
+    x: margin + 8,
+    y: boxY,
     size: 10,
     color: accentColor,
   });
-  yPosition -= 15;
+  boxY -= 3;
   page.drawText((record.category || 'N/A').toUpperCase(), {
-    x: margin + 20,
-    y: yPosition,
+    x: margin + 8,
+    y: boxY,
     size: 11,
     color: darkColor,
   });
-  yPosition -= 25;
+  boxY -= 20;
 
   // Creator
-  page.drawText("Creator / Applicant:", {
-    x: margin,
-    y: yPosition,
+  page.drawText("Creator/Applicant:", {
+    x: margin + 8,
+    y: boxY,
     size: 10,
     color: accentColor,
   });
-  yPosition -= 15;
+  boxY -= 3;
   page.drawText(record.details?.creator_name || 'Unknown', {
-    x: margin + 20,
-    y: yPosition,
+    x: margin + 8,
+    y: boxY,
     size: 11,
     color: darkColor,
   });
-  yPosition -= 35;
 
-  // Tracking ID and dates
+  yPosition -= 105;
+
+  // Tracking and dates section
   page.drawText("Tracking ID: " + trackingId, {
     x: margin,
     y: yPosition,
     size: 10,
     color: darkColor,
   });
-  yPosition -= 18;
+  yPosition -= 16;
   page.drawText("Date Recorded: " + formatDate(record.created_at), {
     x: margin,
     y: yPosition,
     size: 10,
     color: darkColor,
   });
-  yPosition -= 18;
-  page.drawText("Issued: " + formatDate(new Date().toISOString()), {
+  yPosition -= 16;
+  page.drawText("Certificate Issued: " + formatDate(new Date().toISOString()), {
     x: margin,
     y: yPosition,
     size: 10,
     color: darkColor,
   });
-  yPosition -= 40;
+  yPosition -= 35;
 
-  // Generate and embed QR code
+  // Generate and embed QR code on the right
   try {
     const qrCodeDataUrl = await generateQRCodeImage(trackingId);
     const qrCodeDataUrlData = qrCodeDataUrl.split(",")[1];
     const qrCodeImageBytes = Uint8Array.from(atob(qrCodeDataUrlData), c => c.charCodeAt(0));
     const qrCodeImage = await pdfDoc.embedPng(qrCodeImageBytes);
     
-    // Position QR code on the right side
-    const qrSize = 60;
+    const qrSize = 70;
+    const qrX = width - margin - qrSize - 15;
+    const qrY = yPosition - qrSize - 5;
+    
     page.drawImage(qrCodeImage, {
-      x: width - margin - qrSize - 10,
-      y: yPosition - qrSize - 10,
+      x: qrX,
+      y: qrY,
       width: qrSize,
       height: qrSize,
     });
     
-    page.drawText("Verification Code", {
-      x: width - margin - qrSize - 10,
-      y: yPosition - qrSize - 25,
-      size: 7,
+    page.drawText("Scan to verify", {
+      x: qrX,
+      y: qrY - 15,
+      size: 8,
       color: darkColor,
     });
   } catch (error) {
     console.warn('[generate-certificate-legacy] QR code generation skipped:', String(error));
-    // Continue without QR code if generation fails
   }
 
-  yPosition -= 60;
+  yPosition -= 85;
+
+  // Statement and signatures
+  page.drawText("In witness whereof, the University Confidential Consortium, acting", {
+    x: margin,
+    y: yPosition,
+    size: 9,
+    color: darkColor,
+  });
+  yPosition -= 12;
+  page.drawText("through its Intellectual Property Office, has issued this certificate to", {
+    x: margin,
+    y: yPosition,
+    size: 9,
+    color: darkColor,
+  });
+  yPosition -= 12;
+  page.drawText("commemorate the registration of the above described intellectual property.", {
+    x: margin,
+    y: yPosition,
+    size: 9,
+    color: darkColor,
+  });
+  yPosition -= 32;
 
   // Signature line
-  yPosition -= 20;
   page.drawLine({
     start: { x: margin, y: yPosition },
-    end: { x: margin + 150, y: yPosition },
+    end: { x: margin + 180, y: yPosition },
     thickness: 1,
     color: darkColor,
   });
-  page.drawText("University Representative", {
+  yPosition -= 5;
+  page.drawText("University Representative / IP Officer", {
     x: margin,
-    y: yPosition - 20,
+    y: yPosition,
     size: 9,
     color: darkColor,
   });
 
   // Footer
-  page.drawText("This certificate confirms the archival of intellectual property records.", {
+  page.drawText("This certificate certifies the legal record of intellectual property registration.", {
     x: margin,
     y: 50,
     size: 8,
     color: rgb(0.5, 0.5, 0.5),
   });
-  page.drawText(`Certificate #${trackingId} | Generated: ${new Date().toLocaleDateString()}`, {
+  page.drawText(`Cert: ${trackingId} | ${new Date().toLocaleDateString()}`, {
     x: margin,
     y: 35,
     size: 8,

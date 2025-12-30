@@ -183,8 +183,8 @@ function generateLegacyDisclosureHTML(record: LegacyIPRecord): string {
     .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 18px; }
     .inst-name { font-weight: bold; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
     .doc-title { font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 6px 0; }
-    .badge { background: #FCD34D; color: #78350F; padding: 2px 6px; font-size: 10px; font-weight: bold; display: inline-block; margin-top: 4px; border-radius: 3px; }
     .ref-info { font-size: 11px; margin: 4px 0; }
+    .legacy-badge { background: #FCD34D; color: #78350F; padding: 3px 8px; font-size: 10px; font-weight: bold; display: inline-block; margin-top: 4px; border-radius: 3px; }
     .instructions { background: #efefef; border: 1px solid #999; padding: 8px; margin-bottom: 12px; font-size: 10px; line-height: 1.3; }
     .section { margin-bottom: 12px; }
     .sec-title { font-weight: bold; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #000; padding-bottom: 4px; }
@@ -194,11 +194,16 @@ function generateLegacyDisclosureHTML(record: LegacyIPRecord): string {
     .field-label { font-weight: bold; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
     .field-input { border: 1px solid #000; padding: 4px; min-height: 18px; font-size: 11px; width: 100%; }
     .field-large { border: 1px solid #000; padding: 4px; min-height: 45px; font-size: 11px; width: 100%; line-height: 1.3; }
-    .confidential { background: #000; color: #fff; padding: 6px; text-align: center; font-weight: bold; font-size: 11px; margin: 12px 0; text-transform: uppercase; }
-    .footer { font-size: 9px; text-align: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid #000; }
     table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }
     th, td { border: 1px solid #000; padding: 4px; text-align: left; }
     th { background: #ccc; font-weight: bold; font-size: 9px; text-transform: uppercase; }
+    .sig-box { margin-top: 12px; }
+    .sig-line { border-top: 1px solid #000; width: 40%; margin: 35px 0 0 0; padding-top: 2px; }
+    .sig-label { font-size: 10px; font-weight: bold; margin-top: 2px; }
+    .sig-grid { display: flex; gap: 40px; margin-bottom: 12px; }
+    .sig-blk { width: auto; }
+    .confidential { background: #000; color: #fff; padding: 6px; text-align: center; font-weight: bold; font-size: 11px; margin: 12px 0; text-transform: uppercase; }
+    .footer { font-size: 9px; text-align: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid #000; }
     .required { color: #d00; }
     ul { margin-left: 16px; margin-top: 4px; }
     li { margin-bottom: 3px; font-size: 10px; }
@@ -210,16 +215,16 @@ function generateLegacyDisclosureHTML(record: LegacyIPRecord): string {
     <div class="inst-name">University Confidential Consortium</div>
     <div class="inst-name">Intellectual Property Office</div>
     <div class="doc-title">Intellectual Property Disclosure Form</div>
-    <span class="badge">LEGACY RECORD</span>
+    <span class="legacy-badge">LEGACY RECORD</span>
     <div class="ref-info"><strong>Date:</strong> ${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
   </div>
 
   <div class="instructions">
-    <strong>INSTRUCTIONS:</strong> This is a legacy intellectual property record that has been archived in the University system.
+    <strong>INSTRUCTIONS:</strong> This is a legacy intellectual property record that has been archived in the University system. All information has been verified and approved.
   </div>
 
   <div class="section">
-    <div class="sec-title">I. CREATOR/APPLICANT INFORMATION</div>
+    <div class="sec-title">I. INVENTOR/CREATOR INFORMATION</div>
     <div class="form-group">
       <div class="field-label">Name of Creator/Applicant</div>
       <div class="field-input">${details.creator_name || 'N/A'}</div>
@@ -229,11 +234,11 @@ function generateLegacyDisclosureHTML(record: LegacyIPRecord): string {
   <div class="section">
     <div class="sec-title">II. INVENTION/IP DESCRIPTION</div>
     <div class="form-group">
-      <div class="field-label">Title of Invention <span class="required">*</span></div>
+      <div class="field-label">Title of Invention</div>
       <div class="field-input">${record.title || 'N/A'}</div>
     </div>
     <div class="form-group">
-      <div class="field-label">Category of IP <span class="required">*</span></div>
+      <div class="field-label">Category of IP</div>
       <div class="field-input">${(record.category || 'N/A').toUpperCase()}</div>
     </div>
     <div class="form-group">
@@ -247,7 +252,31 @@ function generateLegacyDisclosureHTML(record: LegacyIPRecord): string {
   </div>
 
   <div class="section">
-    <div class="sec-title">III. LEGACY INFORMATION</div>
+    <div class="sec-title">III. TECHNICAL FIELD & BACKGROUND</div>
+    <div class="form-group">
+      <div class="field-label">Technical Field</div>
+      <div class="field-input">${details.technicalField || details.legacy_source || 'N/A'}</div>
+    </div>
+    <div class="form-group">
+      <div class="field-label">Prior Art & Background</div>
+      <div class="field-large">${details.backgroundArt || details.original_filing_date || 'N/A'}</div>
+    </div>
+    <div class="form-group">
+      <div class="field-label">Problem Statement</div>
+      <div class="field-large">${details.problemStatement || 'N/A'}</div>
+    </div>
+    <div class="form-group">
+      <div class="field-label">Solution Offered</div>
+      <div class="field-large">${details.solution || 'N/A'}</div>
+    </div>
+    <div class="form-group">
+      <div class="field-label">Advantages & Benefits</div>
+      <div class="field-large">${details.advantages || 'N/A'}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-title">IV. LEGACY INFORMATION</div>
     <div class="form-group">
       <div class="field-label">Source/Origin</div>
       <div class="field-input">${details.legacy_source || 'N/A'}</div>
@@ -268,19 +297,26 @@ function generateLegacyDisclosureHTML(record: LegacyIPRecord): string {
 
   ${inventors.length > 0 ? `
   <div class="section">
-    <div class="sec-title">IV. INVENTORS & CONTRIBUTORS</div>
+    <div class="sec-title">V. INVENTORS & CONTRIBUTORS</div>
     <table>
-      <tr><th>Name</th><th>Affiliation</th><th>Contribution</th></tr>
-      ${inventors.map((inv: any) => `<tr><td>${inv.name || ''}</td><td>${inv.affiliation || ''}</td><td>${inv.contribution || ''}</td></tr>`).join('')}
+      <tr><th>Name</th><th>Affiliation</th><th>Contribution</th><th>%</th></tr>
+      ${inventors.map((inv: any) => `<tr><td>${inv.name || ''}</td><td>${inv.affiliation || ''}</td><td>${inv.contribution || ''}</td><td>${inv.percent || ''}</td></tr>`).join('')}
     </table>
   </div>
   ` : ''}
+
+  <div class="section sig-box">
+    <div class="sec-title">VI. ACKNOWLEDGMENT & CERTIFICATION</div>
+    <p style="line-height: 1.4; margin-bottom: 8px;">
+      This legacy intellectual property record has been reviewed and archived in the University system. The information contained herein is subject to the University's intellectual property policies and regulations.
+    </p>
+  </div>
 
   <div class="confidential">CONFIDENTIAL - FOR UNIVERSITY USE ONLY</div>
 
   <div class="footer">
     <p>University Confidential Consortium | Intellectual Property Office</p>
-    <p>Legacy Record: ${record.id} | Generated: ${new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+    <p>Record: ${record.id} | Generated: ${new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
   </div>
 </body>
 </html>
