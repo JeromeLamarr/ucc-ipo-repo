@@ -221,6 +221,14 @@ export function LegacyRecordDetailModal({ isOpen, onClose, record }: LegacyRecor
             </div>
           )}
 
+          {/* Original Creator (if different from inventors list) */}
+          {record.details?.creator_name && (
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Original Creator</h3>
+              <p className="text-gray-900">{record.details.creator_name}</p>
+            </div>
+          )}
+
           {/* Timestamps */}
           <div className="border-b pb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Record Information</h3>

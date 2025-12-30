@@ -970,35 +970,45 @@ Deno.serve(async (req: Request) => {
 
     // Continue with certificate generation...
 
-    // Fetch creator details
-    const { data: creator, error: creatorError } = await supabase
-      .from("users")
-      .select("id, full_name, email")
-      .eq("id", ipRecord.applicant_id)
-      .single();
+    // Fetch creator details - for legacy records, use stored creator name
+    let creator;
+    if (isLegacy) {
+      // Legacy records have creator_name in details
+      const creatorName = ipRecord.details?.creator_name || 'Unknown Creator';
+      creator = { id: 'legacy', full_name: creatorName, email: 'legacy@archived' };
+    } else {
+      // Workflow records have applicant_id linking to users table
+      const { data: creatorData, error: creatorError } = await supabase
+        .from("users")
+        .select("id, full_name, email")
+        .eq("id", ipRecord.applicant_id)
+        .single();
 
-    if (creatorError || !creator) {
-      console.error('[generate-certificate] Creator fetch error', {
-        applicant_id: ipRecord.applicant_id,
-        error: creatorError?.message || "Creator not found",
-      });
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Creator user not found",
-          details: {
-            message: "The creator profile for this record could not be found",
-            userId: ipRecord.applicant_id,
-          },
-        }),
-        {
-          status: 404,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      if (creatorError || !creatorData) {
+        console.error('[generate-certificate] Creator fetch error', {
+          applicant_id: ipRecord.applicant_id,
+          error: creatorError?.message || "Creator not found",
+        });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Creator user not found",
+            details: {
+              message: "The creator profile for this record could not be found",
+              userId: ipRecord.applicant_id,
+            },
+          }),
+          {
+            status: 404,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+      creator = creatorData;
+    }      );
     }
 
     // Fetch co-creators

@@ -31,6 +31,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
     originalFilingDate: '',
     ipophilApplicationNo: '',
     remarks: '',
+    creatorName: '', // Name of original IP creator for legacy records
   });
 
   const validateStep1 = () => {
@@ -46,6 +47,10 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
   };
 
   const validateStep2 = () => {
+    if (!formData.creatorName.trim()) {
+      setError('Please enter the original creator name');
+      return false;
+    }
     if (!formData.legacySource) {
       setError('Please select a record source');
       return false;
@@ -95,6 +100,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
             details: {
               inventors: formData.inventors,
               remarks: formData.remarks,
+              creator_name: formData.creatorName,
             },
             legacy_source: formData.legacySource,
             original_filing_date: formData.originalFilingDate,
@@ -150,6 +156,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
         originalFilingDate: '',
         ipophilApplicationNo: '',
         remarks: '',
+        creatorName: '',
       });
       setUploadedFiles([]);
       onSuccess();
@@ -317,6 +324,20 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
           {step === 2 && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900">Step 2: Legacy Details</h3>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Original Creator/Inventor Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.creatorName}
+                  onChange={(e) => setFormData({ ...formData, creatorName: e.target.value })}
+                  placeholder="Name of the original IP creator"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  aria-label="Original creator name"
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
