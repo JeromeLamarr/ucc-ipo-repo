@@ -884,25 +884,25 @@ Deno.serve(async (req: Request) => {
     let isLegacy = false;
     
     // First try regular ip_records
-    const { data: regularRecord, error: regularError } = await supabase
+    const { data: regularRecords, error: regularError } = await supabase
       .from("ip_records")
       .select("*")
-      .eq("id", record_id)
-      .single();
+      .eq("id", record_id);
 
     // If not found, try legacy_ip_records
-    if (regularError || !regularRecord) {
-      const { data: legacyRecord, error: legacyError } = await supabase
+    if (!regularRecords || regularRecords.length === 0) {
+      const { data: legacyRecords, error: legacyError } = await supabase
         .from("legacy_ip_records")
         .select("*")
-        .eq("id", record_id)
-        .single();
+        .eq("id", record_id);
 
-      if (legacyError || !legacyRecord) {
+      if (!legacyRecords || legacyRecords.length === 0) {
         console.error('[generate-certificate] Record fetch error', {
           record_id,
           regularError: regularError?.message,
           legacyError: legacyError?.message,
+          regularRecords: regularRecords?.length,
+          legacyRecords: legacyRecords?.length,
         });
         return new Response(
           JSON.stringify({
@@ -918,10 +918,10 @@ Deno.serve(async (req: Request) => {
           }
         );
       }
-      ipRecord = legacyRecord;
+      ipRecord = legacyRecords[0];
       isLegacy = true;
     } else {
-      ipRecord = regularRecord;
+      ipRecord = regularRecords[0];
     }
 
     // Get the latest status from process_tracking table (most recent status change)
