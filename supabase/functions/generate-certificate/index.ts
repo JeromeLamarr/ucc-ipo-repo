@@ -925,43 +925,50 @@ Deno.serve(async (req: Request) => {
     }
 
     // Get the latest status from process_tracking table (most recent status change)
-    const { data: latestTracking, error: trackingError } = await supabase
-      .from("process_tracking")
-      .select("status")
-      .eq("ip_record_id", record_id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    let currentStatus = ipRecord.status || 'completed'; // Default to completed for legacy records
 
-    // Use latest tracking status if available, otherwise fall back to ip_records.status
-    const currentStatus = latestTracking?.status || ipRecord.status;
-    const validStatuses = ["evaluator_approved", "ready_for_filing", "preparing_legal", "completed"];
+    if (!isLegacy) {
+      // Only check workflow status for non-legacy records
+      const { data: latestTracking, error: trackingError } = await supabase
+        .from("process_tracking")
+        .select("status")
+        .eq("ip_record_id", record_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
 
-    if (!validStatuses.includes(currentStatus)) {
-      console.error('[generate-certificate] Invalid status for certificate generation', {
-        record_id,
-        currentStatus,
-        validStatuses,
-      });
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Cannot generate certificate for this record",
-          details: {
-            message: "Only records with approved status can generate certificates",
-            validStatuses: validStatuses,
-            currentStatus: currentStatus,
-          },
-        }),
-        {
-          status: 403,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // Use latest tracking status if available, otherwise fall back to ip_records.status
+      currentStatus = latestTracking?.status || ipRecord.status;
+      const validStatuses = ["evaluator_approved", "ready_for_filing", "preparing_legal", "completed"];
+
+      if (!validStatuses.includes(currentStatus)) {
+        console.error('[generate-certificate] Invalid status for certificate generation', {
+          record_id,
+          currentStatus,
+          validStatuses,
+        });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Cannot generate certificate for this record",
+            details: {
+              message: "Only records with approved status can generate certificates",
+              validStatuses,
+            },
+          }),
+          {
+            status: 403,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
     }
+    // For legacy records, skip status validation - they're auto-approved
+
+    // Continue with certificate generation...
 
     // Fetch creator details
     const { data: creator, error: creatorError } = await supabase
