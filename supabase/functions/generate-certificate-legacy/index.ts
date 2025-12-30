@@ -274,6 +274,35 @@ async function generateCertificatePDF(
   });
   yPosition -= 40;
 
+  // Generate and embed QR code
+  try {
+    const qrCodeDataUrl = await generateQRCodeImage(trackingId);
+    const qrCodeDataUrlData = qrCodeDataUrl.split(",")[1];
+    const qrCodeImageBytes = Uint8Array.from(atob(qrCodeDataUrlData), c => c.charCodeAt(0));
+    const qrCodeImage = await pdfDoc.embedPng(qrCodeImageBytes);
+    
+    // Position QR code on the right side
+    const qrSize = 60;
+    page.drawImage(qrCodeImage, {
+      x: width - margin - qrSize - 10,
+      y: yPosition - qrSize - 10,
+      width: qrSize,
+      height: qrSize,
+    });
+    
+    page.drawText("Verification Code", {
+      x: width - margin - qrSize - 10,
+      y: yPosition - qrSize - 25,
+      size: 7,
+      color: darkColor,
+    });
+  } catch (error) {
+    console.warn('[generate-certificate-legacy] QR code generation skipped:', String(error));
+    // Continue without QR code if generation fails
+  }
+
+  yPosition -= 60;
+
   // Signature line
   yPosition -= 20;
   page.drawLine({
