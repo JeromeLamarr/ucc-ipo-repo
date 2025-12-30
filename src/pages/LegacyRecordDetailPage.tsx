@@ -72,9 +72,13 @@ export function LegacyRecordDetailPage() {
     try {
       const response = await supabase.functions.invoke('generate-disclosure-legacy', {
         body: { record_id: id },
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.error) {
+        console.error('Function error:', response.error);
         throw new Error(response.error.message || 'Failed to generate disclosure');
       }
 
@@ -83,6 +87,7 @@ export function LegacyRecordDetailPage() {
         fetchDocuments();
       }, 1000);
     } catch (err) {
+      console.error('Disclosure generation error:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate disclosure');
     } finally {
       setActionLoading(false);
@@ -101,6 +106,9 @@ export function LegacyRecordDetailPage() {
 
       const response = await supabase.functions.invoke('generate-certificate-legacy', {
         body: { record_id: id, user_id: profile.id },
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.error) {
