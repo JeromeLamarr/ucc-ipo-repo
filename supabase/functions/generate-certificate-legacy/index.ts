@@ -45,6 +45,12 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+// Validate UUID format
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 // Validate input payload
 function validateRequest(payload: any): { valid: boolean; error?: string } {
   if (typeof payload.record_id !== 'number' && typeof payload.record_id !== 'string') {
