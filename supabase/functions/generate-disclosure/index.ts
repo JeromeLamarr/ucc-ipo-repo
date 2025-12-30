@@ -47,7 +47,6 @@ Deno.serve(async (req: Request) => {
 
     // Fetch the IP record with all details - check both tables
     let record;
-    let recordError;
     
     // First try regular ip_records
     const { data: regularRecord, error: regularError } = await supabase
@@ -59,27 +58,27 @@ Deno.serve(async (req: Request) => {
         evaluator:users!evaluator_id(*),
         documents:ip_documents(*)
       `)
-      .eq("id", actualRecordId)
-      .single();
+      .eq("id", actualRecordId);
 
-    if (regularError || !regularRecord) {
+    if (!regularError && regularRecord && regularRecord.length > 0) {
+      record = regularRecord[0];
+    } else {
       // Try legacy_ip_records
       const { data: legacyRecord, error: legacyError } = await supabase
         .from("legacy_ip_records")
         .select("*")
-        .eq("id", actualRecordId)
-        .single();
+        .eq("id", actualRecordId);
 
-      if (legacyError || !legacyRecord) {
+      if (!legacyError && legacyRecord && legacyRecord.length > 0) {
+        record = legacyRecord[0];
+      } else {
+        console.error('[generate-disclosure] Record not found', {
+          actualRecordId,
+          regularError: regularError?.message,
+          legacyError: legacyError?.message,
+        });
         throw new Error("Record not found in either ip_records or legacy_ip_records");
       }
-      record = legacyRecord;
-    } else {
-      record = regularRecord;
-    }
-
-    if (!record) {
-      throw new Error("Record not found");
     }
 
     const htmlContent = generateFullDisclosureHTML(record);
