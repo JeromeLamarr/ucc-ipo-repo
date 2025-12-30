@@ -70,10 +70,18 @@ export function LegacyRecordDetailPage() {
     setSuccess('');
 
     try {
+      // Get the current session to ensure auth
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('You must be logged in to generate documents');
+      }
+
       const response = await supabase.functions.invoke('generate-disclosure-legacy', {
         body: { record_id: id },
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
       });
 
@@ -104,10 +112,18 @@ export function LegacyRecordDetailPage() {
         throw new Error('User ID not found');
       }
 
+      // Get the current session to ensure auth
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('You must be logged in to generate documents');
+      }
+
       const response = await supabase.functions.invoke('generate-certificate-legacy', {
         body: { record_id: id, user_id: profile.id },
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
       });
 
