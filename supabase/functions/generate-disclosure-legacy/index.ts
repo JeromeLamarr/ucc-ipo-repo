@@ -117,10 +117,14 @@ Deno.serve(async (req: Request) => {
       fileSize: pdfBytes.length,
     });
 
+    // Convert PDF to base64 for download
+    const base64Pdf = btoa(String.fromCharCode.apply(null, Array.from(pdfBytes)));
+
     return new Response(
       JSON.stringify({
         success: true,
         filePath,
+        pdf_data: base64Pdf,
         message: "Legacy disclosure generated successfully",
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }

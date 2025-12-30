@@ -467,6 +467,9 @@ Deno.serve(async (req: Request) => {
       fileSize: pdfBuffer.length,
     });
 
+    // Convert PDF to base64 for download
+    const base64Pdf = btoa(String.fromCharCode.apply(null, Array.from(pdfBuffer)));
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -475,6 +478,7 @@ Deno.serve(async (req: Request) => {
         fileSize: pdfBuffer.length,
         checksum,
         filePath,
+        pdf_data: base64Pdf,
         record: {
           id: record.id,
           title: record.title,

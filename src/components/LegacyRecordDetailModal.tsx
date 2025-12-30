@@ -48,7 +48,25 @@ export function LegacyRecordDetailModal({ isOpen, onClose, record }: LegacyRecor
       const result = await response.json();
 
       if (result.success) {
-        alert(`✅ Certificate generated successfully!\n\nTracking ID: ${result.certificateNumber}`);
+        if (result.pdf_data) {
+          // Download the PDF
+          const binaryString = atob(result.pdf_data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `Certificate-${result.certificateNumber}-${new Date().toISOString().split('T')[0]}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }
+        alert(`✅ Certificate generated and downloaded successfully!\n\nTracking ID: ${result.certificateNumber}`);
       } else {
         throw new Error(result.error || 'Unknown error');
       }
@@ -92,7 +110,25 @@ export function LegacyRecordDetailModal({ isOpen, onClose, record }: LegacyRecor
       const result = await response.json();
 
       if (result.success) {
-        alert(`✅ Disclosure generated successfully!\n\nFile: ${result.filePath}`);
+        if (result.pdf_data) {
+          // Download the PDF
+          const binaryString = atob(result.pdf_data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `Disclosure-${record.title}-${new Date().toISOString().split('T')[0]}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }
+        alert(`✅ Disclosure generated and downloaded successfully!`);
       } else {
         throw new Error(result.error || 'Unknown error');
       }
