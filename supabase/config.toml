@@ -51,3 +51,8 @@ verify_jwt = true
 
 [functions.generate-disclosure]
 verify_jwt = true
+[functions.generate-certificate-legacy]
+verify_jwt = true
+
+[functions.generate-disclosure-legacy]
+verify_jwt = true

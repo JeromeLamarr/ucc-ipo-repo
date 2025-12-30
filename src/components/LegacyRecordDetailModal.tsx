@@ -23,7 +23,8 @@ export function LegacyRecordDetailModal({ isOpen, onClose, record }: LegacyRecor
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-certificate`;
+      // Use the dedicated legacy certificate function
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-certificate-legacy`;
       const headers = {
         Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json',
@@ -35,13 +36,6 @@ export function LegacyRecordDetailModal({ isOpen, onClose, record }: LegacyRecor
         body: JSON.stringify({
           record_id: record.id,
           user_id: user.id,
-          applicant_name: record.details?.inventors?.[0]?.name || 'Unknown',
-          title: record.title,
-          category: record.category,
-          reference_number: record.ipophil_application_no || 'N/A',
-          co_creators: record.details?.inventors?.slice(1) || [],
-          evaluation_score: null,
-          is_legacy: true,
         }),
       });
 
@@ -53,26 +47,11 @@ export function LegacyRecordDetailModal({ isOpen, onClose, record }: LegacyRecor
 
       const result = await response.json();
 
-      if (result.pdf_data) {
-        // Download the PDF
-        const binaryString = atob(result.pdf_data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        const blob = new Blob([bytes], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Certificate-${record.title}-${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+      if (result.success) {
+        alert(`✅ Certificate generated successfully!\n\nTracking ID: ${result.certificateNumber}`);
+      } else {
+        throw new Error(result.error || 'Unknown error');
       }
-
-      alert('✅ Certificate generated successfully!');
     } catch (error: any) {
       console.error('Error generating certificate:', error);
       alert(`Failed to generate certificate: ${error.message || 'Please try again.'}`);
@@ -88,7 +67,8 @@ export function LegacyRecordDetailModal({ isOpen, onClose, record }: LegacyRecor
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-disclosure`;
+      // Use the dedicated legacy disclosure function
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-disclosure-legacy`;
       const headers = {
         Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         'Content-Type': 'application/json',
@@ -98,7 +78,7 @@ export function LegacyRecordDetailModal({ isOpen, onClose, record }: LegacyRecor
         method: 'POST',
         headers,
         body: JSON.stringify({
-          recordId: record.id,  // Using recordId for generate-disclosure compatibility
+          recordId: record.id,
           user_id: user.id,
         }),
       });
@@ -111,26 +91,11 @@ export function LegacyRecordDetailModal({ isOpen, onClose, record }: LegacyRecor
 
       const result = await response.json();
 
-      if (result.pdf_data) {
-        // Download the PDF
-        const binaryString = atob(result.pdf_data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        const blob = new Blob([bytes], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Disclosure-${record.title}-${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+      if (result.success) {
+        alert(`✅ Disclosure generated successfully!\n\nFile: ${result.filePath}`);
+      } else {
+        throw new Error(result.error || 'Unknown error');
       }
-
-      alert('✅ Disclosure generated successfully!');
     } catch (error: any) {
       console.error('Error generating disclosure:', error);
       alert(`Failed to generate disclosure: ${error.message || 'Please try again.'}`);
