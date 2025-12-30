@@ -107,16 +107,23 @@ export function AddLegacyRecordPage() {
 
       const recordId = newRecord[0].id;
 
-      // Upload files if any
+      // Upload files if any (non-blocking - errors don't stop record creation)
       if (uploadedFiles.length > 0) {
         for (const file of uploadedFiles) {
-          const filePath = `legacy-records/${recordId}/${Date.now()}-${file.name}`;
-          const { error: uploadError } = await supabase.storage
-            .from('documents')
-            .upload(filePath, file);
+          try {
+            // Try uploading to 'documents' bucket first
+            const filePath = `legacy-records/${recordId}/${Date.now()}-${file.name}`;
+            const { error: uploadError } = await supabase.storage
+              .from('documents')
+              .upload(filePath, file);
 
-          if (uploadError) {
-            console.error(`Failed to upload ${file.name}:`, uploadError);
+            if (uploadError) {
+              console.warn(`File upload skipped (${file.name}): ${uploadError.message}`);
+              // Continue with record creation even if upload fails
+            }
+          } catch (err) {
+            console.warn(`File upload exception (${file.name}):`, err);
+            // Continue with record creation even if upload fails
           }
         }
       }
