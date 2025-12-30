@@ -100,7 +100,6 @@ export function LegacyRecordDetailPage() {
       const response = await supabase.functions.invoke('generate-disclosure-legacy', {
         body: { record_id: id },
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
       });
@@ -162,7 +161,6 @@ export function LegacyRecordDetailPage() {
       const response = await supabase.functions.invoke('generate-certificate-legacy', {
         body: { record_id: id, user_id: profile.id },
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
       });
