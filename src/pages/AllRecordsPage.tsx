@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { FileText, Search, Filter, Eye, Download, Plus } from 'lucide-react';
+import { FileText, Search, Filter, Eye, Download, Plus, Award } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { AddLegacyRecordModal } from '../components/AddLegacyRecordModal';
 import { LegacyRecordBadge } from '../components/LegacyRecordBadge';
+import { LegacyRecordDetailModal } from '../components/LegacyRecordDetailModal';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -36,6 +37,7 @@ export function AllRecordsPage() {
   
   // Modal state
   const [showAddLegacyModal, setShowAddLegacyModal] = useState(false);
+  const [selectedLegacyRecord, setSelectedLegacyRecord] = useState<any>(null);
 
   useEffect(() => {
     fetchRecords();
@@ -493,13 +495,13 @@ export function AllRecordsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Link
-                        to={`/dashboard/submissions/${record.id}`}
+                      <button
+                        onClick={() => setSelectedLegacyRecord(record)}
                         className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
                       >
                         <Eye className="h-4 w-4" />
                         View
-                      </Link>
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -527,6 +529,13 @@ export function AllRecordsPage() {
           setShowAddLegacyModal(false);
           fetchRecords();
         }}
+      />
+
+      {/* Modal for viewing legacy record details */}
+      <LegacyRecordDetailModal
+        isOpen={!!selectedLegacyRecord}
+        onClose={() => setSelectedLegacyRecord(null)}
+        record={selectedLegacyRecord}
       />
     </div>
   );
