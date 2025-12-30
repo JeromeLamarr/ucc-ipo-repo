@@ -57,20 +57,12 @@ function validateRequest(payload: any): { valid: boolean; error?: string } {
     return { valid: false, error: 'record_id is required' };
   }
 
-  if (typeof payload.record_id !== 'number' && typeof payload.record_id !== 'string') {
-    return { valid: false, error: 'record_id must be a string or number' };
-  }
-
-  // record_id can be any non-empty string or number (UUID, numeric ID, etc.)
+  // record_id can be any non-empty value
   if (typeof payload.record_id === 'string' && payload.record_id.trim().length === 0) {
     return { valid: false, error: 'record_id cannot be empty' };
   }
 
-  // user_id is optional for legacy records
-  if (payload.user_id && typeof payload.user_id !== 'string') {
-    return { valid: false, error: 'user_id must be a string' };
-  }
-
+  // That's it - be permissive with other fields
   return { valid: true };
 }
 
@@ -478,10 +470,12 @@ Deno.serve(async (req: Request) => {
     const validation = validateRequest(requestData);
     if (!validation.valid) {
       console.error('[generate-certificate-legacy] Validation failed:', validation.error);
+      console.error('[generate-certificate-legacy] Request data was:', JSON.stringify(requestData));
       return new Response(
         JSON.stringify({
           success: false,
           error: "Validation failed: " + validation.error,
+          received: requestData,
         }),
         {
           status: 400,
