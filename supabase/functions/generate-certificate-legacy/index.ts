@@ -53,25 +53,22 @@ function isValidUUID(uuid: string): boolean {
 
 // Validate input payload
 function validateRequest(payload: any): { valid: boolean; error?: string } {
+  if (!payload.record_id) {
+    return { valid: false, error: 'record_id is required' };
+  }
+
   if (typeof payload.record_id !== 'number' && typeof payload.record_id !== 'string') {
     return { valid: false, error: 'record_id must be a string or number' };
   }
 
-  if (typeof payload.record_id === 'string') {
-    const isUUID = isValidUUID(payload.record_id);
-    const isNumeric = !isNaN(parseInt(payload.record_id));
-    
-    if (!isUUID && !isNumeric) {
-      return { valid: false, error: 'record_id must be a valid UUID or number' };
-    }
+  // record_id can be any non-empty string or number (UUID, numeric ID, etc.)
+  if (typeof payload.record_id === 'string' && payload.record_id.trim().length === 0) {
+    return { valid: false, error: 'record_id cannot be empty' };
   }
 
-  if (!payload.user_id || typeof payload.user_id !== 'string') {
-    return { valid: false, error: 'user_id must be a non-empty string' };
-  }
-
-  if (!isValidUUID(payload.user_id)) {
-    return { valid: false, error: 'user_id must be a valid UUID' };
+  // user_id is optional for legacy records
+  if (payload.user_id && typeof payload.user_id !== 'string') {
+    return { valid: false, error: 'user_id must be a string' };
   }
 
   return { valid: true };
@@ -425,6 +422,7 @@ Deno.serve(async (req: Request) => {
     let requestData: LegacyCertificateRequest;
     try {
       requestData = await req.json();
+      console.log('[generate-certificate-legacy] Request parsed:', { record_id: requestData.record_id });
     } catch (e) {
       console.error('[generate-certificate-legacy] JSON parse error:', String(e));
       return new Response(
@@ -449,8 +447,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Validation failed",
-          details: { validation: validation.error },
+          error: "Validation failed: " + validation.error,
         }),
         {
           status: 400,
@@ -520,8 +517,12 @@ Deno.serve(async (req: Request) => {
     const trackingId = `LEGACY-${year}-${String(record.id).substring(0, 8).toUpperCase()}`;
 
     // Generate PDF
+    console.log('[generate-certificate-legacy] Starting PDF generation');
     const pdfBuffer = await generateCertificatePDF(record, creator, trackingId);
+    console.log('[generate-certificate-legacy] PDF generated, size:', pdfBuffer.length);
+    
     const checksum = await generateChecksum(pdfBuffer);
+    console.log('[generate-certificate-legacy] Checksum generated:', checksum);
 
     // Upload to legacy bucket
     const now = new Date();

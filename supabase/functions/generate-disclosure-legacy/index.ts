@@ -48,13 +48,15 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('[generate-disclosure-legacy] Missing env vars');
       throw new Error("Missing Supabase configuration");
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Accept both recordId and record_id for compatibility
-    const { recordId, record_id } = await req.json();
+    const bodyData = await req.json();
+    const { recordId, record_id } = bodyData;
     const actualRecordId = recordId || record_id;
 
     if (!actualRecordId) {
@@ -93,10 +95,14 @@ Deno.serve(async (req: Request) => {
 
     // Generate legacy disclosure HTML
     const htmlContent = generateLegacyDisclosureHTML(record);
+    console.log('[generate-disclosure-legacy] HTML generated, size:', htmlContent.length);
 
     // Convert HTML to PDF
     const pdfDoc = await PDFDocument.create();
+    console.log('[generate-disclosure-legacy] PDF document created');
+    
     const pdfBytes = await convertHTMLToPDF(htmlContent, pdfDoc);
+    console.log('[generate-disclosure-legacy] PDF conversion complete, size:', pdfBytes.length);
 
     const fileName = `${actualRecordId}_legacy_disclosure_${Date.now()}.pdf`;
     const filePath = `${actualRecordId}/${fileName}`;
