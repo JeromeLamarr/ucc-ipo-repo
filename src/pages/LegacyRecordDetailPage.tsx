@@ -109,25 +109,8 @@ export function LegacyRecordDetailPage() {
         throw new Error(response.error.message || 'Failed to generate disclosure');
       }
 
-      const { data } = response;
-
-      // Save PDF data to database if not already saved by function
-      if (data?.pdf_data && id) {
-        const fileName = `${id}_full_disclosure_${Date.now()}.pdf`;
-        const { error: saveError } = await supabase
-          .from('legacy_record_documents')
-          .insert({
-            record_id: id,
-            document_type: 'disclosure',
-            file_name: fileName,
-            pdf_data: data.pdf_data,
-          });
-
-        if (saveError) {
-          console.warn('Failed to save document record:', saveError);
-          // Don't fail - PDF generation was successful
-        }
-      }
+      // The edge function already saves the record to the database
+      // No need to save again from the frontend
 
       setSuccess('Disclosure generated successfully!');
       setTimeout(() => {
@@ -169,25 +152,8 @@ export function LegacyRecordDetailPage() {
         throw new Error(response.error.message || 'Failed to generate certificate');
       }
 
-      const { data } = response;
-
-      // Save PDF data to database if not already saved by function
-      if (data?.pdf_data && id) {
-        const fileName = `${id}_certificate_${Date.now()}.pdf`;
-        const { error: saveError } = await supabase
-          .from('legacy_record_documents')
-          .insert({
-            record_id: id,
-            document_type: 'certificate',
-            file_name: fileName,
-            pdf_data: data.pdf_data,
-          });
-
-        if (saveError) {
-          console.warn('Failed to save document record:', saveError);
-          // Don't fail - PDF generation was successful
-        }
-      }
+      // The edge function already saves the record to the database
+      // No need to save again from the frontend
 
       setSuccess('Certificate generated successfully!');
       setTimeout(() => {
