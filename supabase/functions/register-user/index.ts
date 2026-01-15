@@ -67,7 +67,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "ERR_JSON",
+          error: "Invalid request format. Please ensure all fields are provided correctly.",
         }),
         {
           status: 400,
@@ -83,10 +83,15 @@ Deno.serve(async (req: Request) => {
 
     // Validate input
     if (!email || !fullName || !password) {
+      const missingFields = [];
+      if (!email) missingFields.push("email");
+      if (!fullName) missingFields.push("fullName");
+      if (!password) missingFields.push("password");
+      
       return new Response(
         JSON.stringify({
           success: false,
-          error: "ERR_MISSING",
+          error: `Missing required field(s): ${missingFields.join(", ")}`,
         }),
         {
           status: 400,
