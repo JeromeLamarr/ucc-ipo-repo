@@ -109,10 +109,36 @@ export function LegacyRecordDetailPage() {
         throw new Error(response.error.message || 'Failed to generate disclosure');
       }
 
+      const data = response.data as any;
+
+      // Auto-download the PDF if available
+      if (data?.pdf_data) {
+        try {
+          const binaryString = atob(data.pdf_data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `Disclosure-${record?.title || 'document'}-${new Date().toISOString().split('T')[0]}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch (downloadErr) {
+          console.warn('Auto-download failed:', downloadErr);
+          // Continue to show success message even if download fails
+        }
+      }
+
       // The edge function already saves the record to the database
       // No need to save again from the frontend
 
-      setSuccess('Disclosure generated successfully!');
+      setSuccess('Disclosure generated successfully and downloaded!');
       setTimeout(() => {
         fetchDocuments();
       }, 1000);
@@ -152,10 +178,36 @@ export function LegacyRecordDetailPage() {
         throw new Error(response.error.message || 'Failed to generate certificate');
       }
 
+      const data = response.data as any;
+
+      // Auto-download the PDF if available
+      if (data?.pdf_data) {
+        try {
+          const binaryString = atob(data.pdf_data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `Certificate-${data.certificateNumber || 'certificate'}-${new Date().toISOString().split('T')[0]}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch (downloadErr) {
+          console.warn('Auto-download failed:', downloadErr);
+          // Continue to show success message even if download fails
+        }
+      }
+
       // The edge function already saves the record to the database
       // No need to save again from the frontend
 
-      setSuccess('Certificate generated successfully!');
+      setSuccess('Certificate generated successfully and downloaded!');
       setTimeout(() => {
         fetchDocuments();
       }, 1000);
