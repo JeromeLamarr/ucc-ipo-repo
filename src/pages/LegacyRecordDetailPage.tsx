@@ -465,7 +465,7 @@ export function LegacyRecordDetailPage() {
                 <p className="text-sm text-gray-600 mb-4">
                   Generate a comprehensive disclosure document containing all IP details.
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={handleGenerateDisclosure}
                     disabled={actionLoading}
@@ -482,6 +482,17 @@ export function LegacyRecordDetailPage() {
                     <RefreshCw className="w-4 h-4" />
                     Regenerate
                   </button>
+                  <button
+                    onClick={() => {
+                      const disclosureDoc = documents.find(d => d.document_type === 'disclosure');
+                      if (disclosureDoc) handleDownloadDocument(disclosureDoc);
+                    }}
+                    disabled={!documents.some(d => d.document_type === 'disclosure')}
+                    className="flex items-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </button>
                 </div>
               </div>
 
@@ -491,7 +502,7 @@ export function LegacyRecordDetailPage() {
                 <p className="text-sm text-gray-600 mb-4">
                   Generate a professional certificate of IP registration.
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={handleGenerateCertificate}
                     disabled={actionLoading}
@@ -507,6 +518,17 @@ export function LegacyRecordDetailPage() {
                   >
                     <RefreshCw className="w-4 h-4" />
                     Regenerate
+                  </button>
+                  <button
+                    onClick={() => {
+                      const certificateDoc = documents.find(d => d.document_type === 'certificate');
+                      if (certificateDoc) handleDownloadDocument(certificateDoc);
+                    }}
+                    disabled={!documents.some(d => d.document_type === 'certificate')}
+                    className="flex items-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
                   </button>
                 </div>
               </div>
