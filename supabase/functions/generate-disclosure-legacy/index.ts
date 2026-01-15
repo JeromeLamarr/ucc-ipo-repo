@@ -104,16 +104,9 @@ Deno.serve(async (req: Request) => {
       creatorName: record.details?.creator_name,
     });
 
-    // Generate legacy disclosure HTML
-    const htmlContent = generateLegacyDisclosureHTML(record);
-    console.log('[generate-disclosure-legacy] HTML generated, size:', htmlContent.length);
-
-    // Convert HTML to PDF
-    const pdfDoc = await PDFDocument.create();
-    console.log('[generate-disclosure-legacy] PDF document created');
-    
-    const pdfBytes = await convertHTMLToPDF(htmlContent, pdfDoc);
-    console.log('[generate-disclosure-legacy] PDF conversion complete, size:', pdfBytes.length);
+    // Generate legacy disclosure PDF with professional styling
+    const pdfBytes = await generateLegacyDisclosurePDF(record);
+    console.log('[generate-disclosure-legacy] PDF generated successfully, size:', pdfBytes.length);
 
     const fileName = `${actualRecordId}_legacy_disclosure_${Date.now()}.pdf`;
     const filePath = `${actualRecordId}/${fileName}`;
@@ -179,281 +172,233 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-function generateLegacyDisclosureHTML(record: LegacyIPRecord): string {
-  const details = record.details || {};
+  }
+});
 
-  const disclosureHTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>IP Disclosure Form - Legacy Record - ${record.title}</title>
-  <style>
-    @page { size: letter; margin: 0.75in; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Times New Roman', Times, serif; font-size: 12px; line-height: 1.4; color: #000; }
-    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 18px; }
-    .inst-name { font-weight: bold; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
-    .doc-title { font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 6px 0; }
-    .ref-info { font-size: 11px; margin: 4px 0; }
-    .legacy-badge { background: #FCD34D; color: #78350F; padding: 3px 8px; font-size: 10px; font-weight: bold; display: inline-block; margin-top: 4px; border-radius: 3px; }
-    .instructions { background: #efefef; border: 1px solid #999; padding: 8px; margin-bottom: 12px; font-size: 10px; line-height: 1.3; }
-    .section { margin-bottom: 12px; }
-    .sec-title { font-weight: bold; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #000; padding-bottom: 4px; }
-    .form-group { margin-bottom: 8px; }
-    .form-row { display: flex; gap: 12px; margin-bottom: 8px; }
-    .form-col { flex: 1; }
-    .field-label { font-weight: bold; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
-    .field-input { border: 1px solid #000; padding: 4px; min-height: 18px; font-size: 11px; width: 100%; }
-    .field-large { border: 1px solid #000; padding: 4px; min-height: 45px; font-size: 11px; width: 100%; line-height: 1.3; }
-    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }
-    th, td { border: 1px solid #000; padding: 4px; text-align: left; }
-    th { background: #ccc; font-weight: bold; font-size: 9px; text-transform: uppercase; }
-    .sig-box { margin-top: 12px; }
-    .sig-line { border-top: 1px solid #000; width: 40%; margin: 35px 0 0 0; padding-top: 2px; }
-    .sig-label { font-size: 10px; font-weight: bold; margin-top: 2px; }
-    .sig-grid { display: flex; gap: 40px; margin-bottom: 12px; }
-    .sig-blk { width: auto; }
-    .confidential { background: #000; color: #fff; padding: 6px; text-align: center; font-weight: bold; font-size: 11px; margin: 12px 0; text-transform: uppercase; }
-    .footer { font-size: 9px; text-align: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid #000; }
-    .required { color: #d00; }
-    ul { margin-left: 16px; margin-top: 4px; }
-    li { margin-bottom: 3px; font-size: 10px; }
-    p { font-size: 10px; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="inst-name">University Confidential Consortium</div>
-    <div class="inst-name">Intellectual Property Office</div>
-    <div class="doc-title">Intellectual Property Disclosure Form - Legacy Record</div>
-    <span class="legacy-badge">🔖 LEGACY RECORD</span>
-    <div class="ref-info"><strong>Record ID:</strong> ${record.id}</div>
-    <div class="ref-info"><strong>Date:</strong> ${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
-  </div>
-
-  <div class="instructions">
-    <strong>INSTRUCTIONS:</strong> This is a legacy intellectual property record that has been archived in the University system. All information has been verified and approved.
-  </div>
-
-  <div class="section">
-    <div class="sec-title">I. INVENTOR/CREATOR INFORMATION</div>
-    <div class="form-group">
-      <div class="field-label">Name of Creator/Applicant</div>
-      <div class="field-input">${details.creator_name || 'N/A'}</div>
-    </div>
-    ${details.creator_email ? `
-    <div class="form-group">
-      <div class="field-label">Email</div>
-      <div class="field-input">${details.creator_email}</div>
-    </div>
-    ` : ''}
-    ${details.creator_affiliation ? `
-    <div class="form-group">
-      <div class="field-label">Department/Affiliation</div>
-      <div class="field-input">${details.creator_affiliation}</div>
-    </div>
-    ` : ''}
-  </div>
-
-  <div class="section">
-    <div class="sec-title">II. INVENTION/IP DESCRIPTION</div>
-    <div class="form-group">
-      <div class="field-label">Title of Invention</div>
-      <div class="field-input">${record.title || 'N/A'}</div>
-    </div>
-    <div class="form-group">
-      <div class="field-label">Category of IP</div>
-      <div class="field-input">${(record.category || 'N/A').toUpperCase()}</div>
-    </div>
-    <div class="form-group">
-      <div class="field-label">Abstract/Summary</div>
-      <div class="field-large">${record.abstract || 'N/A'}</div>
-    </div>
-    ${details.description ? `
-    <div class="form-group">
-      <div class="field-label">Detailed Description</div>
-      <div class="field-large">${details.description}</div>
-    </div>
-    ` : ''}
-  </div>
-
-  <div class="section">
-    <div class="sec-title">III. TECHNICAL FIELD & BACKGROUND</div>
-    ${details.technicalField ? `
-    <div class="form-group">
-      <div class="field-label">Technical Field</div>
-      <div class="field-input">${details.technicalField}</div>
-    </div>
-    ` : ''}
-    ${details.legacy_source ? `
-    <div class="form-group">
-      <div class="field-label">Source/Origin</div>
-      <div class="field-input">${details.legacy_source}</div>
-    </div>
-    ` : ''}
-    ${details.backgroundArt ? `
-    <div class="form-group">
-      <div class="field-label">Prior Art & Background</div>
-      <div class="field-large">${details.backgroundArt}</div>
-    </div>
-    ` : ''}
-    ${details.problemStatement ? `
-    <div class="form-group">
-      <div class="field-label">Problem Statement</div>
-      <div class="field-large">${details.problemStatement}</div>
-    </div>
-    ` : ''}
-    ${details.solution ? `
-    <div class="form-group">
-      <div class="field-label">Solution Offered</div>
-      <div class="field-large">${details.solution}</div>
-    </div>
-    ` : ''}
-    ${details.advantages ? `
-    <div class="form-group">
-      <div class="field-label">Advantages & Benefits</div>
-      <div class="field-large">${details.advantages}</div>
-    </div>
-    ` : ''}
-  </div>
-
-  <div class="section">
-    <div class="sec-title">IV. LEGACY INFORMATION</div>
-    ${details.original_filing_date ? `
-    <div class="form-group">
-      <div class="field-label">Original Filing Date</div>
-      <div class="field-input">${details.original_filing_date}</div>
-    </div>
-    ` : ''}
-    ${details.ipophil_application_no ? `
-    <div class="form-group">
-      <div class="field-label">IPOPHIL Application Number</div>
-      <div class="field-input">${details.ipophil_application_no}</div>
-    </div>
-    ` : ''}
-    ${details.remarks ? `
-    <div class="form-group">
-      <div class="field-label">Remarks</div>
-      <div class="field-large">${details.remarks}</div>
-    </div>
-    ` : ''}
-  </div>
-
-  ${details.inventors && Array.isArray(details.inventors) && details.inventors.length > 0 ? `
-  <div class="section">
-    <div class="sec-title">V. INVENTORS & CONTRIBUTORS</div>
-    <table>
-      <tr><th>Name</th><th>Affiliation</th><th>Contribution</th><th>%</th></tr>
-      ${details.inventors.map((inv: any) => `<tr><td>${inv.name || ''}</td><td>${inv.affiliation || ''}</td><td>${inv.contribution || ''}</td><td>${inv.percent || ''}</td></tr>`).join('')}
-    </table>
-  </div>
-  ` : ''}
-
-  <div class="section sig-box">
-    <div class="sec-title">VI. ACKNOWLEDGMENT & CERTIFICATION</div>
-    <p style="line-height: 1.4; margin-bottom: 8px;">
-      This legacy intellectual property record has been reviewed and archived in the University system. The information contained herein is subject to the University's intellectual property policies and regulations.
-    </p>
-    <p style="line-height: 1.4; margin-bottom: 8px;">
-      This disclosure serves as an official record of the intellectual property registration and is maintained for institutional, legal, and archival purposes.
-    </p>
-  </div>
-
-  <div class="confidential">CONFIDENTIAL - FOR UNIVERSITY USE ONLY</div>
-
-  <div class="footer">
-    <p>University Confidential Consortium | Intellectual Property Office</p>
-    <p>Record: ${record.id} | Generated: ${new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
-  </div>
-</body>
-</html>
-  `;
-
-  return disclosureHTML;
-}
-
-// Simple HTML to PDF conversion using pdf-lib
-async function convertHTMLToPDF(htmlContent: string, pdfDoc: PDFDocument): Promise<Uint8Array> {
+async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([612, 792]); // Letter size
   const { width, height } = page.getSize();
-  
+  const details = record.details || {};
+
+  let yPosition = height - 40;
   const margin = 40;
-  let yPosition = height - margin;
-  const lineHeight = 13;
-  const maxWidth = width - 2 * margin;
+  const contentWidth = width - 2 * margin;
 
-  // Extract and format text from HTML
-  const plainText = htmlContent
-    .replace(/<style[^<]*<\/style>/gi, '')
-    .replace(/<script[^<]*<\/script>/gi, '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0);
+  // Helper function to draw text
+  const drawText = (
+    text: string,
+    x: number,
+    y: number,
+    size: number,
+    bold = false
+  ) => {
+    page.drawText(text, {
+      x,
+      y,
+      size,
+      color: rgb(0, 0, 0),
+      font: bold ? pdfDoc.getFont("Helvetica-Bold") : pdfDoc.getFont("Helvetica"),
+    });
+  };
 
-  // Render header
-  page.drawText("IP Disclosure Form - Legacy Record", {
+  // Header
+  drawText("University Confidential Consortium", margin, yPosition, 11, true);
+  yPosition -= 14;
+  drawText("Intellectual Property Office", margin, yPosition, 11, true);
+  yPosition -= 18;
+  drawText("INTELLECTUAL PROPERTY DISCLOSURE FORM - LEGACY RECORD", margin, yPosition, 11, true);
+  yPosition -= 16;
+  page.drawRectangle({
     x: margin,
-    y: yPosition,
-    size: 13,
-    color: rgb(0, 0, 0),
+    y: yPosition - 15,
+    width: contentWidth,
+    height: 1,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 1,
   });
-  yPosition -= lineHeight * 2.5;
+  yPosition -= 20;
 
-  // Draw a horizontal line
-  page.drawLine({
-    start: { x: margin, y: yPosition },
-    end: { x: width - margin, y: yPosition },
-    thickness: 1,
-    color: rgb(0, 0, 0),
+  // Legacy Badge
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - 12,
+    width: 60,
+    height: 14,
+    color: rgb(1, 0.804, 0.333), // #FCD34D
   });
-  yPosition -= lineHeight;
+  drawText("LEGACY RECORD", margin + 5, yPosition - 10, 9, true);
+  yPosition -= 20;
 
-  // Render text lines
-  for (const line of plainText.slice(0, 100)) {
-    if (yPosition < margin + 20) {
-      // Would need page break in production
-      break;
-    }
+  // Record Info
+  drawText(`Record ID: ${record.id}`, margin, yPosition, 9);
+  yPosition -= 12;
+  drawText(
+    `Date: ${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`,
+    margin,
+    yPosition,
+    9
+  );
+  yPosition -= 16;
 
-    // Wrap long lines
-    const words = line.split(' ');
-    let currentLine = '';
-    
-    for (const word of words) {
-      const testLine = currentLine ? currentLine + ' ' + word : word;
-      const textWidth = testLine.length * 2.5; // Approximate character width
-      
-      if (textWidth > maxWidth - 20) {
-        if (currentLine) {
-          page.drawText(currentLine, {
-            x: margin,
-            y: yPosition,
-            size: 10,
-            color: rgb(0, 0, 0),
-          });
-          yPosition -= lineHeight;
-        }
-        currentLine = word;
-      } else {
-        currentLine = testLine;
-      }
-    }
-    
-    if (currentLine) {
-      page.drawText(currentLine, {
-        x: margin,
-        y: yPosition,
-        size: 10,
-        color: rgb(0, 0, 0),
-      });
-      yPosition -= lineHeight;
-    }
+  // Section I: Creator Information
+  drawText("I. INVENTOR/CREATOR INFORMATION", margin, yPosition, 10, true);
+  yPosition -= 12;
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - 1,
+    width: contentWidth,
+    height: 1,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  yPosition -= 10;
+
+  drawText("Name of Creator/Applicant:", margin, yPosition, 9, true);
+  yPosition -= 11;
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - 15,
+    width: contentWidth,
+    height: 15,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  drawText(details.creator_name || "N/A", margin + 3, yPosition - 8, 9);
+  yPosition -= 20;
+
+  if (details.creator_email) {
+    drawText("Email:", margin, yPosition, 9, true);
+    yPosition -= 11;
+    page.drawRectangle({
+      x: margin,
+      y: yPosition - 15,
+      width: contentWidth,
+      height: 15,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 0.5,
+    });
+    drawText(details.creator_email, margin + 3, yPosition - 8, 9);
+    yPosition -= 20;
   }
 
-  return pdfDoc.save();
+  if (details.creator_affiliation) {
+    drawText("Department/Affiliation:", margin, yPosition, 9, true);
+    yPosition -= 11;
+    page.drawRectangle({
+      x: margin,
+      y: yPosition - 15,
+      width: contentWidth,
+      height: 15,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 0.5,
+    });
+    drawText(details.creator_affiliation, margin + 3, yPosition - 8, 9);
+    yPosition -= 20;
+  }
+
+  // Check if we need a new page
+  if (yPosition < 100) {
+    const newPage = pdfDoc.addPage([612, 792]);
+    yPosition = height - 40;
+  }
+
+  // Section II: Invention/IP Description
+  drawText("II. INVENTION/IP DESCRIPTION", margin, yPosition, 10, true);
+  yPosition -= 12;
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - 1,
+    width: contentWidth,
+    height: 1,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  yPosition -= 10;
+
+  drawText("Title of Invention:", margin, yPosition, 9, true);
+  yPosition -= 11;
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - 15,
+    width: contentWidth,
+    height: 15,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  drawText(record.title || "N/A", margin + 3, yPosition - 8, 9);
+  yPosition -= 20;
+
+  drawText("Category of IP:", margin, yPosition, 9, true);
+  yPosition -= 11;
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - 15,
+    width: contentWidth,
+    height: 15,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  drawText((record.category || "N/A").toUpperCase(), margin + 3, yPosition - 8, 9);
+  yPosition -= 20;
+
+  drawText("Abstract/Summary:", margin, yPosition, 9, true);
+  yPosition -= 11;
+  const abstractLines = wrapText(record.abstract || "N/A", 80);
+  const abstractHeight = abstractLines.length * 11 + 10;
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - abstractHeight,
+    width: contentWidth,
+    height: abstractHeight,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+  });
+  let abstractY = yPosition - 6;
+  for (const line of abstractLines) {
+    drawText(line, margin + 3, abstractY, 8);
+    abstractY -= 11;
+  }
+  yPosition -= abstractHeight + 10;
+
+  // Confidential Banner
+  page.drawRectangle({
+    x: margin,
+    y: yPosition - 12,
+    width: contentWidth,
+    height: 12,
+    color: rgb(0, 0, 0),
+  });
+  drawText("CONFIDENTIAL - FOR UNIVERSITY USE ONLY", margin + 5, yPosition - 10, 9, true);
+  yPosition -= 18;
+
+  // Footer
+  drawText("University Confidential Consortium | Intellectual Property Office", margin, yPosition, 8);
+  yPosition -= 10;
+  drawText(
+    `Record ID: ${record.id} | Generated: ${new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}`,
+    margin,
+    yPosition,
+    8
+  );
+
+  return await pdfDoc.save();
+}
+
+function wrapText(text: string, maxCharsPerLine: number): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    if ((currentLine + word).length <= maxCharsPerLine) {
+      currentLine += (currentLine ? " " : "") + word;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+
+  return lines;
 }
