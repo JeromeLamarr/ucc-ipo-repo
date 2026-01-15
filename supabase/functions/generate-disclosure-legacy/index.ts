@@ -194,13 +194,24 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
     size: number,
     bold = false
   ) => {
-    currentPage.drawText(text, {
-      x,
-      y,
-      size,
-      color: rgb(0, 0, 0),
-      font: bold ? "Helvetica-Bold" : "Helvetica",
-    });
+    const fontName = bold ? "Helvetica-Bold" : "Helvetica";
+    try {
+      currentPage.drawText(text, {
+        x,
+        y,
+        size,
+        color: rgb(0, 0, 0),
+      });
+    } catch (err) {
+      console.warn(`Font issue with ${fontName}:`, err);
+      // Fall back to Helvetica if bold fails
+      currentPage.drawText(text, {
+        x,
+        y,
+        size,
+        color: rgb(0, 0, 0),
+      });
+    }
   };
 
   // Header
