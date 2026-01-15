@@ -179,164 +179,417 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-  }
-});
-
 function generateLegacyDisclosureHTML(record: LegacyIPRecord): string {
   const details = record.details || {};
   const inventors = details.inventors || [];
 
   const disclosureHTML = `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>IP Disclosure Form - ${record.title}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IP Disclosure Form - Legacy Record - ${record.title}</title>
   <style>
-    @page { size: letter; margin: 0.75in; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Times New Roman', Times, serif; font-size: 12px; line-height: 1.4; color: #000; }
-    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 18px; }
-    .inst-name { font-weight: bold; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
-    .doc-title { font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 6px 0; }
-    .ref-info { font-size: 11px; margin: 4px 0; }
-    .legacy-badge { background: #FCD34D; color: #78350F; padding: 3px 8px; font-size: 10px; font-weight: bold; display: inline-block; margin-top: 4px; border-radius: 3px; }
-    .instructions { background: #efefef; border: 1px solid #999; padding: 8px; margin-bottom: 12px; font-size: 10px; line-height: 1.3; }
-    .section { margin-bottom: 12px; }
-    .sec-title { font-weight: bold; font-size: 11px; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #000; padding-bottom: 4px; }
-    .form-group { margin-bottom: 8px; }
-    .form-row { display: flex; gap: 12px; margin-bottom: 8px; }
-    .form-col { flex: 1; }
-    .field-label { font-weight: bold; font-size: 10px; text-transform: uppercase; margin-bottom: 2px; }
-    .field-input { border: 1px solid #000; padding: 4px; min-height: 18px; font-size: 11px; width: 100%; }
-    .field-large { border: 1px solid #000; padding: 4px; min-height: 45px; font-size: 11px; width: 100%; line-height: 1.3; }
-    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10px; }
-    th, td { border: 1px solid #000; padding: 4px; text-align: left; }
-    th { background: #ccc; font-weight: bold; font-size: 9px; text-transform: uppercase; }
-    .sig-box { margin-top: 12px; }
-    .sig-line { border-top: 1px solid #000; width: 40%; margin: 35px 0 0 0; padding-top: 2px; }
-    .sig-label { font-size: 10px; font-weight: bold; margin-top: 2px; }
-    .sig-grid { display: flex; gap: 40px; margin-bottom: 12px; }
-    .sig-blk { width: auto; }
-    .confidential { background: #000; color: #fff; padding: 6px; text-align: center; font-weight: bold; font-size: 11px; margin: 12px 0; text-transform: uppercase; }
-    .footer { font-size: 9px; text-align: center; margin-top: 12px; padding-top: 8px; border-top: 1px solid #000; }
-    .required { color: #d00; }
-    ul { margin-left: 16px; margin-top: 4px; }
-    li { margin-bottom: 3px; font-size: 10px; }
-    p { font-size: 10px; }
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box;
+    }
+    
+    body { 
+      font-family: 'Calibri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      line-height: 1.8; 
+      color: #1a1a1a; 
+      margin: 0; 
+      padding: 40px 50px;
+      background: #ffffff;
+    }
+    
+    .document-header {
+      border-bottom: 3px solid #1a472a;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .institution-name {
+      font-size: 12px;
+      color: #1a472a;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    
+    .document-title {
+      font-size: 18px;
+      color: #1a1a1a;
+      font-weight: bold;
+      margin: 15px 0 10px 0;
+      text-transform: uppercase;
+    }
+    
+    .legacy-badge {
+      display: inline-block;
+      background: #FCD34D;
+      color: #78350F;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: bold;
+      border-radius: 4px;
+      margin-top: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .ref-info {
+      font-size: 11px;
+      color: #333;
+      margin: 10px 0;
+      font-weight: 500;
+    }
+    
+    h1 { 
+      display: none;
+    }
+    
+    h2 { 
+      color: #1a472a;
+      margin-top: 35px;
+      margin-bottom: 15px;
+      border-left: 5px solid #1a472a;
+      padding-left: 15px;
+      font-size: 14px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .section { 
+      margin-bottom: 30px;
+      page-break-inside: avoid;
+    }
+    
+    .field { 
+      margin-bottom: 18px;
+      page-break-inside: avoid;
+    }
+    
+    .field-label { 
+      font-weight: bold; 
+      color: #1a472a; 
+      font-size: 11px; 
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+    
+    .field-value { 
+      margin-top: 6px; 
+      padding: 12px 14px;
+      background: #f8f8f8;
+      border-left: 3px solid #1a472a;
+      font-size: 11px;
+      line-height: 1.7;
+      color: #333;
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 15px;
+      margin-bottom: 20px;
+      font-size: 11px;
+    }
+    
+    th, td { 
+      padding: 11px 12px;
+      text-align: left;
+      border: 1px solid #ccc;
+      font-size: 11px;
+    }
+    
+    th { 
+      background-color: #1a472a;
+      color: white;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    tr:nth-child(even) { 
+      background-color: #f8f8f8;
+    }
+    
+    tr:nth-child(odd) {
+      background-color: #ffffff;
+    }
+    
+    .signature-block { 
+      margin-top: 50px; 
+      padding-top: 30px; 
+      border-top: 2px solid #1a472a;
+    }
+    
+    .signature-section {
+      margin-top: 35px;
+      page-break-inside: avoid;
+    }
+    
+    .sig-line {
+      border-top: 1px solid #000;
+      margin-top: 40px;
+      padding-top: 5px;
+      width: 200px;
+      display: inline-block;
+    }
+    
+    .sig-label {
+      font-size: 10px;
+      margin-top: 8px;
+      font-weight: 500;
+    }
+    
+    .confidential-banner {
+      background-color: #1a1a1a;
+      color: #ffffff;
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 12px;
+      margin: 25px 0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .footer { 
+      margin-top: 70px; 
+      border-top: 2px solid #1a472a;
+      padding-top: 25px;
+      text-align: center;
+      font-size: 10px;
+      color: #666;
+      line-height: 1.6;
+    }
+    
+    .footer-separator {
+      margin: 15px 0;
+      border-top: 1px solid #ccc;
+      padding-top: 15px;
+    }
+    
+    p { 
+      margin-bottom: 12px; 
+      font-size: 11px; 
+      line-height: 1.7;
+    }
+    
+    li { 
+      margin-left: 20px; 
+      font-size: 11px; 
+      margin-bottom: 6px; 
+    }
+    
+    ul { 
+      margin: 10px 0; 
+    }
+    
+    .note {
+      font-style: italic;
+      color: #666;
+      font-size: 10px;
+      margin: 8px 0;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="inst-name">University Confidential Consortium</div>
-    <div class="inst-name">Intellectual Property Office</div>
-    <div class="doc-title">Intellectual Property Disclosure Form</div>
+  <div class="document-header">
+    <div class="institution-name">UNIVERSITY CONFIDENTIAL CONSORTIUM</div>
+    <div class="institution-name">INTELLECTUAL PROPERTY OFFICE</div>
+    <div class="document-title">INTELLECTUAL PROPERTY DISCLOSURE FORM</div>
     <span class="legacy-badge">LEGACY RECORD</span>
-    <div class="ref-info"><strong>Date:</strong> ${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
-  </div>
-
-  <div class="instructions">
-    <strong>INSTRUCTIONS:</strong> This is a legacy intellectual property record that has been archived in the University system. All information has been verified and approved.
+    <div class="ref-info"><strong>Record ID:</strong> ${record.id}</div>
+    <div class="ref-info"><strong>Disclosure Date:</strong> ${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
   </div>
 
   <div class="section">
-    <div class="sec-title">I. INVENTOR/CREATOR INFORMATION</div>
-    <div class="form-group">
-      <div class="field-label">Name of Creator/Applicant</div>
-      <div class="field-input">${details.creator_name || 'N/A'}</div>
+    <h2>I. INVENTOR/CREATOR INFORMATION</h2>
+    
+    <div class="field">
+      <div class="field-label">Creator/Applicant Name:</div>
+      <div class="field-value">${details.creator_name || 'Not specified'}</div>
     </div>
+
+    ${details.creator_email ? \`
+    <div class="field">
+      <div class="field-label">Email Address:</div>
+      <div class="field-value">\${details.creator_email}</div>
+    </div>
+    \` : ''}
+
+    ${details.creator_affiliation ? \`
+    <div class="field">
+      <div class="field-label">Department/Unit:</div>
+      <div class="field-value">\${details.creator_affiliation}</div>
+    </div>
+    \` : ''}
   </div>
 
   <div class="section">
-    <div class="sec-title">II. INVENTION/IP DESCRIPTION</div>
-    <div class="form-group">
-      <div class="field-label">Title of Invention</div>
-      <div class="field-input">${record.title || 'N/A'}</div>
+    <h2>II. INVENTION/IP DESCRIPTION</h2>
+
+    <div class="field">
+      <div class="field-label">Title of Invention:</div>
+      <div class="field-value">${record.title || 'Not specified'}</div>
     </div>
-    <div class="form-group">
-      <div class="field-label">Category of IP</div>
-      <div class="field-input">${(record.category || 'N/A').toUpperCase()}</div>
+
+    <div class="field">
+      <div class="field-label">Category of IP:</div>
+      <div class="field-value">${record.category ? record.category.toUpperCase() : 'Not specified'}</div>
     </div>
-    <div class="form-group">
-      <div class="field-label">Abstract/Summary</div>
-      <div class="field-large">${record.abstract || 'N/A'}</div>
+
+    ${record.abstract ? \`
+    <div class="field">
+      <div class="field-label">Abstract/Summary:</div>
+      <div class="field-value">\${record.abstract}</div>
     </div>
-    <div class="form-group">
-      <div class="field-label">Detailed Description</div>
-      <div class="field-large">${details.description || 'N/A'}</div>
+    \` : ''}
+
+    ${details.description ? \`
+    <div class="field">
+      <div class="field-label">Detailed Description of the Invention:</div>
+      <div class="field-value">\${details.description}</div>
     </div>
+    \` : ''}
   </div>
 
   <div class="section">
-    <div class="sec-title">III. TECHNICAL FIELD & BACKGROUND</div>
-    <div class="form-group">
-      <div class="field-label">Technical Field</div>
-      <div class="field-input">${details.technicalField || details.legacy_source || 'N/A'}</div>
+    <h2>III. TECHNICAL FIELD AND BACKGROUND</h2>
+
+    ${details.technicalField ? \`
+    <div class="field">
+      <div class="field-label">Technical Field:</div>
+      <div class="field-value">\${details.technicalField}</div>
     </div>
-    <div class="form-group">
-      <div class="field-label">Prior Art & Background</div>
-      <div class="field-large">${details.backgroundArt || details.original_filing_date || 'N/A'}</div>
+    \` : ''}
+
+    ${details.legacy_source ? \`
+    <div class="field">
+      <div class="field-label">Source/Origin:</div>
+      <div class="field-value">\${details.legacy_source}</div>
     </div>
-    <div class="form-group">
-      <div class="field-label">Problem Statement</div>
-      <div class="field-large">${details.problemStatement || 'N/A'}</div>
+    \` : ''}
+
+    ${details.backgroundArt ? \`
+    <div class="field">
+      <div class="field-label">Prior Art and Background:</div>
+      <div class="field-value">\${details.backgroundArt}</div>
     </div>
-    <div class="form-group">
-      <div class="field-label">Solution Offered</div>
-      <div class="field-large">${details.solution || 'N/A'}</div>
+    \` : ''}
+
+    ${details.problemStatement ? \`
+    <div class="field">
+      <div class="field-label">Problem Statement:</div>
+      <div class="field-value">\${details.problemStatement}</div>
     </div>
-    <div class="form-group">
-      <div class="field-label">Advantages & Benefits</div>
-      <div class="field-large">${details.advantages || 'N/A'}</div>
+    \` : ''}
+
+    ${details.solution ? \`
+    <div class="field">
+      <div class="field-label">Solution Offered:</div>
+      <div class="field-value">\${details.solution}</div>
     </div>
+    \` : ''}
+
+    ${details.advantages ? \`
+    <div class="field">
+      <div class="field-label">Advantages and Benefits:</div>
+      <div class="field-value">\${details.advantages}</div>
+    </div>
+    \` : ''}
   </div>
 
   <div class="section">
-    <div class="sec-title">IV. LEGACY INFORMATION</div>
-    <div class="form-group">
-      <div class="field-label">Source/Origin</div>
-      <div class="field-input">${details.legacy_source || 'N/A'}</div>
+    <h2>IV. LEGACY INFORMATION</h2>
+
+    ${details.original_filing_date ? \`
+    <div class="field">
+      <div class="field-label">Original Filing Date:</div>
+      <div class="field-value">\${details.original_filing_date}</div>
     </div>
-    <div class="form-group">
-      <div class="field-label">Original Filing Date</div>
-      <div class="field-input">${details.original_filing_date || 'N/A'}</div>
+    \` : ''}
+
+    ${details.ipophil_application_no ? \`
+    <div class="field">
+      <div class="field-label">IPOPHIL Application Number:</div>
+      <div class="field-value">\${details.ipophil_application_no}</div>
     </div>
-    <div class="form-group">
-      <div class="field-label">IPOPHIL Application Number</div>
-      <div class="field-input">${details.ipophil_application_no || 'N/A'}</div>
+    \` : ''}
+
+    ${details.remarks ? \`
+    <div class="field">
+      <div class="field-label">Remarks/Notes:</div>
+      <div class="field-value">\${details.remarks}</div>
     </div>
-    <div class="form-group">
-      <div class="field-label">Remarks</div>
-      <div class="field-large">${details.remarks || 'N/A'}</div>
-    </div>
+    \` : ''}
   </div>
 
-  ${inventors.length > 0 ? `
+  ${inventors && inventors.length > 0 ? \`
   <div class="section">
-    <div class="sec-title">V. INVENTORS & CONTRIBUTORS</div>
+    <h2>V. INVENTORS AND CONTRIBUTORS</h2>
+    
     <table>
-      <tr><th>Name</th><th>Affiliation</th><th>Contribution</th><th>%</th></tr>
-      ${inventors.map((inv: any) => `<tr><td>${inv.name || ''}</td><td>${inv.affiliation || ''}</td><td>${inv.contribution || ''}</td><td>${inv.percent || ''}</td></tr>`).join('')}
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Affiliation</th>
+          <th>Contribution/Role</th>
+          <th>Ownership %</th>
+        </tr>
+      </thead>
+      <tbody>
+        \${inventors.map((inv: any) => \`<tr>
+          <td>\${inv.name || 'N/A'}</td>
+          <td>\${inv.affiliation || 'N/A'}</td>
+          <td>\${inv.contribution || 'N/A'}</td>
+          <td>\${inv.percent || 'N/A'}</td>
+        </tr>\`).join('')}
+      </tbody>
     </table>
   </div>
-  ` : ''}
+  \` : ''}
 
-  <div class="section sig-box">
-    <div class="sec-title">VI. ACKNOWLEDGMENT & CERTIFICATION</div>
-    <p style="line-height: 1.4; margin-bottom: 8px;">
-      This legacy intellectual property record has been reviewed and archived in the University system. The information contained herein is subject to the University's intellectual property policies and regulations.
+  <div class="section signature-block">
+    <h2>VI. ACKNOWLEDGMENT AND CERTIFICATION</h2>
+    
+    <p>
+      This legacy intellectual property record has been reviewed, verified, and archived in the University Confidential Consortium system. The information contained herein is subject to the University's intellectual property policies and regulations.
     </p>
+    
+    <p>
+      This disclosure serves as an official record of the intellectual property registration and is maintained for institutional, legal, and archival purposes.
+    </p>
+    
+    <div class="signature-section">
+      <p><strong>IP Office Certification:</strong></p>
+      <div class="sig-line"></div>
+      <div class="sig-label">IP Officer Signature / Date</div>
+    </div>
   </div>
 
-  <div class="confidential">CONFIDENTIAL - FOR UNIVERSITY USE ONLY</div>
+  <div class="confidential-banner">
+    CONFIDENTIAL - FOR UNIVERSITY USE ONLY
+  </div>
 
   <div class="footer">
     <p>University Confidential Consortium | Intellectual Property Office</p>
-    <p>Record: ${record.id} | Generated: ${new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+    <p>Record ID: ${record.id} | Document Generated: ${new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+    <div class="footer-separator"></div>
+    <p class="note">This is an official archival document. For verification or inquiries, contact the IP Office.</p>
   </div>
 </body>
 </html>
-  `;
+  \`;
 
   return disclosureHTML;
 }
