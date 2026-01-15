@@ -104,16 +104,20 @@ export function LegacyRecordDetailPage() {
         },
       });
 
+      console.log('[Disclosure] Response:', response);
+
       if (response.error) {
-        console.error('Function error:', response.error);
+        console.error('[Disclosure] Function error:', response.error);
         throw new Error(response.error.message || 'Failed to generate disclosure');
       }
 
       const data = response.data as any;
+      console.log('[Disclosure] Data received:', data);
 
       // Auto-download the PDF if available
       if (data?.pdf_data) {
         try {
+          console.log('[Disclosure] Attempting auto-download...');
           const binaryString = atob(data.pdf_data);
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
@@ -129,21 +133,24 @@ export function LegacyRecordDetailPage() {
           link.click();
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
+          console.log('[Disclosure] Auto-download completed');
         } catch (downloadErr) {
-          console.warn('Auto-download failed:', downloadErr);
+          console.warn('[Disclosure] Auto-download failed:', downloadErr);
           // Continue to show success message even if download fails
         }
+      } else {
+        console.warn('[Disclosure] No pdf_data in response');
       }
 
       // The edge function already saves the record to the database
       // No need to save again from the frontend
 
-      setSuccess('Disclosure generated successfully and downloaded!');
+      setSuccess('Disclosure generated successfully!');
       setTimeout(() => {
         fetchDocuments();
       }, 1000);
     } catch (err) {
-      console.error('Disclosure generation error:', err);
+      console.error('[Disclosure] Error:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate disclosure');
     } finally {
       setActionLoading(false);
@@ -174,15 +181,20 @@ export function LegacyRecordDetailPage() {
         },
       });
 
+      console.log('[Certificate] Response:', response);
+
       if (response.error) {
+        console.error('[Certificate] Function error:', response.error);
         throw new Error(response.error.message || 'Failed to generate certificate');
       }
 
       const data = response.data as any;
+      console.log('[Certificate] Data received:', data);
 
       // Auto-download the PDF if available
       if (data?.pdf_data) {
         try {
+          console.log('[Certificate] Attempting auto-download...');
           const binaryString = atob(data.pdf_data);
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
@@ -198,20 +210,24 @@ export function LegacyRecordDetailPage() {
           link.click();
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
+          console.log('[Certificate] Auto-download completed');
         } catch (downloadErr) {
-          console.warn('Auto-download failed:', downloadErr);
+          console.warn('[Certificate] Auto-download failed:', downloadErr);
           // Continue to show success message even if download fails
         }
+      } else {
+        console.warn('[Certificate] No pdf_data in response');
       }
 
       // The edge function already saves the record to the database
       // No need to save again from the frontend
 
-      setSuccess('Certificate generated successfully and downloaded!');
+      setSuccess('Certificate generated successfully!');
       setTimeout(() => {
         fetchDocuments();
       }, 1000);
     } catch (err) {
+      console.error('[Certificate] Error:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate certificate');
     } finally {
       setActionLoading(false);
@@ -465,7 +481,7 @@ export function LegacyRecordDetailPage() {
                 <p className="text-sm text-gray-600 mb-4">
                   Generate a comprehensive disclosure document containing all IP details.
                 </p>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap items-center">
                   <button
                     onClick={handleGenerateDisclosure}
                     disabled={actionLoading}
@@ -485,10 +501,14 @@ export function LegacyRecordDetailPage() {
                   <button
                     onClick={() => {
                       const disclosureDoc = documents.find(d => d.document_type === 'disclosure');
-                      if (disclosureDoc) handleDownloadDocument(disclosureDoc);
+                      if (disclosureDoc) {
+                        handleDownloadDocument(disclosureDoc);
+                      } else {
+                        setSuccess('Please generate the disclosure first.');
+                      }
                     }}
-                    disabled={!documents.some(d => d.document_type === 'disclosure')}
-                    className="flex items-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+                    className="flex items-center gap-2 px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium text-sm"
+                    title={documents.some(d => d.document_type === 'disclosure') ? 'Download generated disclosure' : 'Generate disclosure first'}
                   >
                     <Download className="w-4 h-4" />
                     Download
@@ -502,7 +522,7 @@ export function LegacyRecordDetailPage() {
                 <p className="text-sm text-gray-600 mb-4">
                   Generate a professional certificate of IP registration.
                 </p>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap items-center">
                   <button
                     onClick={handleGenerateCertificate}
                     disabled={actionLoading}
@@ -522,10 +542,14 @@ export function LegacyRecordDetailPage() {
                   <button
                     onClick={() => {
                       const certificateDoc = documents.find(d => d.document_type === 'certificate');
-                      if (certificateDoc) handleDownloadDocument(certificateDoc);
+                      if (certificateDoc) {
+                        handleDownloadDocument(certificateDoc);
+                      } else {
+                        setSuccess('Please generate the certificate first.');
+                      }
                     }}
-                    disabled={!documents.some(d => d.document_type === 'certificate')}
-                    className="flex items-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+                    className="flex items-center gap-2 px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium text-sm"
+                    title={documents.some(d => d.document_type === 'certificate') ? 'Download generated certificate' : 'Generate certificate first'}
                   >
                     <Download className="w-4 h-4" />
                     Download
