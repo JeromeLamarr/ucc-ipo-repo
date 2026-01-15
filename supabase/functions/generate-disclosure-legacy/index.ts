@@ -177,7 +177,7 @@ Deno.serve(async (req: Request) => {
 
 async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([612, 792]); // Letter size
+  let page = pdfDoc.addPage([612, 792]); // Letter size
   const { width, height } = page.getSize();
   const details = record.details || {};
 
@@ -187,13 +187,14 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
 
   // Helper function to draw text
   const drawText = (
+    currentPage: any,
     text: string,
     x: number,
     y: number,
     size: number,
     bold = false
   ) => {
-    page.drawText(text, {
+    currentPage.drawText(text, {
       x,
       y,
       size,
@@ -203,11 +204,11 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
   };
 
   // Header
-  drawText("University Confidential Consortium", margin, yPosition, 11, true);
+  drawText(page, "University Confidential Consortium", margin, yPosition, 11, true);
   yPosition -= 14;
-  drawText("Intellectual Property Office", margin, yPosition, 11, true);
+  drawText(page, "Intellectual Property Office", margin, yPosition, 11, true);
   yPosition -= 18;
-  drawText("INTELLECTUAL PROPERTY DISCLOSURE FORM - LEGACY RECORD", margin, yPosition, 11, true);
+  drawText(page, "INTELLECTUAL PROPERTY DISCLOSURE FORM - LEGACY RECORD", margin, yPosition, 11, true);
   yPosition -= 16;
   page.drawRectangle({
     x: margin,
@@ -227,13 +228,13 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
     height: 14,
     color: rgb(1, 0.804, 0.333), // #FCD34D
   });
-  drawText("LEGACY RECORD", margin + 5, yPosition - 10, 9, true);
+  drawText(page, "LEGACY RECORD", margin + 5, yPosition - 10, 9, true);
   yPosition -= 20;
 
   // Record Info
-  drawText(`Record ID: ${record.id}`, margin, yPosition, 9);
+  drawText(page, `Record ID: ${record.id}`, margin, yPosition, 9);
   yPosition -= 12;
-  drawText(
+  drawText(page,
     `Date: ${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`,
     margin,
     yPosition,
@@ -242,7 +243,7 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
   yPosition -= 16;
 
   // Section I: Creator Information
-  drawText("I. INVENTOR/CREATOR INFORMATION", margin, yPosition, 10, true);
+  drawText(page, "I. INVENTOR/CREATOR INFORMATION", margin, yPosition, 10, true);
   yPosition -= 12;
   page.drawRectangle({
     x: margin,
@@ -254,7 +255,7 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
   });
   yPosition -= 10;
 
-  drawText("Name of Creator/Applicant:", margin, yPosition, 9, true);
+  drawText(page, "Name of Creator/Applicant:", margin, yPosition, 9, true);
   yPosition -= 11;
   page.drawRectangle({
     x: margin,
@@ -264,11 +265,11 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
     borderColor: rgb(0, 0, 0),
     borderWidth: 0.5,
   });
-  drawText(details.creator_name || "N/A", margin + 3, yPosition - 8, 9);
+  drawText(page, details.creator_name || "N/A", margin + 3, yPosition - 8, 9);
   yPosition -= 20;
 
   if (details.creator_email) {
-    drawText("Email:", margin, yPosition, 9, true);
+    drawText(page, "Email:", margin, yPosition, 9, true);
     yPosition -= 11;
     page.drawRectangle({
       x: margin,
@@ -278,12 +279,12 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
       borderColor: rgb(0, 0, 0),
       borderWidth: 0.5,
     });
-    drawText(details.creator_email, margin + 3, yPosition - 8, 9);
+    drawText(page, details.creator_email, margin + 3, yPosition - 8, 9);
     yPosition -= 20;
   }
 
   if (details.creator_affiliation) {
-    drawText("Department/Affiliation:", margin, yPosition, 9, true);
+    drawText(page, "Department/Affiliation:", margin, yPosition, 9, true);
     yPosition -= 11;
     page.drawRectangle({
       x: margin,
@@ -293,18 +294,18 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
       borderColor: rgb(0, 0, 0),
       borderWidth: 0.5,
     });
-    drawText(details.creator_affiliation, margin + 3, yPosition - 8, 9);
+    drawText(page, details.creator_affiliation, margin + 3, yPosition - 8, 9);
     yPosition -= 20;
   }
 
   // Check if we need a new page
   if (yPosition < 100) {
-    const newPage = pdfDoc.addPage([612, 792]);
+    page = pdfDoc.addPage([612, 792]);
     yPosition = height - 40;
   }
 
   // Section II: Invention/IP Description
-  drawText("II. INVENTION/IP DESCRIPTION", margin, yPosition, 10, true);
+  drawText(page, "II. INVENTION/IP DESCRIPTION", margin, yPosition, 10, true);
   yPosition -= 12;
   page.drawRectangle({
     x: margin,
@@ -316,7 +317,7 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
   });
   yPosition -= 10;
 
-  drawText("Title of Invention:", margin, yPosition, 9, true);
+  drawText(page, "Title of Invention:", margin, yPosition, 9, true);
   yPosition -= 11;
   page.drawRectangle({
     x: margin,
@@ -326,10 +327,10 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
     borderColor: rgb(0, 0, 0),
     borderWidth: 0.5,
   });
-  drawText(record.title || "N/A", margin + 3, yPosition - 8, 9);
+  drawText(page, record.title || "N/A", margin + 3, yPosition - 8, 9);
   yPosition -= 20;
 
-  drawText("Category of IP:", margin, yPosition, 9, true);
+  drawText(page, "Category of IP:", margin, yPosition, 9, true);
   yPosition -= 11;
   page.drawRectangle({
     x: margin,
@@ -339,10 +340,10 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
     borderColor: rgb(0, 0, 0),
     borderWidth: 0.5,
   });
-  drawText((record.category || "N/A").toUpperCase(), margin + 3, yPosition - 8, 9);
+  drawText(page, (record.category || "N/A").toUpperCase(), margin + 3, yPosition - 8, 9);
   yPosition -= 20;
 
-  drawText("Abstract/Summary:", margin, yPosition, 9, true);
+  drawText(page, "Abstract/Summary:", margin, yPosition, 9, true);
   yPosition -= 11;
   const abstractLines = wrapText(record.abstract || "N/A", 80);
   const abstractHeight = abstractLines.length * 11 + 10;
@@ -356,7 +357,7 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
   });
   let abstractY = yPosition - 6;
   for (const line of abstractLines) {
-    drawText(line, margin + 3, abstractY, 8);
+    drawText(page, line, margin + 3, abstractY, 8);
     abstractY -= 11;
   }
   yPosition -= abstractHeight + 10;
@@ -369,13 +370,13 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
     height: 12,
     color: rgb(0, 0, 0),
   });
-  drawText("CONFIDENTIAL - FOR UNIVERSITY USE ONLY", margin + 5, yPosition - 10, 9, true);
+  drawText(page, "CONFIDENTIAL - FOR UNIVERSITY USE ONLY", margin + 5, yPosition - 10, 9, true);
   yPosition -= 18;
 
   // Footer
-  drawText("University Confidential Consortium | Intellectual Property Office", margin, yPosition, 8);
+  drawText(page, "University Confidential Consortium | Intellectual Property Office", margin, yPosition, 8);
   yPosition -= 10;
-  drawText(
+  drawText(page,
     `Record ID: ${record.id} | Generated: ${new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}`,
     margin,
     yPosition,
