@@ -199,7 +199,7 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
       y,
       size,
       color: rgb(0, 0, 0),
-      font: bold ? pdfDoc.getFont("Helvetica-Bold") : pdfDoc.getFont("Helvetica"),
+      font: bold ? "Helvetica-Bold" : "Helvetica",
     });
   };
 
