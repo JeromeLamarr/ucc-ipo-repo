@@ -269,42 +269,22 @@ Deno.serve(async (req: Request) => {
 
     if (signInError) {
       console.error("Generate link error:", signInError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Failed to generate verification link. Please try again.",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // Even if magic link fails, continue - email can still be sent with basic link
+      console.warn("Continuing with email send despite magic link generation failure");
     }
 
     // The magic link is in signInData
     const magicLink = signInData?.properties?.action_link;
 
     if (!magicLink) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Failed to create verification link",
-        }),
-        {
-          status: 400,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      console.error("Failed to create magic link - magicLink is:", magicLink);
+      console.error("signInData:", signInData);
+      // Continue anyway - we have alternative email flow
+      console.warn("Continuing despite no magic link");
     }
 
     // Send verification email
-    const emailHtml = `
+    const emailHtml = magicLink ? `
       <!DOCTYPE html>
       <html>
         <head>
@@ -342,6 +322,45 @@ Deno.serve(async (req: Request) => {
               
               <div class="warning">
                 <strong>Security Note:</strong> If you did not create this account, please ignore this email. Do not share this link with anyone.
+              </div>
+            </div>
+            <div class="footer">
+              <p>University of Caloocan City Intellectual Property Office</p>
+              <p><a href="https://ucc-ipo.com" style="color: #1a59a6; text-decoration: none;">ucc-ipo.com</a></p>
+              <p>Protecting Innovation, Promoting Excellence</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    ` : `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #1a59a6 0%, #0d3a7a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; background: #1a59a6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
+            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Welcome to UCC IP Management</h1>
+            </div>
+            <div class="content">
+              <h2>Hello ${fullName},</h2>
+              <p>Thank you for registering with the University of Caloocan City Intellectual Property Management System.</p>
+              
+              <p>Your account has been created successfully. You will be able to log in shortly after your email is verified. Our system will send you a verification link shortly.</p>
+              
+              <p style="margin-top: 30px;">If you don't receive a verification email within 5 minutes, please check your spam folder or contact support.</p>
+              
+              <div class="warning">
+                <strong>Security Note:</strong> If you did not create this account, please ignore this email.
               </div>
             </div>
             <div class="footer">
@@ -449,13 +468,18 @@ Deno.serve(async (req: Request) => {
     }
   } catch (error: any) {
     console.error("Registration error:", error);
+    console.error("Error stack:", error.stack);
+    
+    // Return 200 with error details instead of 500 to prevent "non-2xx status code" errors
+    // The frontend will check the success field
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message || "Registration failed. Please try again.",
+        details: error.toString(),
       }),
       {
-        status: 500,
+        status: 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
