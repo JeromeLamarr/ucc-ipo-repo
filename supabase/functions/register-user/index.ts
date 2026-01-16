@@ -355,7 +355,12 @@ Deno.serve(async (req: Request) => {
     `;
 
     // Send email via send-notification-email function
+    let emailSent = false;
+    let emailError: string | null = null;
+
     try {
+      console.log("Sending verification email to:", email);
+      
       const emailResponse = await fetch(
         `${supabaseUrl}/functions/v1/send-notification-email`,
         {
@@ -372,34 +377,66 @@ Deno.serve(async (req: Request) => {
         }
       );
 
-      const emailResult = await emailResponse.json();
+      console.log("Email response status:", emailResponse.status);
+      
+      if (!emailResponse.ok) {
+        const errorText = await emailResponse.text();
+        console.error("Email service HTTP error:", {
+          status: emailResponse.status,
+          statusText: emailResponse.statusText,
+          body: errorText,
+        });
+        emailError = `HTTP ${emailResponse.status}: ${emailResponse.statusText}`;
+      } else {
+        try {
+          const emailResult = await emailResponse.json();
+          console.log("Email service response:", emailResult);
 
-      if (!emailResult.success) {
-        console.error("Email service error:", emailResult.error);
-        // User is created but email failed - still return success so user can retry
-        return new Response(
-          JSON.stringify({
-            success: true,
-            message: "Account created but email delivery failed. Please try resending.",
-            warning: "Email delivery issue - you may not receive the verification link",
-          }),
-          {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              "Content-Type": "application/json",
-            },
+          // Check if the response indicates success
+          if (emailResult.success === true || emailResult.id) {
+            console.log("Email sent successfully with ID:", emailResult.id);
+            emailSent = true;
+          } else if (emailResult.error) {
+            console.error("Email service returned error:", emailResult.error);
+            emailError = emailResult.error;
+          } else {
+            // Unexpected response format, but no explicit error
+            console.log("Email service response format unexpected:", emailResult);
+            emailSent = true; // Assume success if no error field
           }
-        );
+        } catch (jsonError) {
+          console.error("Failed to parse email response JSON:", jsonError);
+          emailError = "Invalid response from email service";
+        }
       }
-    } catch (emailError: any) {
-      console.error("Failed to send email:", emailError);
-      // User is created but email failed - still return success
+    } catch (emailNetworkError: any) {
+      console.error("Failed to call email service:", emailNetworkError);
+      emailError = emailNetworkError.message || "Network error calling email service";
+    }
+
+    // Even if email failed, user is created - return success with appropriate message
+    if (emailSent) {
       return new Response(
         JSON.stringify({
           success: true,
-          message: "Account created but email delivery failed. Please try resending.",
-          warning: "Email service unavailable - you may not receive the verification link",
+          message: "Account created successfully. Check your email for the verification link.",
+        }),
+        {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    } else {
+      // Email failed but user exists
+      console.error("Email delivery failed:", emailError);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Account created successfully. However, we encountered an issue sending the verification email.",
+          warning: `Email delivery issue: ${emailError || "Unknown error"}. Please use the 'Resend Email' option on the login page.`,
         }),
         {
           status: 200,
@@ -410,20 +447,6 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Account created successfully. Check your email for the verification link.",
-      }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
   } catch (error: any) {
     console.error("Registration error:", error);
     return new Response(
