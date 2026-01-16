@@ -374,59 +374,68 @@ Deno.serve(async (req: Request) => {
       </html>
     `;
 
-    // Send email via send-notification-email function
+    // Send email via Resend API directly
     let emailSent = false;
     let emailError: string | null = null;
 
     try {
       console.log("[register-user] Sending verification email to:", email);
       
-      const emailResponse = await fetch(
-        `${supabaseUrl}/functions/v1/send-notification-email`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Apikey": supabaseServiceKey,
-          },
-          body: JSON.stringify({
-            to: email,
-            subject: "Verify Your Email - UCC IP Management System",
-            html: emailHtml,
-          }),
-        }
-      );
-
-      console.log("[register-user] Email response status:", emailResponse.status);
+      const resendApiKey = Deno.env.get("RESEND_API_KEY");
+      const resendFromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@ucc-ipo.com";
       
-      if (!emailResponse.ok) {
-        const errorText = await emailResponse.text();
-        console.error("[register-user] Email service HTTP error:", {
-          status: emailResponse.status,
-          statusText: emailResponse.statusText,
-          body: errorText,
-        });
-        emailError = `HTTP ${emailResponse.status}: ${emailResponse.statusText}`;
+      if (!resendApiKey) {
+        console.error("[register-user] RESEND_API_KEY not configured");
+        emailError = "Email service not configured";
       } else {
-        try {
-          const emailResult = await emailResponse.json();
-          console.log("[register-user] Email service response:", emailResult);
-
-          // Check if the response indicates success
-          if (emailResult.success === true || emailResult.id) {
-            console.log("[register-user] Email sent successfully with ID:", emailResult.id);
-            emailSent = true;
-          } else if (emailResult.error) {
-            console.error("[register-user] Email service returned error:", emailResult.error);
-            emailError = emailResult.error;
-          } else {
-            // Unexpected response format, but no explicit error
-            console.log("[register-user] Email service response format unexpected:", emailResult);
-            emailSent = true; // Assume success if no error field
+        const emailResponse = await fetch(
+          "https://api.resend.com/emails",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: `UCC IP Office <${resendFromEmail}>`,
+              to: [email],
+              subject: "Verify Your Email - UCC IP Management System",
+              html: emailHtml,
+            }),
           }
-        } catch (jsonError) {
-          console.error("[register-user] Failed to parse email response JSON:", jsonError);
-          emailError = "Invalid response from email service";
+        );
+
+        console.log("[register-user] Email response status:", emailResponse.status);
+        
+        if (!emailResponse.ok) {
+          const errorText = await emailResponse.text();
+          console.error("[register-user] Email service HTTP error:", {
+            status: emailResponse.status,
+            statusText: emailResponse.statusText,
+            body: errorText,
+          });
+          emailError = `HTTP ${emailResponse.status}: ${emailResponse.statusText}`;
+        } else {
+          try {
+            const emailResult = await emailResponse.json();
+            console.log("[register-user] Email service response:", emailResult);
+
+            // Check if the response indicates success
+            if (emailResult.id) {
+              console.log("[register-user] Email sent successfully with ID:", emailResult.id);
+              emailSent = true;
+            } else if (emailResult.error) {
+              console.error("[register-user] Email service returned error:", emailResult.error);
+              emailError = emailResult.error;
+            } else {
+              // Unexpected response format, but no explicit error
+              console.log("[register-user] Email service response format unexpected:", emailResult);
+              emailSent = true; // Assume success if no error field
+            }
+          } catch (jsonError) {
+            console.error("[register-user] Failed to parse email response JSON:", jsonError);
+            emailError = "Invalid response from email service";
+          }
         }
       }
     } catch (emailNetworkError: any) {
