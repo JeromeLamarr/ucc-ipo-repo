@@ -43,19 +43,19 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    console.log("=== REGISTER USER FUNCTION CALLED ===");
-    console.log("Request method:", req.method);
-    console.log("Request headers:", Object.fromEntries(req.headers.entries()));
+    console.log("[register-user] === REGISTER USER FUNCTION CALLED ===");
+    console.log("[register-user] Request method:", req.method);
+    console.log("[register-user] Request headers:", Object.fromEntries(req.headers.entries()));
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing Supabase environment variables");
+      console.error("[register-user] Missing Supabase environment variables");
       throw new Error("Missing Supabase configuration");
     }
 
-    console.log("Supabase configured:", !!supabaseUrl);
+    console.log("[register-user] Supabase configured:", !!supabaseUrl);
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -151,13 +151,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log("User does not exist, proceeding with creation");
+    console.log("[register-user] User does not exist, proceeding with creation");
 
     // Note: Removed stale auth user cleanup to prevent cascade deletes of user profiles
     // Auth users will be managed through proper lifecycle management
 
     // Create auth user with email_confirm=false (requires email verification)
-    console.log("Creating auth user for email:", email);
+    console.log("[register-user] Creating auth user for email:", email);
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -187,13 +187,15 @@ Deno.serve(async (req: Request) => {
         );
       }
       
+      // Log and return 200 per requirement — do not block registration flow with 4xx/5xx
+      console.error("[register-user] auth.createUser error:", authError);
       return new Response(
         JSON.stringify({
           success: false,
           error: "ERR_AUTH: " + (authError.message || "Unknown"),
         }),
         {
-          status: 400,
+          status: 200,
           headers: {
             ...corsHeaders,
             "Content-Type": "application/json",
@@ -209,7 +211,7 @@ Deno.serve(async (req: Request) => {
           error: "Failed to create account",
         }),
         {
-          status: 400,
+          status: 200,
           headers: {
             ...corsHeaders,
             "Content-Type": "application/json",
@@ -218,9 +220,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log("Auth user created:", authData.user.id);
-
-    console.log("Auth user created successfully:", authData.user.id);
+    console.log("[register-user] Auth user created:", authData.user.id);
+    console.log("[register-user] Auth user created successfully:", authData.user.id);
 
     // Wait for trigger to create the profile
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -237,10 +238,10 @@ Deno.serve(async (req: Request) => {
       .select();
 
     if (profileError) {
-      console.error("Profile update error:", profileError);
-      console.error("Attempted to update with:", { auth_user_id: authData.user.id, department_id: departmentId, role: 'applicant' });
+      console.error("[register-user] Profile update error:", profileError);
+      console.error("[register-user] Attempted to update with:", { auth_user_id: authData.user.id, department_id: departmentId, role: 'applicant' });
     } else {
-      console.log("Profile updated successfully:", updateData);
+      console.log("[register-user] Profile updated successfully:", updateData);
     }
 
     // Store temporary registration data
@@ -254,7 +255,7 @@ Deno.serve(async (req: Request) => {
       });
 
     if (tempRegError) {
-      console.error("Warning: Could not store temp registration data:", tempRegError);
+      console.error("[register-user] Warning: Could not store temp registration data:", tempRegError);
       // Don't fail - user is created, just tracking is missing
     }
 
@@ -268,19 +269,19 @@ Deno.serve(async (req: Request) => {
     });
 
     if (signInError) {
-      console.error("Generate link error:", signInError);
+      console.error("[register-user] Generate link error:", signInError);
       // Even if magic link fails, continue - email can still be sent with basic link
-      console.warn("Continuing with email send despite magic link generation failure");
+      console.warn("[register-user] Continuing with email send despite magic link generation failure");
     }
 
     // The magic link is in signInData
     const magicLink = signInData?.properties?.action_link;
 
     if (!magicLink) {
-      console.error("Failed to create magic link - magicLink is:", magicLink);
-      console.error("signInData:", signInData);
+      console.error("[register-user] Failed to create magic link - magicLink is:", magicLink);
+      console.error("[register-user] signInData:", signInData);
       // Continue anyway - we have alternative email flow
-      console.warn("Continuing despite no magic link");
+      console.warn("[register-user] Continuing despite no magic link");
     }
 
     // Send verification email
@@ -378,7 +379,7 @@ Deno.serve(async (req: Request) => {
     let emailError: string | null = null;
 
     try {
-      console.log("Sending verification email to:", email);
+      console.log("[register-user] Sending verification email to:", email);
       
       const emailResponse = await fetch(
         `${supabaseUrl}/functions/v1/send-notification-email`,
@@ -395,11 +396,11 @@ Deno.serve(async (req: Request) => {
         }
       );
 
-      console.log("Email response status:", emailResponse.status);
+      console.log("[register-user] Email response status:", emailResponse.status);
       
       if (!emailResponse.ok) {
         const errorText = await emailResponse.text();
-        console.error("Email service HTTP error:", {
+        console.error("[register-user] Email service HTTP error:", {
           status: emailResponse.status,
           statusText: emailResponse.statusText,
           body: errorText,
@@ -408,27 +409,27 @@ Deno.serve(async (req: Request) => {
       } else {
         try {
           const emailResult = await emailResponse.json();
-          console.log("Email service response:", emailResult);
+          console.log("[register-user] Email service response:", emailResult);
 
           // Check if the response indicates success
           if (emailResult.success === true || emailResult.id) {
-            console.log("Email sent successfully with ID:", emailResult.id);
+            console.log("[register-user] Email sent successfully with ID:", emailResult.id);
             emailSent = true;
           } else if (emailResult.error) {
-            console.error("Email service returned error:", emailResult.error);
+            console.error("[register-user] Email service returned error:", emailResult.error);
             emailError = emailResult.error;
           } else {
             // Unexpected response format, but no explicit error
-            console.log("Email service response format unexpected:", emailResult);
+            console.log("[register-user] Email service response format unexpected:", emailResult);
             emailSent = true; // Assume success if no error field
           }
         } catch (jsonError) {
-          console.error("Failed to parse email response JSON:", jsonError);
+          console.error("[register-user] Failed to parse email response JSON:", jsonError);
           emailError = "Invalid response from email service";
         }
       }
     } catch (emailNetworkError: any) {
-      console.error("Failed to call email service:", emailNetworkError);
+      console.error("[register-user] Failed to call email service:", emailNetworkError);
       emailError = emailNetworkError.message || "Network error calling email service";
     }
 
@@ -449,7 +450,7 @@ Deno.serve(async (req: Request) => {
       );
     } else {
       // Email failed but user exists
-      console.error("Email delivery failed:", emailError);
+      console.error("[register-user] Email delivery failed:", emailError);
       return new Response(
         JSON.stringify({
           success: true,
@@ -466,8 +467,8 @@ Deno.serve(async (req: Request) => {
       );
     }
   } catch (error: any) {
-    console.error("Registration error:", error);
-    console.error("Error stack:", error.stack);
+    console.error("[register-user] Registration error:", error);
+    console.error("[register-user] Error stack:", error.stack);
     
     // Return 200 with error details instead of 500 to prevent "non-2xx status code" errors
     // The frontend will check the success field
