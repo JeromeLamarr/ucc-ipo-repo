@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Clock, CheckCircle, XCircle, Plus, Edit, AlertCircle } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, Plus, Edit, AlertCircle, BookOpen, X } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import type { Database } from '../lib/database.types';
 
@@ -12,6 +12,9 @@ export function ApplicantDashboard() {
   const { profile } = useAuth();
   const [records, setRecords] = useState<IpRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [departments, setDepartments] = useState<{ [key: string]: string }>({});
+  const [selectedRecord, setSelectedRecord] = useState<IpRecord | null>(null);
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -20,8 +23,33 @@ export function ApplicantDashboard() {
   });
 
   useEffect(() => {
+    fetchDepartments();
     fetchRecords();
   }, [profile]);
+
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name');
+      
+      if (error) throw error;
+      if (data) {
+        const deptMap = data.reduce((acc, dept) => {
+          acc[dept.id] = dept.name;
+          return acc;
+        }, {} as { [key: string]: string });
+        setDepartments(deptMap);
+      }
+    } catch (error) {
+      console.warn('Could not fetch departments:', error);
+    }
+  };
+
+  const getDepartmentName = (affiliationId: string) => {
+    if (!affiliationId) return 'Not specified';
+    return departments[affiliationId] || affiliationId;
+  };
 
   const fetchRecords = async () => {
     if (!profile) return;
@@ -218,7 +246,17 @@ export function ApplicantDashboard() {
                       {formatDate(record.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => {
+                            setSelectedRecord(record);
+                            setShowMoreDetails(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm whitespace-nowrap"
+                        >
+                          <BookOpen className="h-4 w-4" />
+                          View Additional Details
+                        </button>
                         {needsRevision(record.status) && (
                           <Link
                             to={`/dashboard/submissions/${record.id}`}
@@ -243,6 +281,91 @@ export function ApplicantDashboard() {
           </table>
         </div>
       </div>
+
+      {/* Additional Details Modal */}
+      {showMoreDetails && selectedRecord && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={() => setShowMoreDetails(false)}
+            ></div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              <div className="bg-blue-600 px-6 py-4 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-white">Additional Details</h2>
+                <button
+                  onClick={() => setShowMoreDetails(false)}
+                  className="text-white hover:bg-blue-700 p-2 rounded-lg"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="px-6 py-4 max-h-96 overflow-y-auto space-y-6">
+                {selectedRecord.details ? (
+                  <>
+                    {selectedRecord.details.inventors && Array.isArray(selectedRecord.details.inventors) && selectedRecord.details.inventors.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-3">Inventors</h3>
+                        <div className="space-y-3">
+                          {selectedRecord.details.inventors.map((inv: any, idx: number) => (
+                            <div key={idx} className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                              <p className="font-semibold text-gray-900">{inv.name}</p>
+                              {inv.affiliation && (
+                                <p className="text-sm text-gray-600 mt-1">Department: {getDepartmentName(String(inv.affiliation))}</p>
+                              )}
+                              {inv.contribution && (
+                                <p className="text-sm text-gray-600 mt-1">Contribution: {inv.contribution}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedRecord.details.dateConceived && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">When did you come up with this idea?</label>
+                        <p className="text-gray-900 mt-1">{new Date(selectedRecord.details.dateConceived).toLocaleString()}</p>
+                      </div>
+                    )}
+
+                    {selectedRecord.details.dateReduced && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">When did you start working on it?</label>
+                        <p className="text-gray-900 mt-1">{new Date(selectedRecord.details.dateReduced).toLocaleString()}</p>
+                      </div>
+                    )}
+
+                    {selectedRecord.details.funding && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Funding Source</label>
+                        <p className="text-gray-900 mt-1">{selectedRecord.details.funding}</p>
+                      </div>
+                    )}
+
+                    {selectedRecord.details.keywords && Array.isArray(selectedRecord.details.keywords) && selectedRecord.details.keywords.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Keywords</label>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedRecord.details.keywords.map((keyword: string, idx: number) => (
+                            <span key={idx} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">No additional details available</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
