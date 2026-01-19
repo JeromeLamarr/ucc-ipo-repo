@@ -500,7 +500,7 @@ export function SubmissionDetailPage() {
             )}
           </div>
 
-          {profile?.role === 'admin' && (
+          {record.details && Object.keys(record.details).length > 0 && (
             <div>
               {(() => {
                 // Fields that are already displayed above
