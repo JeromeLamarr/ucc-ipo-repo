@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,7 +23,8 @@ import {
   Building,
   Globe,
   DollarSign,
-  Target
+  Target,
+  Save
 } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 
@@ -79,6 +80,14 @@ export function NewSubmissionPage() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  
+  // Autosave state
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSaveTime, setLastSaveTime] = useState<string>('');
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [showDraftRecover, setShowDraftRecover] = useState(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -220,6 +229,237 @@ export function NewSubmissionPage() {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
   };
 
+  // Autosave functions
+  const saveDraft = async (dataToSave: typeof formData) => {
+    if (!profile) return;
+
+    try {
+      setAutoSaveStatus('saving');
+
+      const ipDetails = {
+        description: dataToSave.description,
+        technicalField: dataToSave.technicalField,
+        backgroundArt: dataToSave.backgroundArt,
+        problemStatement: dataToSave.problemStatement,
+        solution: dataToSave.solution,
+        advantages: dataToSave.advantages,
+        implementation: dataToSave.implementation,
+        inventors: dataToSave.inventors,
+        dateConceived: dataToSave.dateConceived,
+        dateReduced: dataToSave.dateReduced,
+        priorArt: dataToSave.priorArt,
+        keywords: dataToSave.keywords.map(k => k.value).filter(k => k.trim()),
+        funding: dataToSave.funding,
+        collaborators: dataToSave.collaborators.filter(c => c.name.trim()),
+        commercialPotential: dataToSave.commercialPotential,
+        targetMarket: dataToSave.targetMarket,
+        competitiveAdvantage: dataToSave.competitiveAdvantage,
+        estimatedValue: dataToSave.estimatedValue,
+        relatedPublications: dataToSave.relatedPublications,
+      };
+
+      if (draftId) {
+        // Update existing draft
+        const { error } = await supabase
+          .from('ip_records')
+          .update({
+            title: dataToSave.title || 'Untitled Draft',
+            category: dataToSave.category,
+            abstract: dataToSave.abstract,
+            details: ipDetails,
+            supervisor_id: dataToSave.supervisorId || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', draftId);
+
+        if (error) throw error;
+      } else {
+        // Create new draft
+        const { data, error } = await supabase
+          .from('ip_records')
+          .insert({
+            applicant_id: profile.id,
+            title: dataToSave.title || 'Untitled Draft',
+            category: dataToSave.category,
+            abstract: dataToSave.abstract,
+            details: ipDetails,
+            status: 'draft',
+            supervisor_id: dataToSave.supervisorId || null,
+            current_stage: 'Draft',
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) setDraftId(data.id);
+      }
+
+      setAutoSaveStatus('saved');
+      setLastSaveTime(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+      
+      // Reset status after 3 seconds
+      setTimeout(() => setAutoSaveStatus('idle'), 3000);
+    } catch (err) {
+      console.error('Autosave error:', err);
+      setAutoSaveStatus('error');
+      setTimeout(() => setAutoSaveStatus('idle'), 3000);
+    }
+  };
+
+  const handleAutoSave = (data: typeof formData) => {
+    // Clear existing timeout
+    if (autoSaveDebounceRef.current) {
+      clearTimeout(autoSaveDebounceRef.current);
+    }
+
+    // Set new debounced save
+    autoSaveDebounceRef.current = setTimeout(() => {
+      saveDraft(data);
+    }, 3000); // Save after 3 seconds of no changes
+  };
+
+  const loadDraft = async () => {
+    if (!profile) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('ip_records')
+        .select('*')
+        .eq('applicant_id', profile.id)
+        .eq('status', 'draft')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        // No draft found, that's okay
+        return;
+      }
+
+      if (error) throw error;
+
+      if (data) {
+        setDraftId(data.id);
+        setShowDraftRecover(true);
+      }
+    } catch (err) {
+      console.error('Error loading draft:', err);
+    }
+  };
+
+  const recoverDraft = async () => {
+    if (!draftId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('ip_records')
+        .select('*')
+        .eq('id', draftId)
+        .single();
+
+      if (error) throw error;
+
+      if (data && data.details) {
+        const details = data.details as any;
+        setFormData({
+          title: data.title || '',
+          category: data.category as any,
+          abstract: data.abstract || '',
+          description: details.description || '',
+          technicalField: details.technicalField || '',
+          backgroundArt: details.backgroundArt || '',
+          problemStatement: details.problemStatement || '',
+          solution: details.solution || '',
+          advantages: details.advantages || '',
+          implementation: details.implementation || '',
+          inventors: details.inventors || [{ name: profile?.full_name || '', affiliation: profile?.department_id || '', contribution: '' }],
+          dateConceived: details.dateConceived || '',
+          dateReduced: details.dateReduced || '',
+          priorArt: details.priorArt || '',
+          keywords: Array.isArray(details.keywords) 
+            ? details.keywords.map((k: string, idx: number) => ({ id: idx.toString(), value: k }))
+            : [{ id: '1', value: '' }],
+          funding: details.funding || '',
+          collaborators: details.collaborators || [{ id: '1', name: '', role: '', affiliation: '' }],
+          commercialPotential: details.commercialPotential || '',
+          targetMarket: details.targetMarket || '',
+          competitiveAdvantage: details.competitiveAdvantage || '',
+          estimatedValue: details.estimatedValue || '',
+          relatedPublications: details.relatedPublications || '',
+          supervisorId: data.supervisor_id || '',
+        });
+        setShowDraftRecover(false);
+      }
+    } catch (err) {
+      console.error('Error recovering draft:', err);
+      setError('Failed to recover draft');
+    }
+  };
+
+  const discardDraft = async () => {
+    if (!draftId) return;
+
+    try {
+      await supabase
+        .from('ip_records')
+        .delete()
+        .eq('id', draftId);
+
+      setDraftId(null);
+      setShowDraftRecover(false);
+      setFormData({
+        title: '',
+        category: 'patent',
+        abstract: '',
+        description: '',
+        technicalField: '',
+        backgroundArt: '',
+        problemStatement: '',
+        solution: '',
+        advantages: '',
+        implementation: '',
+        inventors: [{ name: profile?.full_name || '', affiliation: profile?.department_id || '', contribution: '' }],
+        dateConceived: '',
+        dateReduced: '',
+        priorArt: '',
+        keywords: [{ id: '1', value: '' }],
+        funding: '',
+        collaborators: [{ id: '1', name: '', role: '', affiliation: '' }],
+        commercialPotential: '',
+        targetMarket: '',
+        competitiveAdvantage: '',
+        estimatedValue: '',
+        relatedPublications: '',
+        supervisorId: '',
+      });
+    } catch (err) {
+      console.error('Error discarding draft:', err);
+      setError('Failed to discard draft');
+    }
+  };
+
+  // Load draft on component mount and set up autosave on formData change
+  useEffect(() => {
+    loadDraft();
+    
+    // Cleanup on unmount
+    return () => {
+      if (autoSaveDebounceRef.current) {
+        clearTimeout(autoSaveDebounceRef.current);
+      }
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Trigger autosave when formData changes
+  useEffect(() => {
+    if (step <= 4) { // Don't autosave on document upload step
+      handleAutoSave(formData);
+    }
+  }, [formData]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!profile) return;
@@ -273,6 +513,18 @@ export function NewSubmissionPage() {
         .single();
 
       if (ipError) throw ipError;
+
+      // Delete draft if it was recovered
+      if (draftId && draftId !== ipRecord.id) {
+        try {
+          await supabase
+            .from('ip_records')
+            .delete()
+            .eq('id', draftId);
+        } catch (deleteErr) {
+          console.warn('Could not delete draft:', deleteErr);
+        }
+      }
 
       // Upload all files with proper error handling and progress tracking
       const uploadedDocuments: Array<{ type: string; name: string }> = [];
@@ -651,6 +903,58 @@ export function NewSubmissionPage() {
           <span className="text-sm">{error}</span>
         </div>
       )}
+
+      {/* Draft Recovery Modal */}
+      {showDraftRecover && (
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <FileText className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-blue-900 mb-1">Draft Submission Found</h3>
+              <p className="text-sm text-blue-800 mb-3">We found a saved draft of your submission. Would you like to continue editing it or start fresh?</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={recoverDraft}
+                  className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+                >
+                  Recover Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={discardDraft}
+                  className="px-3 py-1.5 bg-blue-100 text-blue-700 text-sm font-medium rounded hover:bg-blue-200 transition-colors"
+                >
+                  Start New
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Autosave Indicator */}
+      <div className="mb-6 flex items-center justify-end gap-2 text-sm">
+        {autoSaveStatus === 'saving' && (
+          <div className="flex items-center gap-1 text-gray-600">
+            <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-blue-600 rounded-full"></div>
+            <span>Saving...</span>
+          </div>
+        )}
+        {autoSaveStatus === 'saved' && (
+          <div className="flex items-center gap-1 text-green-600">
+            <CheckCircle className="h-4 w-4" />
+            <span>Saved</span>
+            {lastSaveTime && <span className="text-gray-500">at {lastSaveTime}</span>}
+          </div>
+        )}
+        {autoSaveStatus === 'error' && (
+          <div className="flex items-center gap-1 text-red-600">
+            <AlertCircle className="h-4 w-4" />
+            <span>Save failed</span>
+          </div>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} onKeyDown={(e) => {
         if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type !== 'submit') {
