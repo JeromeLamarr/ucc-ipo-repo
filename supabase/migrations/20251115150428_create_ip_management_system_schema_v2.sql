@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   role user_role NOT NULL DEFAULT 'applicant',
   full_name TEXT NOT NULL,
-  affiliation TEXT,
+  department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
   is_verified BOOLEAN DEFAULT false,
   verification_token TEXT,
   temp_password BOOLEAN DEFAULT false,
@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_auth_user_id ON users(auth_user_id);
+CREATE INDEX IF NOT EXISTS idx_users_department_id ON users(department_id);
 
 -- =====================================================
 -- 2. TEMPLATES TABLE (created before ip_records due to FK)

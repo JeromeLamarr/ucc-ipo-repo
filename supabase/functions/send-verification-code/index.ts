@@ -11,7 +11,6 @@ interface SendCodeRequest {
   email: string;
   fullName: string;
   password: string;
-  affiliation?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -27,7 +26,7 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { email, fullName, password, affiliation }: SendCodeRequest = await req.json();
+    const { email, fullName, password }: SendCodeRequest = await req.json();
 
     const { data: existingUser } = await supabase.auth.admin.listUsers();
     const userExists = existingUser?.users.some(u => u.email === email);
@@ -50,7 +49,6 @@ Deno.serve(async (req: Request) => {
         email,
         code,
         full_name: fullName,
-        affiliation: affiliation || null,
         password_hash: password,
         expires_at: expiresAt.toISOString(),
       });

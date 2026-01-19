@@ -7,7 +7,6 @@
       - `email` (text, indexed)
       - `code` (text, 6-digit code)
       - `full_name` (text)
-      - `affiliation` (text, nullable)
       - `password_hash` (text)
       - `expires_at` (timestamptz)
       - `verified` (boolean, default false)
@@ -28,7 +27,6 @@ CREATE TABLE IF NOT EXISTS verification_codes (
   email text NOT NULL,
   code text NOT NULL,
   full_name text NOT NULL,
-  affiliation text,
   password_hash text NOT NULL,
   expires_at timestamptz NOT NULL,
   verified boolean DEFAULT false,

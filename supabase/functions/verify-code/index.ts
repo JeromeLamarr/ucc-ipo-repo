@@ -58,7 +58,6 @@ Deno.serve(async (req: Request) => {
       auth_user_id: authData.user.id,
       email: verificationData.email,
       full_name: verificationData.full_name,
-      affiliation: verificationData.affiliation,
       role: "applicant",
       is_verified: true,
     });
