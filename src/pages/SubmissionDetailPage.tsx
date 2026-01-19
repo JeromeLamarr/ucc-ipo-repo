@@ -43,6 +43,7 @@ export function SubmissionDetailPage() {
   const [record, setRecord] = useState<IpRecord | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+  const [departments, setDepartments] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -55,10 +56,35 @@ export function SubmissionDetailPage() {
   });
 
   useEffect(() => {
+    fetchDepartments();
     if (id) {
       fetchSubmissionDetails();
     }
   }, [id]);
+
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name');
+      
+      if (error) throw error;
+      if (data) {
+        const deptMap = data.reduce((acc, dept) => {
+          acc[dept.id] = dept.name;
+          return acc;
+        }, {} as { [key: string]: string });
+        setDepartments(deptMap);
+      }
+    } catch (error) {
+      console.warn('Could not fetch departments:', error);
+    }
+  };
+
+  const getDepartmentName = (affiliationId: string) => {
+    if (!affiliationId) return 'Not specified';
+    return departments[affiliationId] || affiliationId;
+  };
 
   const fetchSubmissionDetails = async () => {
     try {
@@ -537,10 +563,10 @@ export function SubmissionDetailPage() {
                                           {Object.entries(item)
                                             .filter(([k]) => k !== 'id') // Filter out id field
                                             .map(([k, v]) => {
-                                              // Special handling for affiliation field - show department info
+                                              // Special handling for affiliation field - show department name instead of UUID
                                               let displayValue = String(v);
                                               if (k === 'affiliation' && v) {
-                                                displayValue = v;
+                                                displayValue = getDepartmentName(String(v));
                                               }
                                               
                                               return (
