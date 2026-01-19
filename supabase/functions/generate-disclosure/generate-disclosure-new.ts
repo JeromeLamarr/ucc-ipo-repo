@@ -325,11 +325,11 @@ function generateFormalDisclosureHTML(record: any): string {
     
     <div class="form-row">
       <div class="form-col">
-        <div class="field-label">Date of Conception</div>
+        <div class="field-label">When did you come up with this idea?</div>
         <div class="field-input">${details.dateConceived || '__/__/____'}</div>
       </div>
       <div class="form-col">
-        <div class="field-label">Date Reduced to Practice</div>
+        <div class="field-label">When did you start working on it?</div>
         <div class="field-input">${details.dateReduced || '__/__/____'}</div>
       </div>
     </div>

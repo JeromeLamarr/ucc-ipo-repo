@@ -961,20 +961,20 @@ export function NewSubmissionPage() {
               <div className="grid md:grid-cols-2 gap-6 mt-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date Conceived
+                    When did you come up with this idea?
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.dateConceived}
                     onChange={(e) => setFormData({ ...formData, dateConceived: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    title="Date and time when the IP was conceived"
+                    title="Date and time when the idea was first thought of"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date Reduced to Practice
+                    When did you start working on it?
                   </label>
                   <input
                     type="datetime-local"

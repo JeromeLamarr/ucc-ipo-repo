@@ -649,14 +649,14 @@ async function convertHTMLToPDF(htmlContent: string, pdfDoc: PDFDocument): Promi
 
     ${details.dateConceived ? `
     <div class="field">
-      <div class="field-label">Date of First Conception:</div>
+      <div class="field-label">When did you come up with this idea?</div>
       <div class="field-value">${details.dateConceived}</div>
     </div>
     ` : ''}
 
     ${details.dateReduced ? `
     <div class="field">
-      <div class="field-label">Date First Reduced to Practice:</div>
+      <div class="field-label">When did you start working on it?</div>
       <div class="field-value">${details.dateReduced}</div>
     </div>
     ` : ''}
