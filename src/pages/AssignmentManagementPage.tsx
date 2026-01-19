@@ -50,7 +50,7 @@ export function AssignmentManagementPage() {
           .order('created_at', { ascending: false }),
         supabase
           .from('users')
-          .select('*')
+          .select('id, full_name, department_id, departments(name)')
           .eq('role', 'supervisor')
           .order('full_name'),
         supabase
@@ -428,10 +428,10 @@ export function AssignmentManagementPage() {
                   title="Select a supervisor for this submission"
                 >
                   <option value="">-- Select Supervisor --</option>
-                  {supervisors.map((supervisor) => (
+                  {supervisors.map((supervisor: any) => (
                     <option key={supervisor.id} value={supervisor.id}>
                       {supervisor.full_name}
-                      {supervisor.affiliation ? ` (${supervisor.affiliation})` : ''}
+                      {supervisor.departments?.name ? ` (${supervisor.departments.name})` : ''}
                     </option>
                   ))}
                 </select>

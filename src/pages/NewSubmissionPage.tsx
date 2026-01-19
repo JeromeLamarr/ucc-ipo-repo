@@ -115,7 +115,7 @@ export function NewSubmissionPage() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('id, full_name, department_id, departments(name)')
         .eq('role', 'supervisor')
         .order('full_name');
 
@@ -773,9 +773,9 @@ export function NewSubmissionPage() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">No supervisor selected (Admin will assign)</option>
-                  {supervisors.map((supervisor) => (
+                  {supervisors.map((supervisor: any) => (
                     <option key={supervisor.id} value={supervisor.id}>
-                      {supervisor.full_name} - {supervisor.affiliation || 'No affiliation'}
+                      {supervisor.full_name} - {supervisor.departments?.name || 'No department'}
                     </option>
                   ))}
                 </select>
