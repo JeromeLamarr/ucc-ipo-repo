@@ -71,14 +71,20 @@ export function ApplicantDashboard() {
       const { error } = await supabase
         .from('ip_records')
         .delete()
-        .eq('id', draftId);
+        .eq('id', draftId)
+        .eq('status', 'draft');
 
-      if (error) throw error;
+      if (error) {
+        console.error('[deleteDraft] Delete error:', error);
+        throw error;
+      }
 
+      console.log('[deleteDraft] Successfully deleted draft:', draftId);
       setDrafts(drafts.filter(d => d.id !== draftId));
       setStats({ ...stats, drafts: stats.drafts - 1 });
     } catch (error) {
       console.error('Error deleting draft:', error);
+      alert('Failed to delete draft. Please try again.');
     }
   };
 
