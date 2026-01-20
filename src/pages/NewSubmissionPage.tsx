@@ -93,13 +93,6 @@ export function NewSubmissionPage() {
 
   // Title duplicate checking state
   const [titleCheckPreventSubmit, setTitleCheckPreventSubmit] = useState(false);
-  const { result: titleCheckResult, loading: titleCheckLoading, error: titleCheckError } = useCheckTitleDuplicate(
-    formData.title,
-    {
-      debounceMs: 600,
-      excludeDraftId: draftId || undefined,
-    }
-  );
 
   const [formData, setFormData] = useState({
     title: '',
@@ -126,6 +119,15 @@ export function NewSubmissionPage() {
     relatedPublications: '',
     supervisorId: '',
   });
+
+  // Check title for duplicates (after formData is initialized)
+  const { result: titleCheckResult, loading: titleCheckLoading, error: titleCheckError } = useCheckTitleDuplicate(
+    formData.title,
+    {
+      debounceMs: 600,
+      excludeDraftId: draftId || undefined,
+    }
+  );
 
   useEffect(() => {
     fetchSupervisors();
