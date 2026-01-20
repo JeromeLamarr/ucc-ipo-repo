@@ -299,6 +299,13 @@ export function NewSubmissionPage() {
           throw error;
         }
       } else {
+        // Delete any existing old drafts for this user first (keep only latest)
+        await supabase
+          .from('ip_records')
+          .delete()
+          .eq('applicant_id', profile.id)
+          .eq('status', 'draft');
+
         // Create new draft
         const { data, error } = await supabase
           .from('ip_records')
@@ -430,45 +437,9 @@ export function NewSubmissionPage() {
   };
 
   const discardDraft = async () => {
-    if (!draftId) return;
-
-    try {
-      await supabase
-        .from('ip_records')
-        .delete()
-        .eq('id', draftId);
-
-      setDraftId(null);
-      setShowDraftRecover(false);
-      setFormData({
-        title: '',
-        category: 'patent',
-        abstract: '',
-        description: '',
-        technicalField: '',
-        backgroundArt: '',
-        problemStatement: '',
-        solution: '',
-        advantages: '',
-        implementation: '',
-        inventors: [{ name: profile?.full_name || '', affiliation: profile?.department_id || '', contribution: '' }],
-        dateConceived: '',
-        dateReduced: '',
-        priorArt: '',
-        keywords: [{ id: '1', value: '' }],
-        funding: '',
-        collaborators: [{ id: '1', name: '', role: '', affiliation: '' }],
-        commercialPotential: '',
-        targetMarket: '',
-        competitiveAdvantage: '',
-        estimatedValue: '',
-        relatedPublications: '',
-        supervisorId: '',
-      });
-    } catch (err) {
-      console.error('Error discarding draft:', err);
-      setError('Failed to discard draft');
-    }
+    // Draft auto-deletion is now handled in saveDraft() when creating new draft
+    // No manual delete option - users can only recover the latest draft or start a new submission
+    setShowDraftRecover(false);
   };
 
   // Load draft on component mount and set up autosave on formData change
@@ -962,21 +933,14 @@ export function NewSubmissionPage() {
             <FileText className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-semibold text-blue-900 mb-1">Draft Submission Found</h3>
-              <p className="text-sm text-blue-800 mb-3">We found a saved draft of your submission. Would you like to continue editing it or start fresh?</p>
+              <p className="text-sm text-blue-800 mb-3">We found your latest saved draft. Click below to continue editing it.</p>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={recoverDraft}
                   className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
                 >
-                  Recover Draft
-                </button>
-                <button
-                  type="button"
-                  onClick={discardDraft}
-                  className="px-3 py-1.5 bg-blue-100 text-blue-700 text-sm font-medium rounded hover:bg-blue-200 transition-colors"
-                >
-                  Start New
+                  Continue Editing Draft
                 </button>
               </div>
             </div>
