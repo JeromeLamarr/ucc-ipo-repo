@@ -291,19 +291,23 @@ export function NewSubmissionPage() {
           .insert({
             applicant_id: profile.id,
             title: dataToSave.title || 'Untitled Draft',
-            category: dataToSave.category,
+            category: dataToSave.category || 'other',
             abstract: dataToSave.abstract,
             details: ipDetails,
             status: 'draft',
             supervisor_id: dataToSave.supervisorId || null,
             current_stage: 'Draft',
-            current_step: step,
           })
           .select()
           .single();
 
         if (error) {
           console.error('[AUTOSAVE] Insert failed:', error);
+          console.error('[AUTOSAVE] Error details:', {
+            message: error.message,
+            code: error.code,
+            details: (error as any).details,
+          });
           throw error;
         }
         if (data) setDraftId(data.id);
