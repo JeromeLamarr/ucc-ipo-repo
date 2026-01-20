@@ -68,23 +68,52 @@ export function ApplicantDashboard() {
     if (!confirm('Are you sure you want to delete this draft? This action cannot be undone.')) return;
 
     try {
-      const { error } = await supabase
+      console.log('[deleteDraft] Starting delete for draft:', draftId);
+      
+      // First, verify the draft exists and belongs to this user
+      const { data: draftData, error: fetchError } = await supabase
+        .from('ip_records')
+        .select('id, status, applicant_id')
+        .eq('id', draftId)
+        .single();
+
+      if (fetchError) {
+        console.error('[deleteDraft] Error fetching draft:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('[deleteDraft] Draft data:', draftData);
+
+      if (draftData.status !== 'draft') {
+        throw new Error('Only draft submissions can be deleted');
+      }
+
+      if (draftData.applicant_id !== profile?.id) {
+        throw new Error('You can only delete your own drafts');
+      }
+
+      // Now delete it
+      const { error: deleteError, count } = await supabase
         .from('ip_records')
         .delete()
         .eq('id', draftId)
+        .eq('applicant_id', profile.id)
         .eq('status', 'draft');
 
-      if (error) {
-        console.error('[deleteDraft] Delete error:', error);
-        throw error;
+      if (deleteError) {
+        console.error('[deleteDraft] Delete error:', deleteError);
+        throw deleteError;
       }
 
-      console.log('[deleteDraft] Successfully deleted draft:', draftId);
-      setDrafts(drafts.filter(d => d.id !== draftId));
-      setStats({ ...stats, drafts: stats.drafts - 1 });
+      console.log('[deleteDraft] Delete count:', count);
+
+      // Force refetch to ensure UI is synced
+      await fetchRecords();
+      
+      alert('Draft deleted successfully');
     } catch (error) {
-      console.error('Error deleting draft:', error);
-      alert('Failed to delete draft. Please try again.');
+      console.error('[deleteDraft] Error:', error);
+      alert('Failed to delete draft: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
