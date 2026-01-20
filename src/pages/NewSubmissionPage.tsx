@@ -442,8 +442,19 @@ export function NewSubmissionPage() {
   useEffect(() => {
     loadDraft();
     
+    // Warn user if they try to leave with unsaved changes
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (autoSaveStatus === 'saving' || (draftId && autoSaveStatus !== 'saved' && step <= 5)) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     // Cleanup on unmount
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       if (autoSaveDebounceRef.current) {
         clearTimeout(autoSaveDebounceRef.current);
       }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Clock, CheckCircle, XCircle, Plus, Edit, AlertCircle } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, Plus, Edit, AlertCircle, Trash2 } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import type { Database } from '../lib/database.types';
 
@@ -11,12 +11,14 @@ type IpRecord = Database['public']['Tables']['ip_records']['Row'];
 export function ApplicantDashboard() {
   const { profile } = useAuth();
   const [records, setRecords] = useState<IpRecord[]>([]);
+  const [drafts, setDrafts] = useState<IpRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
     approved: 0,
     rejected: 0,
+    drafts: 0,
   });
 
   useEffect(() => {
@@ -35,23 +37,48 @@ export function ApplicantDashboard() {
 
       if (error) throw error;
 
-      setRecords(data || []);
+      const allRecords = data || [];
+      const submittedRecords = allRecords.filter(r => r.status !== 'draft');
+      const draftRecords = allRecords.filter(r => r.status === 'draft');
+
+      setRecords(submittedRecords);
+      setDrafts(draftRecords);
+      
       setStats({
-        total: data?.length || 0,
+        total: submittedRecords.length,
         pending:
-          data?.filter((r) =>
+          submittedRecords.filter((r) =>
             ['submitted', 'waiting_supervisor', 'waiting_evaluation'].includes(r.status)
           ).length || 0,
         approved:
-          data?.filter((r) =>
+          submittedRecords.filter((r) =>
             ['supervisor_approved', 'evaluator_approved', 'ready_for_filing'].includes(r.status)
           ).length || 0,
-        rejected: data?.filter((r) => r.status === 'rejected').length || 0,
+        rejected: submittedRecords.filter((r) => r.status === 'rejected').length || 0,
+        drafts: draftRecords.length,
       });
     } catch (error) {
       console.error('Error fetching records:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteDraft = async (draftId: string) => {
+    if (!confirm('Are you sure you want to delete this draft? This action cannot be undone.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('ip_records')
+        .delete()
+        .eq('id', draftId);
+
+      if (error) throw error;
+
+      setDrafts(drafts.filter(d => d.id !== draftId));
+      setStats({ ...stats, drafts: stats.drafts - 1 });
+    } catch (error) {
+      console.error('Error deleting draft:', error);
     }
   };
 
@@ -73,6 +100,16 @@ export function ApplicantDashboard() {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
+    });
+  };
+
+  const formatDateTime = (date: string) => {
+    return new Date(date).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
@@ -104,7 +141,7 @@ export function ApplicantDashboard() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Submissions</p>
+              <p className="text-sm text-gray-600">Submissions</p>
               <p className="text-3xl font-bold text-gray-900 mt-1">{stats.total}</p>
             </div>
             <FileText className="h-12 w-12 text-blue-600 opacity-20" />
@@ -114,7 +151,17 @@ export function ApplicantDashboard() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pending Review</p>
+              <p className="text-sm text-gray-600">Draft Saves</p>
+              <p className="text-3xl font-bold text-amber-600 mt-1">{stats.drafts}</p>
+            </div>
+            <FileText className="h-12 w-12 text-amber-600 opacity-20" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Pending</p>
               <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.pending}</p>
             </div>
             <Clock className="h-12 w-12 text-yellow-600 opacity-20" />
@@ -130,17 +177,81 @@ export function ApplicantDashboard() {
             <CheckCircle className="h-12 w-12 text-green-600 opacity-20" />
           </div>
         </div>
+      </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Rejected</p>
-              <p className="text-3xl font-bold text-red-600 mt-1">{stats.rejected}</p>
-            </div>
-            <XCircle className="h-12 w-12 text-red-600 opacity-20" />
+      {/* Draft Submissions Section */}
+      {drafts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">Draft Submissions ({drafts.length})</h2>
+            <p className="text-sm text-gray-600 mt-1">Auto-saved drafts waiting to be completed and submitted</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-amber-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Title</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Progress</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Last Saved</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {drafts.map((draft) => (
+                  <tr key={draft.id} className="hover:bg-amber-50">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {draft.title || <span className="text-gray-500 italic">Untitled Draft</span>}
+                      </div>
+                      {draft.abstract && (
+                        <p className="text-xs text-gray-600 mt-1 line-clamp-1">{draft.abstract}</p>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900 capitalize">{draft.category}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-amber-600 h-2 rounded-full"
+                            style={{ width: `${((draft.current_step || 1) / 6) * 100}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs font-medium text-gray-600">
+                          {draft.current_step || 1}/6
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDateTime(draft.updated_at)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to="/dashboard/submit"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium text-xs"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          Continue
+                        </Link>
+                        <button
+                          onClick={() => deleteDraft(draft.id)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium text-xs"
+                          title="Delete draft"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
