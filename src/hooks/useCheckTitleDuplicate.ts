@@ -61,6 +61,8 @@ export function useCheckTitleDuplicate(
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const functionUrl = `${supabaseUrl}/functions/v1/check-title?${queryParams}`;
 
+      console.log('[useCheckTitleDuplicate] Calling function:', functionUrl);
+
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
 
@@ -72,11 +74,16 @@ export function useCheckTitleDuplicate(
         },
       });
 
+      console.log('[useCheckTitleDuplicate] Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[useCheckTitleDuplicate] Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
-      const data: TitleCheckResult = await response.json();
+      const data = await response.json();
+      console.log('[useCheckTitleDuplicate] Success response:', data);
       setResult(data);
     } catch (err) {
       console.error('[useCheckTitleDuplicate] Error:', err);

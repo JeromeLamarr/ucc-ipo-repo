@@ -8,11 +8,6 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-interface CheckTitleRequest {
-  title: string;
-  excludeDraftId?: string;
-}
-
 interface CheckTitleResponse {
   exists: boolean;
   exactMatch: {
@@ -125,19 +120,14 @@ Deno.serve(async (req: Request) => {
     console.log("[check-title] Checking for title:", title);
     console.log("[check-title] Excluding draft:", excludeDraftId);
 
-    // Get all submitted records with titles
-    let query = supabase
+    // Get all submitted records with titles (using service role to bypass RLS)
+    const { data: records, error } = await supabase
       .from("ip_records")
-      .select("id, title")
-      .eq("status", "submitted")
+      .select("id, title, status")
+      .in("status", ["submitted", "waiting_supervisor", "supervisor_revision", "supervisor_approved", "waiting_evaluation", "evaluator_revision", "evaluator_approved", "preparing_legal", "ready_for_filing"])
       .not("title", "is", null);
 
-    // Exclude current draft if provided
-    if (excludeDraftId) {
-      query = query.neq("id", excludeDraftId);
-    }
-
-    const { data: records, error } = await query;
+    console.log("[check-title] Query result - error:", error, "records count:", records?.length);
 
     if (error) {
       console.error("[check-title] Database error:", error);
@@ -153,9 +143,11 @@ Deno.serve(async (req: Request) => {
     }> = [];
 
     // Check for exact match and collect similar titles
-    if (records) {
-      records.forEach((record: { id: string; title: string }) => {
-        const recordTitleLower = record.title.toLowerCase().trim();
+    if (records && records.length > 0) {
+      records.forEach((record: any) => {
+        const recordTitleLower = record.title?.toLowerCase().trim();
+        
+        if (!recordTitleLower) return;
         
         // Check for exact match
         if (recordTitleLower === titleLower) {
