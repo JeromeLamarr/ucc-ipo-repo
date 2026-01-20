@@ -54,7 +54,7 @@ DO $$ BEGIN
     'waiting_evaluation',
     'evaluator_revision',
     'evaluator_approved',
-    'preparing_legal',
+    'academic_presentation_materials',
     'ready_for_filing',
     'rejected'
   );

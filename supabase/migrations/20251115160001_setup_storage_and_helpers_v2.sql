@@ -278,7 +278,7 @@ FROM ip_records ip
 JOIN users applicant ON applicant.id = ip.applicant_id
 LEFT JOIN users supervisor ON supervisor.id = ip.supervisor_id
 LEFT JOIN users evaluator ON evaluator.id = ip.evaluator_id
-WHERE ip.status IN ('waiting_supervisor', 'waiting_evaluation', 'preparing_legal')
+WHERE ip.status IN ('waiting_supervisor', 'waiting_evaluation', 'academic_presentation_materials')
 ORDER BY ip.created_at ASC;
 
 -- To bulk update verification status (use carefully):
