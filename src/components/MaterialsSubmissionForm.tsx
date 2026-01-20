@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Upload, CheckCircle, AlertCircle, X, FileText, Image } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 import { MATERIALS_REQUIREMENTS, MATERIALS_STORAGE_PATHS } from '@/lib/processConstants';
 
 interface MaterialsSubmissionFormProps {

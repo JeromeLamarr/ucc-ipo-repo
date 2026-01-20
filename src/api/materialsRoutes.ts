@@ -9,7 +9,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import { authenticateUser, authorizeAdmin } from '../middleware/auth';
 import { sendMaterialsRequestEmail } from '../services/emailService';
 

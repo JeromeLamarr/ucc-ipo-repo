@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, Clock, Send, Info } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 
 interface MaterialsRequestActionProps {
   ipRecordId: string;
