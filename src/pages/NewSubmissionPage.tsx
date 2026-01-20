@@ -236,6 +236,12 @@ export function NewSubmissionPage() {
     try {
       setAutoSaveStatus('saving');
 
+      // Only save if there's at least some content
+      if (!dataToSave.title && !dataToSave.abstract && !dataToSave.description) {
+        setAutoSaveStatus('idle');
+        return;
+      }
+
       const ipDetails = {
         description: dataToSave.description,
         technicalField: dataToSave.technicalField,
@@ -268,11 +274,16 @@ export function NewSubmissionPage() {
             abstract: dataToSave.abstract,
             details: ipDetails,
             supervisor_id: dataToSave.supervisorId || null,
+            current_step: step,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', draftId);
+          .eq('id', draftId)
+          .eq('status', 'draft');
 
-        if (error) throw error;
+        if (error) {
+          console.error('[AUTOSAVE] Update failed:', error);
+          throw error;
+        }
       } else {
         // Create new draft
         const { data, error } = await supabase
@@ -286,11 +297,15 @@ export function NewSubmissionPage() {
             status: 'draft',
             supervisor_id: dataToSave.supervisorId || null,
             current_stage: 'Draft',
+            current_step: step,
           })
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('[AUTOSAVE] Insert failed:', error);
+          throw error;
+        }
         if (data) setDraftId(data.id);
       }
 
