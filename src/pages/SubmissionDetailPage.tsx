@@ -23,6 +23,8 @@ import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
 import { CompletionButton } from '../components/CompletionButton';
 import { CertificateManager } from '../components/CertificateManager';
 import { FullDisclosureManager } from '../components/FullDisclosureManager';
+import { MaterialsRequestAction } from '../components/MaterialsRequestAction';
+import { MaterialsSubmissionForm } from '../components/MaterialsSubmissionForm';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -648,6 +650,27 @@ export function SubmissionDetailPage() {
         currentStatus={record.status}
         currentStage={record.current_stage}
       />
+
+      {/* Academic Presentation Materials Section */}
+      {record.current_stage === 'academic_presentation_materials' && profile?.role === 'admin' && (
+        <MaterialsRequestAction
+          ipRecordId={record.id}
+          applicantEmail={record.applicant?.email || ''}
+          applicantName={record.applicant?.full_name || ''}
+          ipTitle={record.title}
+          onSuccess={() => fetchSubmissionDetails()}
+          onError={(error) => console.error('Materials request error:', error)}
+        />
+      )}
+
+      {record.current_stage === 'academic_presentation_materials' && profile?.role === 'applicant' && record.applicant_id === profile.id && (
+        <MaterialsSubmissionForm
+          ipRecordId={record.id}
+          applicantId={profile.id}
+          onSuccess={() => fetchSubmissionDetails()}
+          onError={(error) => console.error('Materials submission error:', error)}
+        />
+      )}
 
       {profile?.role === 'admin' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
