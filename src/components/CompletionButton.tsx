@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2, Lock } from 'lucide-react';
 
 interface CompletionButtonProps {
   recordId: string;
   currentStatus: string;
+  currentStage?: string;
   applicantEmail: string;
   applicantName: string;
   title: string;
@@ -16,6 +17,7 @@ interface CompletionButtonProps {
 export function CompletionButton({
   recordId,
   currentStatus,
+  currentStage,
   applicantEmail,
   applicantName,
   title,
@@ -24,6 +26,35 @@ export function CompletionButton({
   onComplete,
 }: CompletionButtonProps) {
   const [loading, setLoading] = useState(false);
+  const [materialsStatus, setMaterialsStatus] = useState<'not_requested' | 'requested' | 'submitted' | null>(null);
+  const [loadingMaterials, setLoadingMaterials] = useState(true);
+
+  // Check if materials have been submitted when in academic_presentation_materials stage
+  useEffect(() => {
+    if (currentStage === 'academic_presentation_materials') {
+      fetchMaterialsStatus();
+    } else {
+      setLoadingMaterials(false);
+    }
+  }, [recordId, currentStage]);
+
+  const fetchMaterialsStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('presentation_materials')
+        .select('status')
+        .eq('ip_record_id', recordId)
+        .single();
+
+      if (!error && data) {
+        setMaterialsStatus(data.status);
+      }
+    } catch (err) {
+      console.error('Error fetching materials status:', err);
+    } finally {
+      setLoadingMaterials(false);
+    }
+  };
 
   const handleComplete = async () => {
     if (
@@ -167,6 +198,34 @@ export function CompletionButton({
         <span className="font-medium">Completed - Ready for Filing</span>
       </div>
     );
+  }
+
+  // Gate the button if in academic_presentation_materials stage and materials not submitted
+  if (currentStage === 'academic_presentation_materials') {
+    if (loadingMaterials) {
+      return (
+        <button disabled className="px-6 py-3 bg-gray-100 text-gray-400 rounded-lg font-medium cursor-not-allowed">
+          Loading...
+        </button>
+      );
+    }
+
+    if (materialsStatus !== 'submitted') {
+      return (
+        <div className="flex flex-col gap-2">
+          <button
+            disabled
+            className="px-6 py-3 bg-gray-100 text-gray-500 rounded-lg font-medium cursor-not-allowed flex items-center gap-2"
+          >
+            <Lock className="h-5 w-5" />
+            Awaiting Materials Submission
+          </button>
+          <p className="text-sm text-gray-600">
+            ℹ️ This button will be enabled once the applicant submits their presentation materials (poster and paper).
+          </p>
+        </div>
+      );
+    }
   }
 
   if (currentStatus !== 'evaluator_approved') {

@@ -678,6 +678,7 @@ export function SubmissionDetailPage() {
           <CompletionButton
             recordId={record.id}
             currentStatus={record.status}
+            currentStage={record.current_stage}
             applicantEmail={record.applicant?.email || ''}
             applicantName={record.applicant?.full_name || ''}
             title={record.title}
