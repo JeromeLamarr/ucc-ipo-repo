@@ -10,6 +10,8 @@ import {
   ErrorResponse,
 } from '../lib/validation';
 import { DocumentUploadSection } from '../components/DocumentUploadSection';
+import { TitleDuplicateChecker } from '../components/TitleDuplicateChecker';
+import { useCheckTitleDuplicate } from '../hooks/useCheckTitleDuplicate';
 import {
   FileText,
   Upload,
@@ -88,6 +90,16 @@ export function NewSubmissionPage() {
   const [showDraftRecover, setShowDraftRecover] = useState(false);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Title duplicate checking state
+  const [titleCheckPreventSubmit, setTitleCheckPreventSubmit] = useState(false);
+  const { result: titleCheckResult, loading: titleCheckLoading, error: titleCheckError } = useCheckTitleDuplicate(
+    formData.title,
+    {
+      debounceMs: 600,
+      excludeDraftId: draftId || undefined,
+    }
+  );
 
   const [formData, setFormData] = useState({
     title: '',
@@ -493,6 +505,13 @@ export function NewSubmissionPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!profile) return;
+
+    // Prevent submission if title is a duplicate
+    if (titleCheckPreventSubmit) {
+      setError('⚠️ Cannot submit: This IP title already exists. Please choose a different title.');
+      setLoading(false);
+      return;
+    }
 
     setError('');
     setLoading(true);
@@ -1008,6 +1027,13 @@ export function NewSubmissionPage() {
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter a clear, descriptive title"
+                />
+                <TitleDuplicateChecker
+                  title={formData.title}
+                  result={titleCheckResult}
+                  loading={titleCheckLoading}
+                  error={titleCheckError}
+                  onPreventSubmit={setTitleCheckPreventSubmit}
                 />
               </div>
 
