@@ -58,27 +58,41 @@ export function MaterialsRequestAction({
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!user) {
+        throw new Error('Not authenticated. Please log in.');
+      }
+
+      console.log('Requesting materials for IP Record:', ipRecordId);
+      console.log('User ID:', user.id);
 
       // Update presentation_materials with request timestamp
-      const { error: updateError } = await supabase
+      const { error: updateError, data: updateData } = await supabase
         .from('presentation_materials')
         .update({
           status: 'requested',
           materials_requested_at: new Date().toISOString(),
           materials_requested_by: user.id,
         })
-        .eq('ip_record_id', ipRecordId);
+        .eq('ip_record_id', ipRecordId)
+        .select();
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Database update error:', updateError);
+        throw new Error(`Database error: ${updateError.message}`);
+      }
 
-      // Send email notification to applicant
+      console.log('Materials request updated:', updateData);
+
+      // Try to send email but don't fail if it doesn't work
       try {
-        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`, {
+        const emailUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`;
+        console.log('Sending email to:', emailUrl);
+        
+        const emailResponse = await fetch(emailUrl, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
             recipientEmail: applicantEmail,
@@ -92,16 +106,26 @@ export function MaterialsRequestAction({
             },
           }),
         });
+
+        if (!emailResponse.ok) {
+          const emailError = await emailResponse.text();
+          console.warn('Email notification failed:', emailError);
+        } else {
+          console.log('Email sent successfully');
+        }
       } catch (emailError) {
-        console.warn('Email notification failed, but materials request was recorded:', emailError);
+        console.warn('Email notification error (continuing anyway):', emailError);
       }
 
+      // Refresh status
       await fetchMaterialsStatus();
+      alert('✅ Materials request sent successfully!');
       onSuccess?.();
     } catch (error: any) {
-      const message = error.message || 'Failed to request materials';
-      onError?.(message);
       console.error('Error requesting materials:', error);
+      const message = error.message || 'Failed to request materials';
+      alert(`❌ Error: ${message}`);
+      onError?.(message);
     } finally {
       setLoading(false);
     }
