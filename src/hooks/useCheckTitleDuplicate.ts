@@ -57,36 +57,27 @@ export function useCheckTitleDuplicate(
         queryParams.append('excludeDraftId', excludeDraftId);
       }
 
-      const { data, error: invokeError } = await supabase.functions.invoke(
-        'check-title',
-        {
-          method: 'GET',
-          body: null,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          // Pass query params via URL (GET request)
-        }
-      );
+      // Get the Supabase URL from environment
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const functionUrl = `${supabaseUrl}/functions/v1/check-title?${queryParams}`;
 
-      // For GET requests, we need to construct the full URL
-      const response = await fetch(
-        `${supabase.functions.url}/check-title?${queryParams}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
-          },
-        }
-      );
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+
+      const response = await fetch(functionUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result: TitleCheckResult = await response.json();
-      setResult(result);
+      const data: TitleCheckResult = await response.json();
+      setResult(data);
     } catch (err) {
       console.error('[useCheckTitleDuplicate] Error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
