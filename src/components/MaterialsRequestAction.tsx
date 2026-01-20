@@ -56,14 +56,44 @@ export function MaterialsRequestAction({
   const handleRequestMaterials = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/materials/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ip_record_id: ipRecordId }),
-      });
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
 
-      if (!response.ok) {
-        throw new Error('Failed to request materials');
+      // Update presentation_materials with request timestamp
+      const { error: updateError } = await supabase
+        .from('presentation_materials')
+        .update({
+          status: 'requested',
+          materials_requested_at: new Date().toISOString(),
+          materials_requested_by: user.id,
+        })
+        .eq('ip_record_id', ipRecordId);
+
+      if (updateError) throw updateError;
+
+      // Send email notification to applicant
+      try {
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            recipientEmail: applicantEmail,
+            recipientName: applicantName,
+            subject: 'Presentation Materials Requested',
+            templateType: 'materials_request',
+            data: {
+              applicantName,
+              ipTitle,
+              deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+            },
+          }),
+        });
+      } catch (emailError) {
+        console.warn('Email notification failed, but materials request was recorded:', emailError);
       }
 
       await fetchMaterialsStatus();
