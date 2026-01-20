@@ -80,9 +80,9 @@ export function ProcessTrackingWizard({
         status: 'pending',
       },
       {
-        stage: 'legal_preparation',
-        label: 'Legal Preparation',
-        description: getStatusDescription('preparing_legal'),
+        stage: 'academic_presentation_materials',
+        label: 'Academic Presentation Materials',
+        description: 'Preparing presentation materials for publication',
         status: 'pending',
       },
       {
