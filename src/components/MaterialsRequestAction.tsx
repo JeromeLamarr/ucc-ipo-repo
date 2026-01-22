@@ -65,28 +65,55 @@ export function MaterialsRequestAction({
       console.log('Requesting materials for IP Record:', ipRecordId);
       console.log('User ID:', user.id);
 
-      // Update presentation_materials with request timestamp
-      const { error: updateError, data: updateData } = await supabase
+      // First check if presentation_materials record exists, if not create it
+      const { data: existingRecord, error: checkError } = await supabase
         .from('presentation_materials')
-        .update({
-          status: 'requested',
-          materials_requested_at: new Date().toISOString(),
-          materials_requested_by: user.id,
-        })
+        .select('id')
         .eq('ip_record_id', ipRecordId)
-        .select();
+        .single();
 
-      if (updateError) {
-        console.error('Database update error:', updateError);
-        throw new Error(`Database error: ${updateError.message}`);
+      if (checkError && checkError.code === 'PGRST116') {
+        // Record doesn't exist, create it
+        console.log('Creating new presentation_materials record');
+        const { error: insertError } = await supabase
+          .from('presentation_materials')
+          .insert({
+            ip_record_id: ipRecordId,
+            status: 'requested',
+            materials_requested_at: new Date().toISOString(),
+            materials_requested_by: user.id,
+          });
+
+        if (insertError) {
+          console.error('Failed to create materials record:', insertError);
+          throw new Error(`Failed to create materials request: ${insertError.message}`);
+        }
+      } else if (checkError) {
+        console.error('Database check error:', checkError);
+        throw new Error(`Database error: ${checkError.message}`);
+      } else {
+        // Record exists, update it
+        const { error: updateError } = await supabase
+          .from('presentation_materials')
+          .update({
+            status: 'requested',
+            materials_requested_at: new Date().toISOString(),
+            materials_requested_by: user.id,
+          })
+          .eq('ip_record_id', ipRecordId);
+
+        if (updateError) {
+          console.error('Database update error:', updateError);
+          throw new Error(`Database error: ${updateError.message}`);
+        }
       }
 
-      console.log('Materials request updated:', updateData);
+      console.log('Materials request recorded in database');
 
       // Try to send email but don't fail if it doesn't work
       try {
         const emailUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`;
-        console.log('Sending email to:', emailUrl);
+        console.log('Sending email to:', applicantEmail);
         
         const emailResponse = await fetch(emailUrl, {
           method: 'POST',
@@ -105,7 +132,7 @@ export function MaterialsRequestAction({
 
         if (!emailResponse.ok) {
           const emailError = await emailResponse.text();
-          console.warn('Email notification failed:', emailError);
+          console.warn('Email notification failed (non-critical):', emailError);
         } else {
           console.log('Email sent successfully');
         }
@@ -115,7 +142,7 @@ export function MaterialsRequestAction({
 
       // Refresh status
       await fetchMaterialsStatus();
-      alert('✅ Materials request sent successfully!');
+      alert('✅ Materials request recorded successfully!');
       onSuccess?.();
     } catch (error: any) {
       console.error('Error requesting materials:', error);
