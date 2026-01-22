@@ -663,7 +663,8 @@ export function SubmissionDetailPage() {
         />
       )}
 
-      {record.current_stage === 'academic_presentation_materials' && profile?.role === 'applicant' && record.applicant_id === profile.id && (
+      {/* Show materials submission form to applicant when materials are requested */}
+      {profile?.role === 'applicant' && record.applicant_id === profile.id && (
         <MaterialsSubmissionForm
           ipRecordId={record.id}
           applicantId={profile.id}
