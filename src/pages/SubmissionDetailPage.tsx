@@ -675,17 +675,27 @@ export function SubmissionDetailPage() {
       {profile?.role === 'admin' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Admin Actions</h2>
-          <CompletionButton
-            recordId={record.id}
-            currentStatus={record.status}
-            currentStage={record.current_stage}
-            applicantEmail={record.applicant?.email || ''}
-            applicantName={record.applicant?.full_name || ''}
-            title={record.title}
-            referenceNumber={record.reference_number || ''}
-            category={record.category}
-            onComplete={() => fetchSubmissionDetails()}
-          />
+          <div className="space-y-4">
+            <MaterialsRequestAction
+              ipRecordId={record.id}
+              applicantEmail={record.applicant?.email || ''}
+              applicantName={record.applicant?.full_name || ''}
+              ipTitle={record.title}
+              onSuccess={() => fetchSubmissionDetails()}
+              onError={(error) => console.error('Materials request error:', error)}
+            />
+            <CompletionButton
+              recordId={record.id}
+              currentStatus={record.status}
+              currentStage={record.current_stage}
+              applicantEmail={record.applicant?.email || ''}
+              applicantName={record.applicant?.full_name || ''}
+              title={record.title}
+              referenceNumber={record.reference_number || ''}
+              category={record.category}
+              onComplete={() => fetchSubmissionDetails()}
+            />
+          </div>
         </div>
       )}
 
