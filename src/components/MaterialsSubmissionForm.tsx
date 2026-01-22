@@ -114,9 +114,9 @@ export function MaterialsSubmissionForm({
     }
 
     if (type === 'poster') {
-      setPoster((prev) => ({ ...prev, file, error: null, progress: 0 }));
+      setPoster((prev) => ({ ...prev, file, fileName: file.name, error: null, progress: 0 }));
     } else {
-      setPaper((prev) => ({ ...prev, file, error: null, progress: 0 }));
+      setPaper((prev) => ({ ...prev, file, fileName: file.name, error: null, progress: 0 }));
     }
   };
 
