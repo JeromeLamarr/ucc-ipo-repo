@@ -81,7 +81,6 @@ export function MaterialsRequestAction({
             ip_record_id: ipRecordId,
             status: 'requested',
             materials_requested_at: new Date().toISOString(),
-            materials_requested_by: user.id,
           });
 
         if (insertError) {
@@ -98,7 +97,6 @@ export function MaterialsRequestAction({
           .update({
             status: 'requested',
             materials_requested_at: new Date().toISOString(),
-            materials_requested_by: user.id,
           })
           .eq('ip_record_id', ipRecordId);
 
