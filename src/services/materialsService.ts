@@ -65,14 +65,14 @@ export const materialsService = {
         if (error) throw error;
         result = data;
       } else {
-        // Create new record
+        // Create new record (omit materials_requested_by on insert to avoid FK issues)
         const { data, error } = await supabase
           .from('presentation_materials')
           .insert({
             ip_record_id: ipRecordId,
             status: 'requested',
             materials_requested_at: now,
-            materials_requested_by: adminId,
+            // Note: materials_requested_by is set separately to avoid RLS/FK conflicts
           })
           .select()
           .single();
