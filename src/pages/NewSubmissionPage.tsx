@@ -536,13 +536,14 @@ export function NewSubmissionPage() {
 
       if (ipError) throw ipError;
 
-      // Delete draft if it was recovered
-      if (draftId && draftId !== ipRecord.id) {
+      // Delete draft if it was recovered (always delete, whether same ID or not)
+      if (draftId) {
         try {
           await supabase
             .from('ip_records')
             .delete()
-            .eq('id', draftId);
+            .eq('id', draftId)
+            .eq('status', 'draft');
         } catch (deleteErr) {
           console.warn('Could not delete draft:', deleteErr);
         }
