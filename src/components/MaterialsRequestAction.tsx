@@ -95,15 +95,11 @@ export function MaterialsRequestAction({
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
-            recipientEmail: applicantEmail,
-            recipientName: applicantName,
+            to: applicantEmail,
             subject: 'Presentation Materials Requested',
-            templateType: 'materials_request',
-            data: {
-              applicantName,
-              ipTitle,
-              deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-            },
+            title: 'Presentation Materials Requested',
+            message: `We are requesting the following presentation materials for your IP submission "${ipTitle}":\n\n- Scientific Poster (JPG/PNG, max 10MB)\n- IMRaD Short Paper (PDF/DOCX, max 5MB)\n\nPlease submit these materials within 10 days.`,
+            applicantName: applicantName,
           }),
         });
 
