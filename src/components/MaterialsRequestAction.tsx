@@ -261,19 +261,21 @@ export function MaterialsRequestAction({
         </div>
       </div>
 
-      {/* Gating Rule Info */}
-      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex gap-2">
-        <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-yellow-700">
-          <p className="font-medium">
-            🔒 Gating Rule: "Mark as Completed" will be enabled only after:
-          </p>
-          <ul className="list-disc list-inside mt-1 space-y-1">
-            <li>Materials have been requested</li>
-            <li>Applicant submits both required files</li>
-          </ul>
+      {/* Gating Rule Info - Only show if materials not yet submitted */}
+      {materialsStatus !== 'submitted' && (
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex gap-2">
+          <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-yellow-700">
+            <p className="font-medium">
+              🔒 Gating Rule: "Mark as Completed" will be enabled only after:
+            </p>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              <li>Materials have been requested</li>
+              <li>Applicant submits both required files</li>
+            </ul>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
