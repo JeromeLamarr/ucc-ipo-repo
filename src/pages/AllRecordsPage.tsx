@@ -17,6 +17,7 @@ type IpCategory = Database['public']['Tables']['ip_records']['Row']['category'];
 export function AllRecordsPage() {
   const [records, setRecords] = useState<IpRecord[]>([]);
   const [filteredRecords, setFilteredRecords] = useState<IpRecord[]>([]);
+  const [filteredDrafts, setFilteredDrafts] = useState<IpRecord[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Filters
@@ -34,7 +35,7 @@ export function AllRecordsPage() {
 
   const fetchRecords = async () => {
     try {
-      // Fetch ONLY workflow records from ip_records
+      // Fetch ALL records from ip_records (both drafts and submitted)
       const { data, error } = await supabase
         .from('ip_records')
         .select(`
@@ -55,7 +56,12 @@ export function AllRecordsPage() {
   };
 
   const filterRecords = () => {
-    let filtered = records;
+    // Separate drafts from workflow records
+    const drafts = records.filter((record) => record.status === 'draft');
+    const submitted = records.filter((record) => record.status !== 'draft');
+
+    // Apply filters only to submitted records (not to drafts)
+    let filtered = submitted;
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -74,6 +80,7 @@ export function AllRecordsPage() {
     }
 
     setFilteredRecords(filtered);
+    setFilteredDrafts(drafts);
   };
 
   const exportToCSV = () => {
@@ -101,6 +108,9 @@ export function AllRecordsPage() {
     a.click();
     window.URL.revokeObjectURL(url);
   };
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -124,7 +134,7 @@ export function AllRecordsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">All IP Records</h1>
           <p className="text-gray-600 mt-1">
-            Viewing {filteredRecords.length} of {records.length} submissions
+            Viewing {filteredRecords.length} workflow records and {filteredDrafts.length} drafts
           </p>
         </div>
         <button
@@ -136,10 +146,72 @@ export function AllRecordsPage() {
         </button>
       </div>
 
+      {/* DRAFT SUBMISSIONS SECTION */}
+      {filteredDrafts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-amber-200 p-6">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Draft Submissions ({filteredDrafts.length})</h2>
+            <p className="text-gray-600 text-sm mt-1">Incomplete submissions waiting to be submitted to the workflow</p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-amber-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Applicant
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredDrafts.map((record) => (
+                  <tr key={record.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">{record.title}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">{record.applicant?.full_name}</div>
+                      <div className="text-xs text-gray-500">{record.applicant?.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 capitalize">{record.category}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(record.created_at)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <Link
+                        to={`/dashboard/submissions/${record.id}`}
+                        className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* WORKFLOW IP RECORDS SECTION */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Workflow IP Records</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Workflow IP Records ({filteredRecords.length})</h2>
           <p className="text-gray-600 text-sm mt-1">Active submissions in the evaluation workflow</p>
         </div>
 
