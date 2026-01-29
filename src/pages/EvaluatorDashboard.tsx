@@ -805,13 +805,25 @@ export function EvaluatorDashboard() {
               </div>
 
               <div className="flex gap-3 pt-6 border-t border-gray-200 sticky bottom-0 bg-white">
-                <button
-                  onClick={openEvaluationModal}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
-                >
-                  <Star className="h-5 w-5" />
-                  Start Evaluation
-                </button>
+                {['evaluator_approved', 'rejected', 'completed', 'preparing_legal', 'ready_for_filing'].includes(
+                  selectedRecord.status
+                ) ? (
+                  <button
+                    disabled
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-400 text-white rounded-lg font-medium transition-colors cursor-not-allowed"
+                  >
+                    <CheckCircle className="h-5 w-5" />
+                    Done Evaluating
+                  </button>
+                ) : (
+                  <button
+                    onClick={openEvaluationModal}
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
+                  >
+                    <Star className="h-5 w-5" />
+                    Start Evaluation
+                  </button>
+                )}
               </div>
             </div>
           </div>
