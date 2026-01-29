@@ -152,14 +152,16 @@ export function SubmissionDetailPage() {
       const { data: materialsData, error: materialsError } = await supabase
         .from('presentation_materials')
         .select('*')
-        .eq('ip_record_id', id)
-        .single();
+        .eq('ip_record_id', id);
 
-      if (materialsError && materialsError.code !== 'PGRST116') {
+      if (materialsError) {
         console.warn('Could not fetch presentation materials:', materialsError);
         setPresentationMaterials(null);
+      } else if (materialsData && materialsData.length > 0) {
+        // Take the first/most recent presentation material
+        setPresentationMaterials(materialsData[0]);
       } else {
-        setPresentationMaterials(materialsData || null);
+        setPresentationMaterials(null);
       }
     } catch (error) {
       console.error('Error fetching submission details:', error);
