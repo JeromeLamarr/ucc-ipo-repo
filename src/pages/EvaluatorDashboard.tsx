@@ -39,6 +39,7 @@ export function EvaluatorDashboard() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEvalModal, setShowEvalModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [departments, setDepartments] = useState<{ [key: string]: string }>({});
 
   const [evaluationForm, setEvaluationForm] = useState({
     innovation: 0,
@@ -51,9 +52,34 @@ export function EvaluatorDashboard() {
   });
 
   useEffect(() => {
+    fetchDepartments();
     fetchAssignedRecords();
     fetchHistoryRecords();
   }, [profile]);
+
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name');
+
+      if (error) throw error;
+      if (data) {
+        const deptMap = data.reduce((acc, dept) => {
+          acc[dept.id] = dept.name;
+          return acc;
+        }, {} as { [key: string]: string });
+        setDepartments(deptMap);
+      }
+    } catch (error) {
+      console.warn('Could not fetch departments:', error);
+    }
+  };
+
+  const getDepartmentName = (affiliationId: string) => {
+    if (!affiliationId) return 'Not specified';
+    return departments[affiliationId] || affiliationId;
+  };
 
   const fetchAssignedRecords = async () => {
     if (!profile) return;
@@ -752,7 +778,7 @@ export function EvaluatorDashboard() {
                           <div key={idx} className="border-l-4 border-purple-500 pl-4 py-2">
                             <p className="font-semibold text-gray-900">{inv.name}</p>
                             {inv.affiliation && (
-                              <p className="text-sm text-gray-600">Affiliation: {inv.affiliation}</p>
+                              <p className="text-sm text-gray-600">Affiliation: {getDepartmentName(inv.affiliation)}</p>
                             )}
                             {inv.contribution && (
                               <p className="text-sm text-gray-600">Contribution: {inv.contribution}</p>
