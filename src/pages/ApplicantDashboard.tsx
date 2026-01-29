@@ -74,42 +74,27 @@ export function ApplicantDashboard() {
     try {
       console.log('[deleteDraft] Starting delete for draft:', draftId);
       
-      // First, verify the draft exists and belongs to this user
-      const { data: draftData, error: fetchError } = await supabase
-        .from('ip_records')
-        .select('id, status, applicant_id')
-        .eq('id', draftId)
-        .single();
+      // Call the delete-draft edge function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-draft`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+          },
+          body: JSON.stringify({ draftId }),
+        }
+      );
 
-      if (fetchError) {
-        console.error('[deleteDraft] Error fetching draft:', fetchError);
-        throw fetchError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('[deleteDraft] Edge function error:', result);
+        throw new Error(result.error || 'Failed to delete draft');
       }
 
-      console.log('[deleteDraft] Draft data:', draftData);
-
-      if (draftData.status !== 'draft') {
-        throw new Error('Only draft submissions can be deleted');
-      }
-
-      if (draftData.applicant_id !== profile?.id) {
-        throw new Error('You can only delete your own drafts');
-      }
-
-      // Now delete it
-      const { error: deleteError, count } = await supabase
-        .from('ip_records')
-        .delete()
-        .eq('id', draftId)
-        .eq('applicant_id', profile.id)
-        .eq('status', 'draft');
-
-      if (deleteError) {
-        console.error('[deleteDraft] Delete error:', deleteError);
-        throw deleteError;
-      }
-
-      console.log('[deleteDraft] Delete count:', count);
+      console.log('[deleteDraft] Successfully deleted draft:', result);
 
       // Force refetch to ensure UI is synced
       await fetchRecords();
