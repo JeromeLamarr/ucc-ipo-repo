@@ -489,6 +489,9 @@ export function SubmissionDetailPage() {
   const handleResubmit = async (editData: any) => {
     if (!record || !profile || !id) return;
 
+    console.log('🔵 handleResubmit START');
+    alert(`🔵 RESUBMIT START - ${editData.documentsToDelete?.length || 0} docs to delete`);
+
     try {
       console.log('[handleResubmit] Called with editData:', editData);
       console.log('[handleResubmit] documentsToDelete:', editData.documentsToDelete);
