@@ -26,6 +26,8 @@ import { FullDisclosureManager } from '../components/FullDisclosureManager';
 import { MaterialsRequestAction } from '../components/MaterialsRequestAction';
 import { MaterialsSubmissionForm } from '../components/MaterialsSubmissionForm';
 import { MaterialsView } from '../components/MaterialsView';
+import { RevisionBanner } from '../components/RevisionBanner';
+import { EditSubmissionModal } from '../components/EditSubmissionModal';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -53,6 +55,8 @@ export function SubmissionDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showMoreDetails, setShowMoreDetails] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [revisionComments, setRevisionComments] = useState<string | null>(null);
   const [editData, setEditData] = useState({
     title: '',
     abstract: '',
@@ -290,6 +294,320 @@ export function SubmissionDetailPage() {
           .single();
 
         if (applicantData) {
+          // Send email to applicant confirming resubmission
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-status-notification`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              applicantEmail: applicantData.email,
+              applicantName: applicantData.full_name,
+              recordTitle: editData.title,
+              referenceNumber: record.reference_number || 'N/A',
+              oldStatus: record.status,
+              newStatus: newStatus,
+              currentStage: newStage,
+              remarks: 'Your submission has been resubmitted for review.',
+              actorName: profile.full_name,
+              actorRole: profile.role,
+            }),
+          });
+        }
+
+        // Send email to supervisor/evaluator about the resubmission
+        const reviewerData = record.status === 'supervisor_revision' 
+          ? record.supervisor 
+          : record.evaluator;
+
+        if (reviewerData && reviewerData.email) {
+          await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-revision-resubmit-notification`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              supervisorEmail: reviewerData.email,
+              supervisorName: reviewerData.full_name,
+              applicantName: profile.full_name,
+              recordTitle: editData.title,
+              referenceNumber: record.reference_number || 'N/A',
+              previousStatus: record.status,
+              newStatus: newStatus,
+              resubmitDate: new Date().toISOString(),
+            }),
+          });
+        }
+      } catch (emailError) {
+        console.error('Failed to send email notification:', emailError);
+      }
+
+      setEditMode(false);
+      fetchSubmissionDetails();
+      alert('Submission updated successfully!');
+    } catch (error: any) {
+      console.error('Error saving edits:', error);
+      alert('Failed to save changes: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const canEdit = () => {
+    if (!profile || !record) return false;
+    if (profile.role !== 'applicant' || profile.id !== record.applicant_id) return false;
+    return record.status === 'supervisor_revision' || record.status === 'evaluator_revision';
+  };
+
+  const handleSaveDraft = async (editData: any) => {
+    if (!record || !profile || !id) return;
+
+    try {
+      // Update submission with new data
+      const updatedDetails = {
+        ...(record.details || {}),
+        description: editData.description,
+        technicalField: editData.technicalField,
+        backgroundArt: editData.backgroundArt,
+        problemStatement: editData.problemStatement,
+        solution: editData.solution,
+        advantages: editData.advantages,
+        implementation: editData.implementation,
+        inventors: editData.inventors,
+        dateConceived: editData.dateConceived,
+        dateReduced: editData.dateReduced,
+        priorArt: editData.priorArt,
+        keywords: editData.keywords.map((k: any) => k.value).filter((k: string) => k.trim()),
+        funding: editData.funding,
+        collaborators: editData.collaborators.filter((c: any) => c.name.trim()),
+        commercialPotential: editData.commercialPotential,
+        targetMarket: editData.targetMarket,
+        competitiveAdvantage: editData.competitiveAdvantage,
+        estimatedValue: editData.estimatedValue,
+        relatedPublications: editData.relatedPublications,
+      };
+
+      // Update submission record (keep current status for draft save)
+      const { error: updateError } = await supabase
+        .from('ip_records')
+        .update({
+          title: editData.title,
+          abstract: editData.abstract,
+          category: editData.category,
+          details: updatedDetails,
+          supervisor_id: editData.supervisorId || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      // Handle document deletions
+      for (const doc of editData.documentsToDelete) {
+        // Delete from storage
+        await supabase.storage
+          .from('ip-documents')
+          .remove([doc.file_path]);
+
+        // Delete from database
+        await supabase
+          .from('ip_documents')
+          .delete()
+          .eq('id', doc.id);
+      }
+
+      // Handle new document uploads
+      for (const newDoc of editData.newDocuments) {
+        const fileName = `${Date.now()}_${newDoc.file.name}`;
+        const filePath = `${id}/${fileName}`;
+
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from('ip-documents')
+          .upload(filePath, newDoc.file);
+
+        if (uploadError) throw uploadError;
+
+        // Add to database
+        await supabase.from('ip_documents').insert({
+          ip_record_id: id,
+          uploader_id: profile.id,
+          file_name: newDoc.file.name,
+          file_path: filePath,
+          mime_type: newDoc.file.type,
+          size_bytes: newDoc.file.size,
+          doc_type: 'attachment',
+        });
+      }
+
+      // Log activity
+      await supabase.from('activity_logs').insert({
+        user_id: profile.id,
+        ip_record_id: id,
+        action: 'submission_draft_saved',
+        details: { changes: 'Applicant saved draft revisions' },
+      });
+
+      setShowEditModal(false);
+      fetchSubmissionDetails();
+      alert('Draft saved successfully!');
+    } catch (error: any) {
+      console.error('Error saving draft:', error);
+      alert('Failed to save draft: ' + error.message);
+      throw error;
+    }
+  };
+
+  const handleResubmit = async (editData: any) => {
+    if (!record || !profile || !id) return;
+
+    try {
+      // Determine next status based on current status
+      let newStatus: 'waiting_supervisor' | 'waiting_evaluation';
+      let newStage: string;
+
+      if (record.status === 'supervisor_revision') {
+        newStatus = 'waiting_supervisor';
+        newStage = 'Resubmitted - Waiting for Supervisor';
+      } else if (record.status === 'evaluator_revision') {
+        newStatus = 'waiting_evaluation';
+        newStage = 'Resubmitted - Waiting for Evaluation';
+      } else {
+        newStatus = record.supervisor_id ? 'waiting_supervisor' : 'waiting_evaluation';
+        newStage = record.supervisor_id
+          ? 'Resubmitted - Waiting for Supervisor'
+          : 'Resubmitted - Waiting for Evaluation';
+      }
+
+      // Update submission with new data and new status
+      const updatedDetails = {
+        ...(record.details || {}),
+        description: editData.description,
+        technicalField: editData.technicalField,
+        backgroundArt: editData.backgroundArt,
+        problemStatement: editData.problemStatement,
+        solution: editData.solution,
+        advantages: editData.advantages,
+        implementation: editData.implementation,
+        inventors: editData.inventors,
+        dateConceived: editData.dateConceived,
+        dateReduced: editData.dateReduced,
+        priorArt: editData.priorArt,
+        keywords: editData.keywords.map((k: any) => k.value).filter((k: string) => k.trim()),
+        funding: editData.funding,
+        collaborators: editData.collaborators.filter((c: any) => c.name.trim()),
+        commercialPotential: editData.commercialPotential,
+        targetMarket: editData.targetMarket,
+        competitiveAdvantage: editData.competitiveAdvantage,
+        estimatedValue: editData.estimatedValue,
+        relatedPublications: editData.relatedPublications,
+      };
+
+      // Update submission record
+      const { error: updateError } = await supabase
+        .from('ip_records')
+        .update({
+          title: editData.title,
+          abstract: editData.abstract,
+          category: editData.category,
+          details: updatedDetails,
+          supervisor_id: editData.supervisorId || null,
+          status: newStatus,
+          current_stage: newStage,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      // Handle document deletions
+      for (const doc of editData.documentsToDelete) {
+        // Delete from storage
+        await supabase.storage
+          .from('ip-documents')
+          .remove([doc.file_path]);
+
+        // Delete from database
+        await supabase
+          .from('ip_documents')
+          .delete()
+          .eq('id', doc.id);
+      }
+
+      // Handle new document uploads
+      for (const newDoc of editData.newDocuments) {
+        const fileName = `${Date.now()}_${newDoc.file.name}`;
+        const filePath = `${id}/${fileName}`;
+
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from('ip-documents')
+          .upload(filePath, newDoc.file);
+
+        if (uploadError) throw uploadError;
+
+        // Add to database
+        await supabase.from('ip_documents').insert({
+          ip_record_id: id,
+          uploader_id: profile.id,
+          file_name: newDoc.file.name,
+          file_path: filePath,
+          mime_type: newDoc.file.type,
+          size_bytes: newDoc.file.size,
+          doc_type: 'attachment',
+        });
+      }
+
+      // Notify supervisor/evaluator
+      const notifyUserId =
+        record.status === 'supervisor_revision'
+          ? record.supervisor_id
+          : record.status === 'evaluator_revision'
+          ? record.evaluator_id
+          : record.supervisor_id || record.evaluator_id;
+
+      if (notifyUserId) {
+        await supabase.from('notifications').insert({
+          user_id: notifyUserId,
+          type: 'resubmission',
+          title: 'Submission Updated',
+          message: `${profile.full_name} has updated their submission "${editData.title}"`,
+          payload: { ip_record_id: id },
+        });
+      }
+
+      // Log activity
+      await supabase.from('activity_logs').insert({
+        user_id: profile.id,
+        ip_record_id: id,
+        action: 'submission_resubmitted',
+        details: { changes: 'Applicant resubmitted with revisions', oldStatus: record.status, newStatus },
+      });
+
+      // Track in process tracking
+      await supabase.from('process_tracking').insert({
+        ip_record_id: id,
+        stage: newStage,
+        status: newStatus,
+        actor_id: profile.id,
+        actor_name: profile.full_name,
+        actor_role: 'Applicant',
+        action: 'submission_resubmitted',
+        description: `Applicant resubmitted with revisions for ${newStatus.replace('_', ' ')}`,
+        metadata: { previousStatus: record.status },
+      });
+
+      // Send email notification
+      try {
+        const { data: applicantData } = await supabase
+          .from('users')
+          .select('email, full_name')
+          .eq('id', record.applicant_id)
+          .single();
+
+        if (applicantData) {
           await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-status-notification`, {
             method: 'POST',
             headers: {
@@ -314,21 +632,14 @@ export function SubmissionDetailPage() {
         console.error('Failed to send email notification:', emailError);
       }
 
-      setEditMode(false);
+      setShowEditModal(false);
       fetchSubmissionDetails();
-      alert('Submission updated successfully!');
+      alert('Submission resubmitted successfully!');
     } catch (error: any) {
-      console.error('Error saving edits:', error);
-      alert('Failed to save changes: ' + error.message);
-    } finally {
-      setSaving(false);
+      console.error('Error resubmitting:', error);
+      alert('Failed to resubmit: ' + error.message);
+      throw error;
     }
-  };
-
-  const canEdit = () => {
-    if (!profile || !record) return false;
-    if (profile.role !== 'applicant' || profile.id !== record.applicant_id) return false;
-    return record.status === 'supervisor_revision' || record.status === 'evaluator_revision';
   };
 
   const formatDate = (date: string) => {
@@ -383,6 +694,17 @@ export function SubmissionDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Revision Banner */}
+      {record && (record.status === 'supervisor_revision' || record.status === 'evaluator_revision') && (
+        <RevisionBanner
+          status={record.status}
+          revisionReason={revisionComments}
+          requestedBy={record.status === 'supervisor_revision' ? record.supervisor : record.evaluator}
+          requestedByRole={record.status === 'supervisor_revision' ? 'supervisor' : 'evaluator'}
+          requestedAt={record.updated_at}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
@@ -393,7 +715,7 @@ export function SubmissionDetailPage() {
         </button>
         {canEdit() && !editMode && (
           <button
-            onClick={() => setEditMode(true)}
+            onClick={() => setShowEditModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Edit className="h-4 w-4" />
@@ -895,6 +1217,17 @@ export function SubmissionDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Submission Modal */}
+      <EditSubmissionModal
+        isOpen={showEditModal}
+        record={record}
+        documents={documents}
+        onClose={() => setShowEditModal(false)}
+        onSaveDraft={handleSaveDraft}
+        onResubmit={handleResubmit}
+        profile={profile}
+      />
     </div>
   );
 }
