@@ -108,9 +108,6 @@ export function AllRecordsPage() {
     a.click();
     window.URL.revokeObjectURL(url);
   };
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
