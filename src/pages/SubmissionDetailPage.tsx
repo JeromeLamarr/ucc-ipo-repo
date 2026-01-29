@@ -599,8 +599,9 @@ export function SubmissionDetailPage() {
         metadata: { previousStatus: record.status },
       });
 
-      // Send email notification
+      // Send email notifications
       try {
+        // 1. Notify applicant of resubmission
         const { data: applicantData } = await supabase
           .from('users')
           .select('email, full_name')
@@ -627,6 +628,38 @@ export function SubmissionDetailPage() {
               actorRole: profile.role,
             }),
           });
+        }
+
+        // 2. Notify supervisor/evaluator of revised submission
+        const supervisorId = record.status === 'supervisor_revision' ? record.supervisor_id : record.status === 'evaluator_revision' ? record.evaluator_id : record.supervisor_id || record.evaluator_id;
+        const isSupervisorRevision = record.status === 'supervisor_revision';
+
+        if (supervisorId) {
+          const { data: reviewerData } = await supabase
+            .from('users')
+            .select('email, full_name')
+            .eq('id', supervisorId)
+            .single();
+
+          if (reviewerData) {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-revision-resubmit-notification`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                supervisorEmail: reviewerData.email,
+                supervisorName: reviewerData.full_name,
+                applicantName: applicantData?.full_name || 'Applicant',
+                recordTitle: editData.title,
+                referenceNumber: record.reference_number || 'N/A',
+                previousStatus: record.status,
+                newStatus: newStatus,
+                resubmitDate: new Date().toISOString(),
+              }),
+            });
+          }
         }
       } catch (emailError) {
         console.error('Failed to send email notification:', emailError);
