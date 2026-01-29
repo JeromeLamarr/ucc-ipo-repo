@@ -17,7 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    // Get the auth header
+    // Get the auth header to verify user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -26,7 +26,13 @@ serve(async (req) => {
       );
     }
 
-    // Create Supabase client with auth token (for RLS)
+    // Create Supabase client with service role for admin operations
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") || "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+    );
+
+    // Create client with auth token to get current user
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") || "",
       Deno.env.get("SUPABASE_ANON_KEY") || "",
@@ -38,6 +44,18 @@ serve(async (req) => {
         },
       }
     );
+
+    // Get current user to verify ownership
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("[delete-draft] Error getting user:", userError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[delete-draft] User ${user.id} deleting draft`);
 
     // Parse request body
     const payload: DeleteDraftPayload = await req.json();
@@ -52,36 +70,38 @@ serve(async (req) => {
       );
     }
 
-    // First verify the draft exists and belongs to current user
-    const { data: draftData, error: fetchError } = await supabase
+    // Verify the draft exists, belongs to current user, and is a draft
+    const { data: draftData, error: fetchError } = await supabaseAdmin
       .from("ip_records")
       .select("id, status, applicant_id")
       .eq("id", draftId)
+      .eq("applicant_id", user.id)
       .eq("status", "draft")
       .single();
 
     if (fetchError) {
       console.error("[delete-draft] Error fetching draft:", fetchError);
       return new Response(
-        JSON.stringify({ error: "Draft not found or unauthorized" }),
+        JSON.stringify({ error: "Draft not found or unauthorized", details: fetchError.message }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (!draftData) {
       return new Response(
-        JSON.stringify({ error: "Draft not found" }),
+        JSON.stringify({ error: "Draft not found or not a draft" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[delete-draft] Draft found - belongs to user: ${draftData.applicant_id}`);
+    console.log(`[delete-draft] Draft verified - belongs to user ${draftData.applicant_id}`);
 
-    // Delete the draft
-    const { error: deleteError, data: deletedData } = await supabase
+    // Delete the draft using admin client
+    const { error: deleteError, data: deletedData } = await supabaseAdmin
       .from("ip_records")
       .delete()
       .eq("id", draftId)
+      .eq("applicant_id", user.id)
       .eq("status", "draft")
       .select();
 
@@ -93,7 +113,19 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[delete-draft] Successfully deleted draft`);
+    // Validate that something was actually deleted
+    if (!deletedData || deletedData.length === 0) {
+      console.error("[delete-draft] Delete query returned no rows - RLS policy may be blocking deletion");
+      return new Response(
+        JSON.stringify({ 
+          error: "Failed to delete draft - delete query returned no rows",
+          details: "RLS policy may be preventing deletion or record no longer exists"
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[delete-draft] Successfully deleted draft - ${deletedData.length} row(s) deleted`);
 
     return new Response(
       JSON.stringify({
