@@ -374,6 +374,10 @@ export function EditSubmissionModal({
         documentsToDelete,
       };
 
+      console.log('[EditModal.handleResubmit] Sending data:', dataToSend);
+      console.log('[EditModal.handleResubmit] documentsToDelete:', documentsToDelete);
+      console.log('[EditModal.handleResubmit] documentsToDelete.length:', documentsToDelete.length);
+
       await onResubmit(dataToSend);
       // Modal will close in parent component
     } catch (err: any) {

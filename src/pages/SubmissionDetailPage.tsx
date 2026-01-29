@@ -490,6 +490,11 @@ export function SubmissionDetailPage() {
     if (!record || !profile || !id) return;
 
     try {
+      console.log('[handleResubmit] Called with editData:', editData);
+      console.log('[handleResubmit] documentsToDelete:', editData.documentsToDelete);
+      console.log('[handleResubmit] newDocuments:', editData.newDocuments);
+      console.log('[handleResubmit] documentsToDelete length:', editData.documentsToDelete?.length);
+
       // Determine next status based on current status
       let newStatus: 'waiting_supervisor' | 'waiting_evaluation';
       let newStage: string;
