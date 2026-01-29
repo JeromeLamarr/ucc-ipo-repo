@@ -405,17 +405,41 @@ export function SubmissionDetailPage() {
       if (updateError) throw updateError;
 
       // Handle document deletions
-      for (const doc of editData.documentsToDelete) {
-        // Delete from storage
-        await supabase.storage
-          .from('ip-documents')
-          .remove([doc.file_path]);
+      if (editData.documentsToDelete && editData.documentsToDelete.length > 0) {
+        console.log(`[SaveDraftDeletion] Starting deletion of ${editData.documentsToDelete.length} documents`);
+        
+        for (const doc of editData.documentsToDelete) {
+          try {
+            console.log(`[SaveDraftDeletion] Deleting: ${doc.id} path:${doc.file_path}`);
+            
+            // Delete from storage first
+            const { error: storageError } = await supabase.storage
+              .from('ip-documents')
+              .remove([doc.file_path]);
 
-        // Delete from database
-        await supabase
-          .from('ip_documents')
-          .delete()
-          .eq('id', doc.id);
+            if (storageError) {
+              console.warn(`[SaveDraftDeletion] Storage error:`, storageError);
+            } else {
+              console.log(`[SaveDraftDeletion] Storage deleted: ${doc.file_path}`);
+            }
+
+            // Delete from database
+            const { error: dbError } = await supabase
+              .from('ip_documents')
+              .delete()
+              .eq('id', doc.id);
+
+            if (dbError) {
+              console.error(`[SaveDraftDeletion] DB error:`, dbError);
+              throw dbError;
+            }
+            
+            console.log(`[SaveDraftDeletion] DB deleted: ${doc.id}`);
+          } catch (e) {
+            console.error(`[SaveDraftDeletion] Error:`, e);
+            throw e;
+          }
+        }
       }
 
       // Handle new document uploads
@@ -523,17 +547,41 @@ export function SubmissionDetailPage() {
       if (updateError) throw updateError;
 
       // Handle document deletions
-      for (const doc of editData.documentsToDelete) {
-        // Delete from storage
-        await supabase.storage
-          .from('ip-documents')
-          .remove([doc.file_path]);
+      if (editData.documentsToDelete && editData.documentsToDelete.length > 0) {
+        console.log(`[ResubmitDeletion] Starting deletion of ${editData.documentsToDelete.length} documents`);
+        
+        for (const doc of editData.documentsToDelete) {
+          try {
+            console.log(`[ResubmitDeletion] Deleting: ${doc.id} path:${doc.file_path}`);
+            
+            // Delete from storage first
+            const { error: storageError } = await supabase.storage
+              .from('ip-documents')
+              .remove([doc.file_path]);
 
-        // Delete from database
-        await supabase
-          .from('ip_documents')
-          .delete()
-          .eq('id', doc.id);
+            if (storageError) {
+              console.warn(`[ResubmitDeletion] Storage error:`, storageError);
+            } else {
+              console.log(`[ResubmitDeletion] Storage deleted: ${doc.file_path}`);
+            }
+
+            // Delete from database
+            const { error: dbError } = await supabase
+              .from('ip_documents')
+              .delete()
+              .eq('id', doc.id);
+
+            if (dbError) {
+              console.error(`[ResubmitDeletion] DB error:`, dbError);
+              throw dbError;
+            }
+            
+            console.log(`[ResubmitDeletion] DB deleted: ${doc.id}`);
+          } catch (e) {
+            console.error(`[ResubmitDeletion] Error:`, e);
+            throw e;
+          }
+        }
       }
 
       // Handle new document uploads
