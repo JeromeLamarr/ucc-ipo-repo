@@ -406,41 +406,41 @@ export function SubmissionDetailPage() {
 
       if (updateError) throw updateError;
 
-      // Handle document deletions
+      // Handle document deletions using edge function
       if (editData.documentsToDelete && editData.documentsToDelete.length > 0) {
         console.log(`[SaveDraftDeletion] Starting deletion of ${editData.documentsToDelete.length} documents`);
         
-        for (const doc of editData.documentsToDelete) {
-          try {
-            console.log(`[SaveDraftDeletion] Deleting: ${doc.id} path:${doc.file_path}`);
-            
-            // Delete from storage first
-            const { error: storageError } = await supabase.storage
-              .from('ip-documents')
-              .remove([doc.file_path]);
-
-            if (storageError) {
-              console.warn(`[SaveDraftDeletion] Storage error:`, storageError);
-            } else {
-              console.log(`[SaveDraftDeletion] Storage deleted: ${doc.file_path}`);
+        try {
+          const documentIds = editData.documentsToDelete.map((doc: any) => doc.id);
+          
+          console.log(`[SaveDraftDeletion] Calling delete-ip-documents edge function for IDs:`, documentIds);
+          
+          const deleteResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-ip-documents`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                documentIds: documentIds,
+                recordId: id,
+              }),
             }
+          );
 
-            // Delete from database
-            const { error: dbError } = await supabase
-              .from('ip_documents')
-              .delete()
-              .eq('id', doc.id);
-
-            if (dbError) {
-              console.error(`[SaveDraftDeletion] DB error:`, dbError);
-              throw dbError;
-            }
-            
-            console.log(`[SaveDraftDeletion] DB deleted: ${doc.id}`);
-          } catch (e) {
-            console.error(`[SaveDraftDeletion] Error:`, e);
-            throw e;
+          const deleteResult = await deleteResponse.json();
+          
+          if (!deleteResponse.ok) {
+            console.error(`[SaveDraftDeletion] Edge function error:`, deleteResult);
+            throw new Error(deleteResult.error || "Failed to delete documents");
           }
+          
+          console.log(`[SaveDraftDeletion] Successfully deleted ${deleteResult.deleted} documents`);
+        } catch (deleteError) {
+          console.error(`[SaveDraftDeletion] Critical error:`, deleteError);
+          throw deleteError;
         }
       }
 
@@ -556,41 +556,41 @@ export function SubmissionDetailPage() {
 
       if (updateError) throw updateError;
 
-      // Handle document deletions
+      // Handle document deletions using edge function
       if (editData.documentsToDelete && editData.documentsToDelete.length > 0) {
         console.log(`[ResubmitDeletion] Starting deletion of ${editData.documentsToDelete.length} documents`);
         
-        for (const doc of editData.documentsToDelete) {
-          try {
-            console.log(`[ResubmitDeletion] Deleting: ${doc.id} path:${doc.file_path}`);
-            
-            // Delete from storage first
-            const { error: storageError } = await supabase.storage
-              .from('ip-documents')
-              .remove([doc.file_path]);
-
-            if (storageError) {
-              console.warn(`[ResubmitDeletion] Storage error:`, storageError);
-            } else {
-              console.log(`[ResubmitDeletion] Storage deleted: ${doc.file_path}`);
+        try {
+          const documentIds = editData.documentsToDelete.map((doc: any) => doc.id);
+          
+          console.log(`[ResubmitDeletion] Calling delete-ip-documents edge function for IDs:`, documentIds);
+          
+          const deleteResponse = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-ip-documents`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                documentIds: documentIds,
+                recordId: id,
+              }),
             }
+          );
 
-            // Delete from database
-            const { error: dbError } = await supabase
-              .from('ip_documents')
-              .delete()
-              .eq('id', doc.id);
-
-            if (dbError) {
-              console.error(`[ResubmitDeletion] DB error:`, dbError);
-              throw dbError;
-            }
-            
-            console.log(`[ResubmitDeletion] DB deleted: ${doc.id}`);
-          } catch (e) {
-            console.error(`[ResubmitDeletion] Error:`, e);
-            throw e;
+          const deleteResult = await deleteResponse.json();
+          
+          if (!deleteResponse.ok) {
+            console.error(`[ResubmitDeletion] Edge function error:`, deleteResult);
+            throw new Error(deleteResult.error || "Failed to delete documents");
           }
+          
+          console.log(`[ResubmitDeletion] Successfully deleted ${deleteResult.deleted} documents`);
+        } catch (deleteError) {
+          console.error(`[ResubmitDeletion] Critical error:`, deleteError);
+          throw deleteError;
         }
       }
 
