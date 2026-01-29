@@ -25,6 +25,7 @@ import { CertificateManager } from '../components/CertificateManager';
 import { FullDisclosureManager } from '../components/FullDisclosureManager';
 import { MaterialsRequestAction } from '../components/MaterialsRequestAction';
 import { MaterialsSubmissionForm } from '../components/MaterialsSubmissionForm';
+import { MaterialsView } from '../components/MaterialsView';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -46,6 +47,7 @@ export function SubmissionDetailPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [departments, setDepartments] = useState<{ [key: string]: string }>({});
+  const [presentationMaterials, setPresentationMaterials] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -141,6 +143,20 @@ export function SubmissionDetailPage() {
 
       if (evalsError) throw evalsError;
       setEvaluations(evalsData || []);
+
+      // Fetch presentation materials
+      const { data: materialsData, error: materialsError } = await supabase
+        .from('presentation_materials')
+        .select('*')
+        .eq('ip_record_id', id)
+        .single();
+
+      if (materialsError && materialsError.code !== 'PGRST116') {
+        console.warn('Could not fetch presentation materials:', materialsError);
+        setPresentationMaterials(null);
+      } else {
+        setPresentationMaterials(materialsData || null);
+      }
     } catch (error) {
       console.error('Error fetching submission details:', error);
     } finally {
@@ -663,7 +679,8 @@ export function SubmissionDetailPage() {
         />
       )}
 
-      {record.current_stage === 'academic_presentation_materials' && profile?.role === 'applicant' && record.applicant_id === profile.id && (
+      {/* Show materials submission form to applicant when materials are requested */}
+      {profile?.role === 'applicant' && record.applicant_id === profile.id && (
         <MaterialsSubmissionForm
           ipRecordId={record.id}
           applicantId={profile.id}
@@ -672,20 +689,50 @@ export function SubmissionDetailPage() {
         />
       )}
 
+      {/* Display submitted materials to both applicant and admin */}
+      {presentationMaterials && presentationMaterials.status === 'submitted' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Submitted Materials</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Submitted on {presentationMaterials.materials_submitted_at ? new Date(presentationMaterials.materials_submitted_at).toLocaleString() : 'Unknown date'}
+          </p>
+          <MaterialsView
+            submissionId={record.id}
+            posterFileName={presentationMaterials.poster_file_name}
+            posterFileUrl={presentationMaterials.poster_file_url}
+            posterFileSize={presentationMaterials.poster_file_size}
+            paperFileName={presentationMaterials.paper_file_name}
+            paperFileUrl={presentationMaterials.paper_file_url}
+            paperFileSize={presentationMaterials.paper_file_size}
+            userRole={profile?.role === 'admin' ? 'admin' : 'applicant'}
+          />
+        </div>
+      )}
+
       {profile?.role === 'admin' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Admin Actions</h2>
-          <CompletionButton
-            recordId={record.id}
-            currentStatus={record.status}
-            currentStage={record.current_stage}
-            applicantEmail={record.applicant?.email || ''}
-            applicantName={record.applicant?.full_name || ''}
-            title={record.title}
-            referenceNumber={record.reference_number || ''}
-            category={record.category}
-            onComplete={() => fetchSubmissionDetails()}
-          />
+          <div className="space-y-4">
+            <MaterialsRequestAction
+              ipRecordId={record.id}
+              applicantEmail={record.applicant?.email || ''}
+              applicantName={record.applicant?.full_name || ''}
+              ipTitle={record.title}
+              onSuccess={() => fetchSubmissionDetails()}
+              onError={(error) => console.error('Materials request error:', error)}
+            />
+            <CompletionButton
+              recordId={record.id}
+              currentStatus={record.status}
+              currentStage={record.current_stage}
+              applicantEmail={record.applicant?.email || ''}
+              applicantName={record.applicant?.full_name || ''}
+              title={record.title}
+              referenceNumber={record.reference_number || ''}
+              category={record.category}
+              onComplete={() => fetchSubmissionDetails()}
+            />
+          </div>
         </div>
       )}
 

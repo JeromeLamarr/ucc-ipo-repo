@@ -247,6 +247,12 @@ export function NewSubmissionPage() {
   const saveDraft = async (dataToSave: typeof formData) => {
     if (!profile) return;
 
+    // PREVENT SAVING DRAFT IF SUBMISSION WAS SUCCESSFUL
+    if (success) {
+      console.log('[AUTOSAVE] Submission already completed, skipping autosave');
+      return;
+    }
+
     try {
       setAutoSaveStatus('saving');
 
@@ -347,6 +353,12 @@ export function NewSubmissionPage() {
   };
 
   const handleAutoSave = (data: typeof formData) => {
+    // Don't autosave if submission was successful
+    if (success) {
+      console.log('[AUTOSAVE] Submission already completed, skipping autosave trigger');
+      return;
+    }
+
     // Clear existing timeout
     if (autoSaveDebounceRef.current) {
       clearTimeout(autoSaveDebounceRef.current);
@@ -491,6 +503,22 @@ export function NewSubmissionPage() {
     setUploading(true);
 
     try {
+      // DELETE DRAFT IMMEDIATELY TO PREVENT DUPLICATION
+      // Do this BEFORE creating the new IP record to ensure atomic operation
+      if (draftId) {
+        try {
+          console.log('[SUBMIT] Deleting draft before creating submission:', draftId);
+          await supabase
+            .from('ip_records')
+            .delete()
+            .eq('id', draftId)
+            .eq('status', 'draft');
+          console.log('[SUBMIT] Draft deleted successfully');
+        } catch (deleteErr) {
+          console.warn('[SUBMIT] Could not delete draft (continuing anyway):', deleteErr);
+        }
+      }
+
       // No document validation required - users can submit without files
       // Documents are optional; disclosure form will be auto-generated
 
@@ -536,90 +564,79 @@ export function NewSubmissionPage() {
 
       if (ipError) throw ipError;
 
-      // Delete draft if it was recovered (always delete, whether same ID or not)
-      if (draftId) {
-        try {
-          await supabase
-            .from('ip_records')
-            .delete()
-            .eq('id', draftId)
-            .eq('status', 'draft');
-        } catch (deleteErr) {
-          console.warn('Could not delete draft:', deleteErr);
-        }
-      }
-
       // Upload all files with proper error handling and progress tracking
       const uploadedDocuments: Array<{ type: string; name: string }> = [];
       setUploading(true);
       setUploadProgress(0);
 
-      for (let i = 0; i < uploadedFiles.length; i++) {
-        const uploadedFile = uploadedFiles[i];
-        try {
-          const fileExt = uploadedFile.file.name.split('.').pop();
-          const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}_${uploadedFile.file.name}`;
-          const filePath = `${ipRecord.id}/${fileName}`;
+      if (uploadedFiles.length > 0) {
+        for (let i = 0; i < uploadedFiles.length; i++) {
+          const uploadedFile = uploadedFiles[i];
+          try {
+            const fileExt = uploadedFile.file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}_${uploadedFile.file.name}`;
+            const filePath = `${ipRecord.id}/${fileName}`;
 
-          // Update progress (50% for storage upload)
-          const storageProgress = Math.round(((i + 0.5) / uploadedFiles.length) * 100);
-          setUploadProgress(storageProgress);
+            // Update progress (50% for storage upload)
+            const storageProgress = Math.round(((i + 0.5) / uploadedFiles.length) * 100);
+            setUploadProgress(storageProgress);
 
-          // Upload to storage
-          const { error: uploadError } = await supabase.storage
-            .from('ip-documents')
-            .upload(filePath, uploadedFile.file, {
-              contentType: uploadedFile.file.type,
-              upsert: false
+            // Upload to storage
+            const { error: uploadError } = await supabase.storage
+              .from('ip-documents')
+              .upload(filePath, uploadedFile.file, {
+                contentType: uploadedFile.file.type,
+                upsert: false
+              });
+
+            if (uploadError) {
+              console.error(`[NewSubmission] Storage upload failed for ${uploadedFile.file.name}:`, uploadError);
+              throw new Error(`Failed to upload ${uploadedFile.file.name}: ${uploadError.message}`);
+            }
+
+            // Update progress (100% for this file including DB)
+            const dbProgress = Math.round(((i + 1) / uploadedFiles.length) * 100);
+            setUploadProgress(dbProgress);
+
+            // Record in database
+            const { error: dbError } = await supabase.from('ip_documents').insert({
+              ip_record_id: ipRecord.id,
+              uploader_id: profile.id,
+              file_name: uploadedFile.file.name,
+              file_path: filePath,
+              mime_type: uploadedFile.file.type,
+              size_bytes: uploadedFile.file.size,
+              doc_type: uploadedFile.type as any,
             });
 
-          if (uploadError) {
-            console.error(`[NewSubmission] Storage upload failed for ${uploadedFile.file.name}:`, uploadError);
-            throw new Error(`Failed to upload ${uploadedFile.file.name}: ${uploadError.message}`);
+            if (dbError) {
+              console.error(`[NewSubmission] Database insert failed for ${uploadedFile.file.name}:`, dbError);
+              // Try to clean up the uploaded file
+              await supabase.storage
+                .from('ip-documents')
+                .remove([filePath])
+                .catch(e => console.warn('File cleanup failed:', e));
+              throw new Error(`Failed to record ${uploadedFile.file.name}: ${dbError.message}`);
+            }
+
+            uploadedDocuments.push({ type: uploadedFile.type, name: uploadedFile.file.name });
+            console.log(`[NewSubmission] Successfully uploaded: ${uploadedFile.file.name} (${uploadedFile.type})`);
+          } catch (fileError: any) {
+            console.error(`[NewSubmission] Error processing file ${uploadedFile.file.name}:`, fileError);
+            setUploading(false);
+            setUploadProgress(0);
+            throw fileError;
           }
-
-          // Update progress (100% for this file including DB)
-          const dbProgress = Math.round(((i + 1) / uploadedFiles.length) * 100);
-          setUploadProgress(dbProgress);
-
-          // Record in database
-          const { error: dbError } = await supabase.from('ip_documents').insert({
-            ip_record_id: ipRecord.id,
-            uploader_id: profile.id,
-            file_name: uploadedFile.file.name,
-            file_path: filePath,
-            mime_type: uploadedFile.file.type,
-            size_bytes: uploadedFile.file.size,
-            doc_type: uploadedFile.type as any,
-          });
-
-          if (dbError) {
-            console.error(`[NewSubmission] Database insert failed for ${uploadedFile.file.name}:`, dbError);
-            // Try to clean up the uploaded file
-            await supabase.storage
-              .from('ip-documents')
-              .remove([filePath])
-              .catch(e => console.warn('File cleanup failed:', e));
-            throw new Error(`Failed to record ${uploadedFile.file.name}: ${dbError.message}`);
-          }
-
-          uploadedDocuments.push({ type: uploadedFile.type, name: uploadedFile.file.name });
-          console.log(`[NewSubmission] Successfully uploaded: ${uploadedFile.file.name} (${uploadedFile.type})`);
-        } catch (fileError: any) {
-          console.error(`[NewSubmission] Error processing file ${uploadedFile.file.name}:`, fileError);
-          setUploading(false);
-          setUploadProgress(0);
-          throw fileError;
         }
       }
 
-      if (uploadedDocuments.length === 0) {
-        setUploading(false);
-        setUploadProgress(0);
-        throw new Error('No documents were uploaded successfully');
+      // Documents are optional - log the result but don't fail if none were uploaded
+      if (uploadedDocuments.length > 0) {
+        console.log(`[NewSubmission] All ${uploadedDocuments.length} documents uploaded successfully`);
+      } else {
+        console.log('[NewSubmission] No documents were uploaded (submissions can proceed without documents)');
       }
-
-      console.log(`[NewSubmission] All ${uploadedDocuments.length} documents uploaded successfully`);
+      
       setUploading(false);
       setUploadProgress(0);
 
@@ -818,6 +835,16 @@ export function NewSubmissionPage() {
         } catch (emailError) {
           console.error('Error sending applicant confirmation email:', emailError);
         }
+      }
+
+      // Clear draft state to prevent any future autosaves
+      console.log('[SUBMIT] Clearing draft ID to prevent future autosaves');
+      setDraftId(null);
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      if (autoSaveDebounceRef.current) {
+        clearTimeout(autoSaveDebounceRef.current);
       }
 
       setSuccess(true);

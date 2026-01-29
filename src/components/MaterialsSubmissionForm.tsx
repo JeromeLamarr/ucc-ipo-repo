@@ -114,9 +114,9 @@ export function MaterialsSubmissionForm({
     }
 
     if (type === 'poster') {
-      setPoster((prev) => ({ ...prev, file, error: null, progress: 0 }));
+      setPoster((prev) => ({ ...prev, file, fileName: file.name, error: null, progress: 0 }));
     } else {
-      setPaper((prev) => ({ ...prev, file, error: null, progress: 0 }));
+      setPaper((prev) => ({ ...prev, file, fileName: file.name, error: null, progress: 0 }));
     }
   };
 
@@ -188,26 +188,37 @@ export function MaterialsSubmissionForm({
         paperData = await uploadFile('paper', paper.file) || paperData;
       }
 
-      // Submit materials via API
-      const response = await fetch('/api/materials/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ip_record_id: ipRecordId,
-          poster_file_url: posterData.fileUrl,
-          poster_file_name: posterData.fileName,
-          poster_file_size: posterData.fileSize,
-          paper_file_url: paperData.fileUrl,
-          paper_file_name: paperData.fileName,
-          paper_file_size: paperData.fileSize,
-        }),
+      // Update database directly with Supabase
+      console.log('Submitting materials to database:', {
+        ip_record_id: ipRecordId,
+        poster_file_name: posterData.fileName,
+        poster_file_url: posterData.fileUrl,
+        paper_file_name: paperData.fileName,
+        paper_file_url: paperData.fileUrl,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to submit materials');
+      const { error: updateError } = await supabase
+        .from('presentation_materials')
+        .update({
+          status: 'submitted',
+          materials_submitted_at: new Date().toISOString(),
+          poster_file_name: posterData.fileName,
+          poster_file_url: posterData.fileUrl,
+          poster_file_size: posterData.fileSize,
+          poster_uploaded_at: new Date().toISOString(),
+          paper_file_name: paperData.fileName,
+          paper_file_url: paperData.fileUrl,
+          paper_file_size: paperData.fileSize,
+          paper_uploaded_at: new Date().toISOString(),
+        })
+        .eq('ip_record_id', ipRecordId);
+
+      if (updateError) {
+        console.error('Database update error:', updateError);
+        throw new Error(`Failed to save materials: ${updateError.message}`);
       }
 
+      console.log('Materials submitted successfully');
       setSubmitSuccess(true);
       await fetchMaterialsStatus();
       onSuccess?.();
@@ -216,6 +227,7 @@ export function MaterialsSubmissionForm({
       setTimeout(() => setSubmitSuccess(false), 3000);
     } catch (error: any) {
       const message = error.message || 'Failed to submit materials';
+      console.error('Submit error:', error);
       setSubmitError(message);
       onError?.(message);
     } finally {
