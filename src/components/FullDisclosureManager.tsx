@@ -272,37 +272,48 @@ export function FullDisclosureManager({
             </div>
           </div>
 
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2">
             <button
               onClick={handleDownloadDisclosure}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
               Download
             </button>
             <button
-              onClick={handleRegenerateDisclosure}
-              disabled={generating}
-              className="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-            >
-              {generating ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              {generating ? 'Regenerating...' : 'Regenerate'}
-            </button>
-            <button
               onClick={handleSendDisclosureEmail}
               disabled={sending}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
             >
               {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending...
+                </>
               ) : (
-                <Mail className="h-4 w-4" />
+                <>
+                  <Mail className="h-4 w-4" />
+                  Send to Applicant
+                </>
               )}
-              {sending ? 'Sending...' : 'Email to Applicant'}
+            </button>
+            <button
+              onClick={handleRegenerateDisclosure}
+              disabled={generating}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50"
+              title="Generate a new disclosure to replace the current one"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Regenerating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4" />
+                  Regenerate
+                </>
+              )}
             </button>
           </div>
 
