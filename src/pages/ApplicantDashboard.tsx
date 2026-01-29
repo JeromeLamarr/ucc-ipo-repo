@@ -38,7 +38,9 @@ export function ApplicantDashboard() {
       if (error) throw error;
 
       const allRecords = data || [];
+      // Only submitted/completed records appear in main list
       const submittedRecords = allRecords.filter(r => r.status !== 'draft');
+      // Drafts are auto-saved but not yet submitted to the workflow
       const draftRecords = allRecords.filter(r => r.status === 'draft');
 
       setRecords(submittedRecords);
