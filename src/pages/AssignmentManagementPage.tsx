@@ -47,6 +47,7 @@ export function AssignmentManagementPage() {
             supervisor:users!supervisor_id(*),
             evaluator:users!evaluator_id(*)
           `)
+          .neq('status', 'draft')
           .order('created_at', { ascending: false }),
         supabase
           .from('users')
