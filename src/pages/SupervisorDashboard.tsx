@@ -868,27 +868,39 @@ export function SupervisorDashboard() {
               </div>
 
               <div className="flex gap-3 pt-6 border-t border-gray-200 sticky bottom-0 bg-white">
-                <button
-                  onClick={() => openReviewModal('approve')}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
-                >
-                  <CheckCircle className="h-5 w-5" />
-                  Approve
-                </button>
-                <button
-                  onClick={() => openReviewModal('revision')}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors"
-                >
-                  <AlertCircle className="h-5 w-5" />
-                  Request Revision
-                </button>
-                <button
-                  onClick={() => openReviewModal('reject')}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
-                >
-                  <XCircle className="h-5 w-5" />
-                  Reject
-                </button>
+                {['supervisor_approved', 'rejected', 'supervisor_revision', 'waiting_evaluation', 'evaluator_approved', 'evaluator_revision', 'completed', 'preparing_legal', 'ready_for_filing'].includes(selectedRecord.status) ? (
+                  <button
+                    disabled
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-400 text-white rounded-lg font-medium transition-colors cursor-not-allowed"
+                  >
+                    <CheckCircle className="h-5 w-5" />
+                    Already Reviewed
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => openReviewModal('approve')}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+                    >
+                      <CheckCircle className="h-5 w-5" />
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => openReviewModal('revision')}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors"
+                    >
+                      <AlertCircle className="h-5 w-5" />
+                      Request Revision
+                    </button>
+                    <button
+                      onClick={() => openReviewModal('reject')}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+                    >
+                      <XCircle className="h-5 w-5" />
+                      Reject
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
