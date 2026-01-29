@@ -286,14 +286,36 @@ export function EditSubmissionModal({
     // Validate new files
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
     const ALLOWED_TYPES = [
+      // Documents
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'text/plain',
+      // Images
       'image/jpeg',
       'image/png',
+      // Audio Files
+      'audio/mpeg',
+      'audio/mp4',
+      'audio/wav',
+      'audio/ogg',
+      'audio/aac',
+      'audio/flac',
+      'audio/webm',
+      'audio/x-m4a',
+      // Video Files
+      'video/mp4',
+      'video/webm',
+      'video/quicktime',
+      'video/x-msvideo',
+      'video/x-matroska',
+      'video/mpeg',
+      'video/ogg',
+      // Special Formats
+      'application/x-pkz',
+      'application/octet-stream', // For .pkz and other binary files
     ];
 
     for (const doc of newDocuments) {
