@@ -13,6 +13,7 @@ export function ApplicantDashboard() {
   const [records, setRecords] = useState<IpRecord[]>([]);
   const [drafts, setDrafts] = useState<IpRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -69,6 +70,7 @@ export function ApplicantDashboard() {
   const deleteDraft = async (draftId: string) => {
     if (!confirm('Are you sure you want to delete this draft? This action cannot be undone.')) return;
 
+    setDeletingDraftId(draftId);
     try {
       console.log('[deleteDraft] Starting delete for draft:', draftId);
       
@@ -116,6 +118,8 @@ export function ApplicantDashboard() {
     } catch (error) {
       console.error('[deleteDraft] Error:', error);
       alert('Failed to delete draft: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setDeletingDraftId(null);
     }
   };
 
@@ -274,11 +278,14 @@ export function ApplicantDashboard() {
                           Continue
                         </Link>
                         <button
+                          type="button"
                           onClick={() => deleteDraft(draft.id)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium text-xs"
+                          disabled={deletingDraftId === draft.id}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium text-xs disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                           title="Delete draft"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
+                          {deletingDraftId === draft.id ? 'Deleting...' : ''}
                         </button>
                       </div>
                     </td>
