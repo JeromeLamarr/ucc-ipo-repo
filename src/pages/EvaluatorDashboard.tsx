@@ -592,18 +592,12 @@ export function EvaluatorDashboard() {
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
-                            Evaluated: {formatDate(record.updated_at)}
+                            Updated: {formatDate(record.updated_at)}
                           </span>
                         </div>
                       </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          record.status === 'evaluator_approved'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {record.status === 'evaluator_approved' ? 'Approved' : 'Rejected'}
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(record.status)}`}>
+                        {getStatusLabel(record.status)}
                       </span>
                     </div>
 
