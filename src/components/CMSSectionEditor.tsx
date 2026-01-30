@@ -521,9 +521,12 @@ function TextBlockForm({ formData, updateField }: any) {
           onChange={(e) => updateField('text_style', e.target.value)}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <option value="default">Default</option>
-          <option value="intro">Intro / Lead Text</option>
-          <option value="emphasized">Emphasized Section</option>
+          <option value="default">Default - Regular body text</option>
+          <option value="intro">Intro - Large introductory text</option>
+          <option value="highlight">Highlight - Callout with blue background</option>
+          <option value="quote">Quote - Emphasized quote or testimonial</option>
+          <option value="subtitle">Subtitle - Secondary heading text</option>
+          <option value="muted">Muted - Subtle secondary text</option>
         </select>
         <p className="text-xs text-gray-500 mt-2">
           Choose a style to automatically format your text appropriately.

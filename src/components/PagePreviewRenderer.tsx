@@ -241,11 +241,17 @@ function TextSection({ content }: { content: Record<string, any> }) {
   const getTextStyleClass = (style: string): string => {
     switch (style) {
       case 'intro':
-        return 'text-lg leading-relaxed text-gray-600';
-      case 'emphasized':
+        return 'text-lg leading-relaxed text-gray-700 font-medium';
+      case 'highlight':
         return 'text-base leading-relaxed bg-blue-50 px-6 py-4 rounded-lg border-l-4 border-blue-500 text-gray-800';
+      case 'quote':
+        return 'text-base leading-relaxed italic text-gray-700 border-l-4 border-gray-300 pl-4';
+      case 'subtitle':
+        return 'text-base leading-relaxed text-gray-600 font-semibold';
+      case 'muted':
+        return 'text-sm leading-relaxed text-gray-500';
       default:
-        return 'text-base text-gray-700';
+        return 'text-sm leading-relaxed text-gray-700';
     }
   };
 
