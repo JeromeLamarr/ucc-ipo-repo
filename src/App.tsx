@@ -6,12 +6,15 @@ import { LandingPage } from '@pages/LandingPage';
 import { LoginPage } from '@pages/LoginPage';
 import { RegisterPage } from '@pages/RegisterPage';
 import { AuthCallbackPage } from '@pages/AuthCallbackPage';
+import { CMSPageRenderer } from '@pages/CMSPageRenderer';
 import { ApplicantDashboard } from '@pages/ApplicantDashboard';
 import { NewSubmissionPage } from '@pages/NewSubmissionPage';
 import { SupervisorDashboard } from '@pages/SupervisorDashboard';
 import { EvaluatorDashboard } from '@pages/EvaluatorDashboard';
 import { AdminDashboard } from '@pages/AdminDashboard';
 import { UserManagement } from '@pages/UserManagement';
+import { PublicPagesManagement } from '@pages/PublicPagesManagement';
+import { PageSectionsManagement } from '@pages/PageSectionsManagement';
 import { SubmissionDetailPage } from '@pages/SubmissionDetailPage';
 import { AllRecordsPage } from '@pages/AllRecordsPage';
 import { LegacyRecordsPage } from '@pages/LegacyRecordsPage';
@@ -54,6 +57,8 @@ function DashboardRouter() {
         <Route path="review" element={<SupervisorDashboard />} />
         <Route path="evaluations" element={<EvaluatorDashboard />} />
         <Route path="users" element={<UserManagement />} />
+        <Route path="public-pages" element={<PublicPagesManagement />} />
+        <Route path="public-pages/:pageId" element={<PageSectionsManagement />} />
         <Route path="records" element={<AllRecordsPage />} />
         <Route path="legacy-records" element={<LegacyRecordsPage />} />
         <Route path="legacy-records/new" element={<AddLegacyRecordPage />} />
@@ -77,6 +82,7 @@ function App() {
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/verify/:trackingId" element={<CertificateVerifyPage />} />
           <Route path="/verify-disclosure/:trackingId" element={<DisclosureVerifyPage />} />
+          <Route path="/pages/:slug" element={<CMSPageRenderer />} />
           <Route
             path="/dashboard/*"
             element={

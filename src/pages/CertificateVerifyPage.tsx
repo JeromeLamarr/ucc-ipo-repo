@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
-import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader, Lock } from 'lucide-react';
 
 // Create a public Supabase client for certificate verification
 // This uses the anon key to allow public access to verified data
@@ -28,6 +28,26 @@ interface IPRecord {
 interface Creator {
   full_name: string;
   email: string;
+}
+
+// Helper function to mask sensitive information
+const maskEmail = (email: string): string => {
+  const [name, domain] = email.split('@');
+  if (!name || !domain) return email;
+  const visibleChars = Math.max(1, Math.ceil(name.length / 3));
+  const maskedName = name.substring(0, visibleChars) + '*'.repeat(Math.max(1, name.length - visibleChars));
+  return `${maskedName}@${domain}`;
+};
+
+const maskName = (fullName: string): string => {
+  const parts = fullName.split(' ');
+  if (parts.length === 1) {
+    return parts[0].charAt(0) + '*'.repeat(Math.max(1, parts[0].length - 1));
+  }
+  const firstName = parts[0].charAt(0) + '*'.repeat(Math.max(1, parts[0].length - 1));
+  const lastName = parts[parts.length - 1];
+  return `${firstName} ${lastName}`;
+};
 }
 
 export function CertificateVerifyPage() {
@@ -202,11 +222,11 @@ export function CertificateVerifyPage() {
                 <div className="bg-gray-50 rounded-lg p-6 space-y-4">
                   <div>
                     <label className="text-sm font-semibold text-gray-600">Name</label>
-                    <p className="text-gray-900 font-medium mt-1">{creator.full_name}</p>
+                    <p className="text-gray-900 font-medium mt-1">{maskName(creator.full_name)}</p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-gray-600">Email</label>
-                    <p className="text-gray-900 font-medium mt-1">{creator.email}</p>
+                    <p className="text-gray-900 font-medium mt-1">{maskEmail(creator.email)}</p>
                   </div>
                 </div>
               </section>
@@ -245,6 +265,15 @@ export function CertificateVerifyPage() {
                 </div>
               </section>
 
+              {/* Security Notice */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
+                <Lock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-800">
+                  <p className="font-semibold">⚠️ Public Verification Notice</p>
+                  <p className="mt-1">The full certificate is publicly accessible. The creator information above has been partially masked for privacy. This is a verification-only view.</p>
+                </div>
+              </div>
+
               {/* Action Button */}
               <div className="pt-6">
                 <a
@@ -252,8 +281,9 @@ export function CertificateVerifyPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 px-6 rounded-lg hover:shadow-lg transition text-center"
+                  title="View the complete certificate PDF (publicly accessible)"
                 >
-                  View Full Certificate
+                  Download Full Certificate
                 </a>
               </div>
             </div>

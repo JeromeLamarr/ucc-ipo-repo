@@ -16,7 +16,8 @@ import {
   Star,
   PieChart,
   UserCheck,
-  Archive
+  Archive,
+  Globe
 } from 'lucide-react';
 import type { UserRole } from '../lib/database.types';
 
@@ -66,6 +67,12 @@ const navItems: NavItem[] = [
     label: 'Users',
     path: '/dashboard/users',
     icon: Users,
+    roles: ['admin'],
+  },
+  {
+    label: 'Public Pages',
+    path: '/dashboard/public-pages',
+    icon: Globe,
     roles: ['admin'],
   },
   {

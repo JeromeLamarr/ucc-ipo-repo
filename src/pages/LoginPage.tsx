@@ -1,7 +1,8 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { GraduationCap, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { PublicNavigation } from '../components/PublicNavigation';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -31,15 +32,14 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <GraduationCap className="h-16 w-16 text-blue-600" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <PublicNavigation />
+      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-64px)]">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
+            <p className="text-gray-600 mt-2">Sign in to your IP Management account</p>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
-          <p className="text-gray-600 mt-2">Sign in to your IP Management account</p>
-        </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -104,12 +104,6 @@ export function LoginPage() {
               </Link>
             </div>
           </div>
-        </div>
-
-        <div className="mt-6 text-center">
-          <Link to="/" className="text-gray-600 hover:text-gray-900 text-sm">
-            ← Back to Home
-          </Link>
         </div>
       </div>
     </div>

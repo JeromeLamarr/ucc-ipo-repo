@@ -1,53 +1,157 @@
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Shield, FileText, TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Shield, FileText, TrendingUp } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { PublicNavigation } from '../components/PublicNavigation';
+
+interface SiteSettings {
+  site_name: string;
+  tagline: string;
+}
+
+interface CMSSection {
+  id: string;
+  section_type: string;
+  content: Record<string, any>;
+  order_index: number;
+}
+
+// Fallback values (current hardcoded values)
+const DEFAULT_SETTINGS: SiteSettings = {
+  site_name: 'University of Caloocan City Intellectual Property Office',
+  tagline: 'Protecting Innovation, Promoting Excellence',
+};
+
+const DEFAULT_HERO_CONTENT = {
+  headline: 'University Intellectual Property',
+  headline_highlight: 'Management System',
+  subheadline: 'Streamline your intellectual property submissions, evaluations, and approvals with our comprehensive management platform.',
+  cta_text: 'Get Started',
+  cta_link: '/register',
+};
 
 export function LandingPage() {
   const navigate = useNavigate();
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
+  const [heroSection, setHeroSection] = useState<CMSSection | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('site_settings')
+          .select('site_name, tagline')
+          .eq('id', 1)
+          .single();
+
+        if (error) {
+          console.warn('Error fetching site settings:', error.message);
+          setSettings(DEFAULT_SETTINGS);
+        } else if (data) {
+          setSettings({
+            site_name: data.site_name || DEFAULT_SETTINGS.site_name,
+            tagline: data.tagline || DEFAULT_SETTINGS.tagline,
+          });
+        } else {
+          setSettings(DEFAULT_SETTINGS);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch site settings, using defaults:', err);
+        setSettings(DEFAULT_SETTINGS);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  // Fetch CMS sections for home page
+  useEffect(() => {
+    const fetchCMSSections = async () => {
+      try {
+        // First, get the home page
+        const { data: pageData, error: pageError } = await supabase
+          .from('cms_pages')
+          .select('id')
+          .eq('slug', 'home')
+          .eq('is_published', true)
+          .single();
+
+        if (pageError || !pageData) {
+          console.warn('Home page not found in CMS');
+          return;
+        }
+
+        // Then fetch sections for this page, ordered by index
+        const { data: sectionsData, error: sectionsError } = await supabase
+          .from('cms_sections')
+          .select('*')
+          .eq('page_id', pageData.id)
+          .order('order_index', { ascending: true });
+
+        if (sectionsError) {
+          console.warn('Error fetching CMS sections:', sectionsError.message);
+          return;
+        }
+
+        // Find hero section
+        if (sectionsData) {
+          const hero = sectionsData.find((s) => s.section_type === 'hero');
+          if (hero) {
+            setHeroSection(hero);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch CMS sections:', err);
+      }
+    };
+
+    fetchCMSSections();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">UCC IP Office</span>
-            </div>
-            <div className="flex gap-4">
-              <button
-                onClick={() => navigate('/login')}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
-              >
-                Login
-              </button>
-              <button
-                onClick={() => navigate('/register')}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-              >
-                Register
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <PublicNavigation />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            University Intellectual Property
-            <br />
-            <span className="text-blue-600">Management System</span>
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Streamline your intellectual property submissions, evaluations, and approvals with our comprehensive management platform.
-          </p>
-          <button
-            onClick={() => navigate('/register')}
-            className="mt-8 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg font-semibold shadow-lg"
-          >
-            Get Started
-          </button>
-        </div>
+        {/* Hero Section - CMS-driven or hardcoded fallback */}
+        {heroSection ? (
+          <div className="text-center mb-16">
+            <h1 className="text-5xl font-bold text-gray-900 mb-6">
+              {heroSection.content.headline}
+              <br />
+              <span className="text-blue-600">{heroSection.content.headline_highlight}</span>
+            </h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              {heroSection.content.subheadline}
+            </p>
+            <button
+              onClick={() => navigate(heroSection.content.cta_link || '/register')}
+              className="mt-8 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg font-semibold shadow-lg"
+            >
+              {heroSection.content.cta_text || 'Get Started'}
+            </button>
+          </div>
+        ) : (
+          <div className="text-center mb-16">
+            <h1 className="text-5xl font-bold text-gray-900 mb-6">
+              {DEFAULT_HERO_CONTENT.headline}
+              <br />
+              <span className="text-blue-600">{DEFAULT_HERO_CONTENT.headline_highlight}</span>
+            </h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              {DEFAULT_HERO_CONTENT.subheadline}
+            </p>
+            <button
+              onClick={() => navigate(DEFAULT_HERO_CONTENT.cta_link)}
+              className="mt-8 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg font-semibold shadow-lg"
+            >
+              {DEFAULT_HERO_CONTENT.cta_text}
+            </button>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-3 gap-8 mb-16">
           <div className="bg-white p-8 rounded-xl shadow-lg">
@@ -132,8 +236,8 @@ export function LandingPage() {
 
       <footer className="bg-gray-900 text-white py-8 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p>University of Caloocan City Intellectual Property Office</p>
-          <p className="text-gray-400 text-sm mt-2">Protecting Innovation, Promoting Excellence</p>
+          <p>{settings.site_name}</p>
+          <p className="text-gray-400 text-sm mt-2">{settings.tagline}</p>
         </div>
       </footer>
     </div>
