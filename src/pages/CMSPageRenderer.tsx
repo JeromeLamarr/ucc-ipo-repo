@@ -476,16 +476,39 @@ function TextSection({ content }: { content: Record<string, any> }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className={`max-w-3xl ${safeAlignment === 'center' ? 'mx-auto' : ''}`}>
+      <div className={`max-w-3xl ${safeAlignment === 'center' ? 'mx-auto' : ''} text-section`}>
         {title && (
           <h2 className={`text-3xl font-bold mb-4 ${alignClass[safeAlignment]}`}>{title}</h2>
         )}
         {body && (
           <div
-            className={`prose prose-lg ${alignClass[safeAlignment]}`}
+            className={`${alignClass[safeAlignment]} space-y-4`}
+            style={{
+              fontSize: '16px',
+              lineHeight: '1.6',
+              color: '#1f2937',
+            }}
             dangerouslySetInnerHTML={{ __html: sanitizedBody }}
           />
         )}
+        <style>{`
+          .text-section h1, .text-section h2, .text-section h3, .text-section h4, .text-section h5, .text-section h6 {
+            font-weight: bold;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+          }
+          .text-section h1 { font-size: 2rem; }
+          .text-section h2 { font-size: 1.75rem; }
+          .text-section h3 { font-size: 1.5rem; color: #1e40af; }
+          .text-section h4 { font-size: 1.25rem; }
+          .text-section h5 { font-size: 1.1rem; }
+          .text-section h6 { font-size: 1rem; }
+          .text-section p { margin-bottom: 1rem; }
+          .text-section ul, .text-section ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+          .text-section li { margin-bottom: 0.5rem; }
+          .text-section strong { font-weight: bold; }
+          .text-section em { font-style: italic; }
+        `}</style>
       </div>
     </div>
   );
