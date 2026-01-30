@@ -245,23 +245,29 @@ function TextSection({ content }: { content: Record<string, any> }) {
 }
 
 function CTASection({ content, navigate }: { content: Record<string, any>; navigate: any }) {
-  const bgColor = content.background_color || 'bg-gradient-to-r from-blue-600 to-blue-800';
+  // Defensive checks
+  if (!content) {
+    return null;
+  }
+
+  const bgColor = content.background_color || '#2563EB';
   const heading = content.heading || '';
   const description = content.description || '';
   const buttonText = content.button_text || null;
   const buttonLink = content.button_link || null;
 
+  // Check if there's any content to display
   if (!heading && !description && (!buttonText || !buttonLink)) {
     return null;
   }
 
-  // Check if bgColor is a Tailwind class (contains 'bg-', 'from-', 'to-', 'gradient')
-  // or a color value (hex, rgb, etc.)
+  // Check if bgColor is a Tailwind class or a color value
   const isTailwindClass = bgColor.includes('bg-') || bgColor.includes('from-') || bgColor.includes('to-') || bgColor.includes('gradient');
+  const classNames = isTailwindClass ? `py-16 text-center text-white ${bgColor}` : 'py-16 text-center text-white';
 
   return (
     <div
-      className={`py-20 text-center text-white ${isTailwindClass ? bgColor : ''}`}
+      className={classNames}
       style={!isTailwindClass ? { backgroundColor: bgColor } : {}}
     >
       <div className="max-w-3xl mx-auto px-4">
@@ -269,7 +275,7 @@ function CTASection({ content, navigate }: { content: Record<string, any>; navig
           <h2 className="text-4xl font-bold mb-4">{heading}</h2>
         )}
         {description && (
-          <p className="text-xl mb-8 opacity-95">{description}</p>
+          <p className="text-lg mb-8 opacity-90">{description}</p>
         )}
         {buttonText && buttonLink && (
           <button
