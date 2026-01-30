@@ -136,22 +136,42 @@ CREATE POLICY "site_settings_public_read"
 CREATE POLICY "site_settings_admin_insert" 
   ON site_settings FOR INSERT
   WITH CHECK (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   );
 
 CREATE POLICY "site_settings_admin_update" 
   ON site_settings FOR UPDATE
   USING (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   )
   WITH CHECK (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   );
 
 CREATE POLICY "site_settings_admin_delete" 
   ON site_settings FOR DELETE
   USING (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   );
 
 -- ============================================================================
@@ -164,22 +184,42 @@ CREATE POLICY "cms_pages_published_read"
 CREATE POLICY "cms_pages_admin_insert" 
   ON cms_pages FOR INSERT
   WITH CHECK (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   );
 
 CREATE POLICY "cms_pages_admin_update" 
   ON cms_pages FOR UPDATE
   USING (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   )
   WITH CHECK (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   );
 
 CREATE POLICY "cms_pages_admin_delete" 
   ON cms_pages FOR DELETE
   USING (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   );
 
 -- ============================================================================
@@ -198,22 +238,42 @@ CREATE POLICY "cms_sections_published_read"
 CREATE POLICY "cms_sections_admin_insert" 
   ON cms_sections FOR INSERT
   WITH CHECK (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   );
 
 CREATE POLICY "cms_sections_admin_update" 
   ON cms_sections FOR UPDATE
   USING (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   )
   WITH CHECK (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   );
 
 CREATE POLICY "cms_sections_admin_delete" 
   ON cms_sections FOR DELETE
   USING (
-    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
+    auth.uid()::text IN (
+      SELECT id::text FROM auth.users 
+      WHERE raw_user_meta_data->>'role' = 'admin' 
+      OR email LIKE '%admin%'
+    )
+    OR (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   );
 
 
