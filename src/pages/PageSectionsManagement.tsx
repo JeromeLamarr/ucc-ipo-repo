@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Plus, Trash2, Edit, AlertCircle, ChevronLeft, GripVertical } from 'lucide-react';
 import { CMSSectionEditor } from '../components/CMSSectionEditor';
 import { BlockTypePicker } from '../components/BlockTypePicker';
+import { PagePreviewRenderer } from '../components/PagePreviewRenderer';
 
 interface CMSPage {
   id: string;
@@ -341,107 +342,126 @@ export function PageSectionsManagement() {
   }
 
   return (
-    <div>
-      <div className="mb-6 flex items-center gap-4">
-        <button
-          onClick={() => navigate('/dashboard/public-pages')}
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-        >
-          <ChevronLeft className="h-5 w-5" />
-          Back to Pages
-        </button>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{page.title}</h1>
-          <p className="text-gray-600">Manage blocks for this page</p>
+    <div className="flex flex-col h-screen">
+      {/* Header */}
+      <div className="border-b border-gray-200 bg-white p-4 sticky top-0 z-10">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/dashboard/public-pages')}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+          >
+            <ChevronLeft className="h-5 w-5" />
+            Back
+          </button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-gray-900">{page.title}</h1>
+            <p className="text-sm text-gray-600">Edit blocks • Changes preview in real-time</p>
+          </div>
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
-          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <span className="text-sm">{error}</span>
+      {/* Messages */}
+      {(error || success) && (
+        <div className="border-b border-gray-200 bg-white px-4 py-3">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <span className="text-sm">{error}</span>
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <span className="text-sm">{success}</span>
+            </div>
+          )}
         </div>
       )}
 
-      {success && (
-        <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-start gap-2">
-          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <span className="text-sm">{success}</span>
-        </div>
-      )}
+      {/* Two-column layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left: Block Editor */}
+        <div className="w-1/2 overflow-y-auto border-r border-gray-200 bg-white">
+          <div className="p-6 space-y-4">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            >
+              <Plus className="h-5 w-5" />
+              Add New Block
+            </button>
 
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Blocks ({sections.length})
-          </h2>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-          >
-            <Plus className="h-5 w-5" />
-            Add Block
-          </button>
-        </div>
-
-        {sections.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No sections yet. Create one to get started.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {sections.map((section) => (
-              <div
-                key={section.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, section.id)}
-                onDragOver={(e) => handleDragOver(e, section.id)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, section.id)}
-                className={`border-2 rounded-lg p-4 transition-all cursor-grab active:cursor-grabbing ${
-                  draggedId === section.id
-                    ? 'opacity-50 bg-gray-100 border-gray-300'
-                    : dragOverId === section.id
-                    ? 'bg-blue-50 border-blue-400 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <GripVertical className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
-                        {section.section_type.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {Object.keys(section.content).length} fields
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEditSection(section)}
-                      className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
-                      title="Edit"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteSection(section.id)}
-                      disabled={deleting === section.id}
-                      className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors disabled:opacity-50"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
+            {sections.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <p>No blocks yet. Create one to get started.</p>
               </div>
-            ))}
+            ) : (
+              <div className="space-y-3">
+                {sections.map((section) => (
+                  <div
+                    key={section.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, section.id)}
+                    onDragOver={(e) => handleDragOver(e, section.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, section.id)}
+                    className={`border-2 rounded-lg p-4 transition-all cursor-grab active:cursor-grabbing ${
+                      draggedId === section.id
+                        ? 'opacity-50 bg-gray-100 border-gray-300'
+                        : dragOverId === section.id
+                        ? 'bg-blue-50 border-blue-400 shadow-md'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <GripVertical className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                            {section.section_type.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {Object.keys(section.content).length} fields
+                        </p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditSection(section)}
+                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <Edit className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSection(section.id)}
+                          disabled={deleting === section.id}
+                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors disabled:opacity-50"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Right: Live Preview */}
+        <div className="w-1/2 overflow-y-auto bg-gray-50">
+          <div className="p-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+            <h3 className="font-semibold text-gray-900 text-sm">LIVE PREVIEW</h3>
+            <p className="text-xs text-gray-600 mt-1">Updates as you edit blocks</p>
+          </div>
+          <div className="bg-white">
+            <PagePreviewRenderer sections={sections} />
+          </div>
+        </div>
       </div>
 
       {/* Create Block Modal */}
