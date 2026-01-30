@@ -48,7 +48,6 @@ const maskName = (fullName: string): string => {
   const lastName = parts[parts.length - 1];
   return `${firstName} ${lastName}`;
 };
-}
 
 export function CertificateVerifyPage() {
   const { trackingId } = useParams<{ trackingId: string }>();
