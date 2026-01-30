@@ -540,12 +540,12 @@ function TextBlockForm({ formData, updateField }: any) {
         <textarea
           value={formData.body || ''}
           onChange={(e) => updateField('body', e.target.value)}
-          placeholder='Enter HTML content. Allowed: <h3>, <p>, <strong>, <em>, <a>, <ul>, <li>, etc.'
+          placeholder='Enter your text content. Format with line breaks and spacing as needed.'
           rows={8}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
         />
         <p className="text-xs text-gray-500 mt-2">
-          You can use basic HTML tags. Example: &lt;h3&gt;Heading&lt;/h3&gt;&lt;p&gt;Paragraph&lt;/p&gt;
+          Write plain text only. Use line breaks to separate paragraphs. No HTML tags needed.
         </p>
       </div>
     </div>
