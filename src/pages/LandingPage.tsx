@@ -233,6 +233,7 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
 function TextSection({ content }: { content: Record<string, any> }) {
   const title = content.title || '';
   const body = content.body || '';
+  const textAlign = content.text_align || 'left';
 
   const sanitizedBody = DOMPurify.sanitize(body, {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
@@ -240,10 +241,13 @@ function TextSection({ content }: { content: Record<string, any> }) {
     KEEP_CONTENT: true,
   });
 
+  // Map text_align to Tailwind class
+  const alignClass = textAlign === 'right' ? 'text-right' : textAlign === 'center' ? 'text-center' : 'text-left';
+
   return (
     <div className="w-full bg-white py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center">
+        <div className={`max-w-3xl mx-auto ${alignClass}`}>
           {title && <h2 className="text-3xl font-bold mb-6 text-gray-900">{title}</h2>}
           <div
             className="text-section text-gray-700"

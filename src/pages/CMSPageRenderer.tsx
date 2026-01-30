@@ -459,6 +459,7 @@ function TextSection({ content }: { content: Record<string, any> }) {
 
   const title = content.title || '';
   const body = content.body || '';
+  const textAlign = content.text_align || 'left';
 
   // Check if there's any content to display
   if (!title && !body) {
@@ -474,10 +475,13 @@ function TextSection({ content }: { content: Record<string, any> }) {
     KEEP_CONTENT: true,
   });
 
+  // Map text_align to Tailwind class
+  const alignClass = textAlign === 'right' ? 'text-right' : textAlign === 'center' ? 'text-center' : 'text-left';
+
   return (
     <div className="w-full bg-white py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center text-section">
+        <div className={`max-w-3xl mx-auto text-section ${alignClass}`}>
           {title && (
             <h2 className="text-3xl font-bold mb-6 text-gray-900">{title}</h2>
           )}

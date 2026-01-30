@@ -200,6 +200,7 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
 function TextSection({ content }: { content: Record<string, any> }) {
   const title = content.title || '';
   const body = content.body || '';
+  const textAlign = content.text_align || 'left';
 
   if (!title && !body) return null;
 
@@ -209,9 +210,12 @@ function TextSection({ content }: { content: Record<string, any> }) {
     KEEP_CONTENT: true,
   });
 
+  // Map text_align to Tailwind class
+  const alignClass = textAlign === 'right' ? 'text-right' : textAlign === 'center' ? 'text-center' : 'text-left';
+
   return (
     <div className="w-full bg-white py-12 px-4">
-      <div className="max-w-3xl mx-auto text-center">
+      <div className={`max-w-3xl mx-auto ${alignClass}`}>
         {title && <h2 className="text-2xl font-bold mb-4 text-gray-900">{title}</h2>}
         <div
           className="text-section text-gray-700 text-sm"
