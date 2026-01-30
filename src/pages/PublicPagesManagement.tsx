@@ -177,8 +177,8 @@ export function PublicPagesManagement() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Public Pages</h1>
-        <p className="text-gray-600">Manage CMS pages for your website</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Pages</h1>
+        <p className="text-gray-600">Create and manage your website pages</p>
       </div>
 
       {error && (
@@ -201,7 +201,7 @@ export function PublicPagesManagement() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search pages by title or slug..."
+              placeholder="Search pages by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -232,7 +232,7 @@ export function PublicPagesManagement() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Title</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Slug</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Page URL</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Created</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
@@ -246,7 +246,7 @@ export function PublicPagesManagement() {
                     </td>
                     <td className="py-3 px-4">
                       <code className="bg-gray-100 px-2 py-1 rounded text-sm text-gray-600">
-                        /{page.slug}
+                        /pages/{page.slug}
                       </code>
                     </td>
                     <td className="py-3 px-4">
@@ -325,10 +325,10 @@ export function PublicPagesManagement() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  URL Slug *
+                  Page URL *
                 </label>
                 <div className="flex items-center">
-                  <span className="text-gray-500 mr-2">/</span>
+                  <span className="text-gray-500 mr-2">/pages/</span>
                   <input
                     type="text"
                     value={formData.slug}
@@ -344,7 +344,7 @@ export function PublicPagesManagement() {
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Only lowercase letters, numbers, and hyphens allowed
+                  Use lowercase letters, numbers, and hyphens only
                 </p>
               </div>
 

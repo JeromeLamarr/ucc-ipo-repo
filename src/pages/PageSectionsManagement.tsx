@@ -357,7 +357,7 @@ export function PageSectionsManagement() {
         </button>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{page.title}</h1>
-          <p className="text-gray-600">Manage sections for this page</p>
+          <p className="text-gray-600">Manage blocks for this page</p>
         </div>
       </div>
 
@@ -378,14 +378,14 @@ export function PageSectionsManagement() {
       <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
-            Sections ({sections.length})
+            Blocks ({sections.length})
           </h2>
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
           >
             <Plus className="h-5 w-5" />
-            Add Section
+            Add Block
           </button>
         </div>
 
@@ -406,7 +406,6 @@ export function PageSectionsManagement() {
                       <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
                         {section.section_type.toUpperCase()}
                       </span>
-                      <span className="text-sm text-gray-600">Order: {section.order_index}</span>
                     </div>
                     <p className="text-sm text-gray-600 mt-2">
                       {Object.keys(section.content).length} fields
@@ -457,16 +456,16 @@ export function PageSectionsManagement() {
         )}
       </div>
 
-      {/* Create Section Modal */}
+      {/* Create Block Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New Section</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Add New Block</h2>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Section Type *
+                  Block Type *
                 </label>
                 <select
                   value={selectedSectionType}
@@ -483,7 +482,7 @@ export function PageSectionsManagement() {
               </div>
 
               <p className="text-sm text-gray-600">
-                A new section will be created with template content that you can edit.
+                A new block will be created with template content that you can edit.
               </p>
 
               <div className="flex gap-2 pt-4">
@@ -492,7 +491,7 @@ export function PageSectionsManagement() {
                   disabled={saving}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
                 >
-                  {saving ? 'Creating...' : 'Create Section'}
+                  {saving ? 'Creating...' : 'Create Block'}
                 </button>
                 <button
                   onClick={() => setShowCreateModal(false)}
@@ -507,12 +506,12 @@ export function PageSectionsManagement() {
         </div>
       )}
 
-      {/* Edit Section Modal */}
+      {/* Edit Block Modal */}
       {showEditModal && editingSection && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Edit {editingSection.section_type.toUpperCase()} Section
+              Edit {editingSection.section_type.toUpperCase()} Block
             </h2>
 
             <div className="space-y-4">
