@@ -828,6 +828,8 @@ function GallerySection({ content }: { content: Record<string, any> }) {
     const imageUrl = image.url || null;
     const imageAlt = image.alt_text || image.caption || `Gallery image ${idx + 1}`;
     const imageCaption = image.caption || '';
+    const offsetX = image.offset_x || 50;
+    const offsetY = image.offset_y || 50;
 
     if (!imageUrl) {
       return null;
@@ -846,6 +848,9 @@ function GallerySection({ content }: { content: Record<string, any> }) {
             src={imageUrl}
             alt={imageAlt}
             className="w-full h-full object-cover"
+            style={{
+              objectPosition: `${offsetX}% ${offsetY}%`,
+            }}
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="system-ui" font-size="18" fill="%239ca3af"%3EImage not found%3C/text%3E%3C/svg%3E';
             }}

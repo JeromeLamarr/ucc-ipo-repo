@@ -781,6 +781,33 @@ function CTABlockForm({ formData, updateField }: any) {
 
 function GalleryBlockForm({ formData, updateField, addArrayItem, removeArrayItem, updateArrayItem }: any) {
   const images = Array.isArray(formData.images) ? formData.images : [];
+  const [draggedImageIdx, setDraggedImageIdx] = React.useState<number | null>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  const handleImageDragStart = (idx: number, e: React.MouseEvent<HTMLDivElement>) => {
+    setDraggedImageIdx(idx);
+    setIsDragging(true);
+  };
+
+  const handleImageDragMove = (idx: number, e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || draggedImageIdx !== idx) return;
+
+    const container = e.currentTarget;
+    const rect = container.getBoundingClientRect();
+    
+    // Calculate position as percentage (0-100)
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+
+    // Store offset in image data
+    updateArrayItem('images', idx, 'offset_x', Math.round(x));
+    updateArrayItem('images', idx, 'offset_y', Math.round(y));
+  };
+
+  const handleImageDragEnd = () => {
+    setIsDragging(false);
+    setDraggedImageIdx(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -802,7 +829,7 @@ function GalleryBlockForm({ formData, updateField, addArrayItem, removeArrayItem
           Images ({images.length})
         </label>
         <button
-          onClick={() => addArrayItem('images', { url: '', alt_text: '', caption: '' })}
+          onClick={() => addArrayItem('images', { url: '', alt_text: '', caption: '', offset_x: 50, offset_y: 50 })}
           className="text-sm px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
         >
           + Add Image
@@ -853,6 +880,42 @@ function GalleryBlockForm({ formData, updateField, addArrayItem, removeArrayItem
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             />
           </div>
+
+          {image.url && (
+            <div className="mt-3 p-3 bg-white rounded border border-gray-300">
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Adjust Image Position (Drag to position)
+              </label>
+              <div
+                className="w-full h-48 bg-gray-200 rounded cursor-move overflow-hidden relative"
+                onMouseDown={(e) => handleImageDragStart(idx, e)}
+                onMouseMove={(e) => handleImageDragMove(idx, e)}
+                onMouseUp={handleImageDragEnd}
+                onMouseLeave={handleImageDragEnd}
+                style={{ cursor: isDragging && draggedImageIdx === idx ? 'grabbing' : 'grab' }}
+              >
+                <img
+                  src={image.url}
+                  alt="preview"
+                  className="w-full h-full object-cover pointer-events-none"
+                  style={{
+                    objectPosition: `${image.offset_x || 50}% ${image.offset_y || 50}%`,
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                {!image.url || (image.url && !image.offset_x) && (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-xs">
+                    Drag to adjust view
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Position: {image.offset_x || 50}% horizontal, {image.offset_y || 50}% vertical
+              </p>
+            </div>
+          )}
         </div>
       ))}
     </div>
