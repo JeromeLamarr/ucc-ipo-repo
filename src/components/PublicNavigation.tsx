@@ -19,6 +19,7 @@ export function PublicNavigation() {
   const [pages, setPages] = useState<CMSPage[]>([]);
   const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY_COLOR);
   const [loading, setLoading] = useState(true);
+  const [navError, setNavError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchNavData();
@@ -26,29 +27,40 @@ export function PublicNavigation() {
 
   const fetchNavData = async () => {
     try {
+      setNavError(null);
+
       // Fetch published CMS pages
-      const { data: pagesData } = await supabase
+      const { data: pagesData, error: pagesError } = await supabase
         .from('cms_pages')
         .select('slug, title')
         .eq('is_published', true)
         .order('created_at', { ascending: true });
 
-      if (pagesData) {
+      if (pagesError) {
+        const msg = `Failed to load navigation pages: ${pagesError.message}`;
+        if (import.meta.env.DEV) console.warn(msg, pagesError);
+        setNavError('Navigation unavailable');
+      } else if (pagesData) {
         setPages(pagesData);
       }
 
       // Fetch site settings for branding
-      const { data: settingsData } = await supabase
+      const { data: settingsData, error: settingsError } = await supabase
         .from('site_settings')
         .select('primary_color')
         .eq('id', 1)
         .single();
 
-      if (settingsData && settingsData.primary_color) {
+      if (settingsError) {
+        const msg = `Failed to load site settings: ${settingsError.message}`;
+        if (import.meta.env.DEV) console.warn(msg, settingsError);
+      } else if (settingsData && settingsData.primary_color) {
         setPrimaryColor(settingsData.primary_color);
       }
     } catch (err) {
-      console.warn('Error fetching navigation data:', err);
+      const msg = 'Unexpected error loading navigation';
+      if (import.meta.env.DEV) console.error(msg, err);
+      setNavError(msg);
     } finally {
       setLoading(false);
     }
@@ -82,6 +94,14 @@ export function PublicNavigation() {
             </div>
           )}
 
+          {/* Error indicator in nav */}
+          {navError && !loading && (
+            <div className="hidden md:flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-3 py-1 rounded">
+              <span>⚠️</span>
+              <span>{navError}</span>
+            </div>
+          )}
+
           {/* Auth Buttons */}
           <div className="flex gap-4">
             <button
@@ -112,6 +132,14 @@ export function PublicNavigation() {
                 {page.title}
               </a>
             ))}
+          </div>
+        )}
+
+        {/* Mobile error indicator */}
+        {navError && !loading && (
+          <div className="md:hidden pb-3 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{navError}</span>
           </div>
         )}
       </div>

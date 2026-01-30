@@ -221,23 +221,23 @@ CREATE POLICY "cms_sections_admin_delete"
 -- EXAMPLE DATA (Optional - Remove if not needed)
 -- ============================================================================
 
--- Insert landing page example
+-- Insert home page example (canonical slug: 'home')
 INSERT INTO cms_pages (slug, title, description, is_published)
 VALUES (
-  'landing',
-  'Landing Page',
-  'Main landing page for the IP Management System',
+  'home',
+  'Home Page',
+  'Main home page for the IP Management System',
   true
 ) ON CONFLICT (slug) DO NOTHING;
 
--- Get the landing page ID for sections
+-- Get the home page ID for sections
 DO $$
 DECLARE
-  landing_page_id UUID;
+  home_page_id UUID;
 BEGIN
-  SELECT id INTO landing_page_id FROM cms_pages WHERE slug = 'landing' LIMIT 1;
+  SELECT id INTO home_page_id FROM cms_pages WHERE slug = 'home' LIMIT 1;
   
-  IF landing_page_id IS NOT NULL THEN
+  IF home_page_id IS NOT NULL THEN
     -- Insert hero section
     INSERT INTO cms_sections (
       page_id,
@@ -245,7 +245,7 @@ BEGIN
       content,
       order_index
     ) VALUES (
-      landing_page_id,
+      home_page_id,
       'hero',
       jsonb_build_object(
         'headline', 'University Intellectual Property Management System',
@@ -263,7 +263,7 @@ BEGIN
       content,
       order_index
     ) VALUES (
-      landing_page_id,
+      home_page_id,
       'features',
       jsonb_build_object(
         'features', jsonb_build_array(
@@ -300,7 +300,7 @@ BEGIN
       content,
       order_index
     ) VALUES (
-      landing_page_id,
+      home_page_id,
       'steps',
       jsonb_build_object(
         'title', 'How It Works',
@@ -321,7 +321,7 @@ BEGIN
       content,
       order_index
     ) VALUES (
-      landing_page_id,
+      home_page_id,
       'categories',
       jsonb_build_object(
         'title', 'IP Categories We Support',

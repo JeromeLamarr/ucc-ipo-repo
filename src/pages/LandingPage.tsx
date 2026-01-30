@@ -35,10 +35,13 @@ export function LandingPage() {
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [heroSection, setHeroSection] = useState<CMSSection | null>(null);
   const [loading, setLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [sectionsError, setSectionsError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
+        setSettingsError(null);
         const { data, error } = await supabase
           .from('site_settings')
           .select('site_name, tagline')
@@ -46,7 +49,9 @@ export function LandingPage() {
           .single();
 
         if (error) {
-          console.warn('Error fetching site settings:', error.message);
+          const msg = `Failed to load site settings: ${error.message}`;
+          if (import.meta.env.DEV) console.warn(msg);
+          setSettingsError(msg);
           setSettings(DEFAULT_SETTINGS);
         } else if (data) {
           setSettings({
@@ -57,7 +62,9 @@ export function LandingPage() {
           setSettings(DEFAULT_SETTINGS);
         }
       } catch (err) {
-        console.warn('Failed to fetch site settings, using defaults:', err);
+        const msg = 'Failed to load site settings, using defaults';
+        if (import.meta.env.DEV) console.warn(msg, err);
+        setSettingsError(msg);
         setSettings(DEFAULT_SETTINGS);
       } finally {
         setLoading(false);
@@ -71,6 +78,7 @@ export function LandingPage() {
   useEffect(() => {
     const fetchCMSSections = async () => {
       try {
+        setSectionsError(null);
         // First, get the home page
         const { data: pageData, error: pageError } = await supabase
           .from('cms_pages')
@@ -79,8 +87,13 @@ export function LandingPage() {
           .eq('is_published', true)
           .single();
 
-        if (pageError || !pageData) {
-          console.warn('Home page not found in CMS');
+        if (pageError) {
+          if (import.meta.env.DEV) console.warn('Home page not found in CMS', pageError);
+          return;
+        }
+
+        if (!pageData) {
+          if (import.meta.env.DEV) console.warn('Home page not found in CMS');
           return;
         }
 
@@ -92,7 +105,9 @@ export function LandingPage() {
           .order('order_index', { ascending: true });
 
         if (sectionsError) {
-          console.warn('Error fetching CMS sections:', sectionsError.message);
+          const msg = `Some homepage content is unavailable: ${sectionsError.message}`;
+          if (import.meta.env.DEV) console.warn(msg);
+          setSectionsError(msg);
           return;
         }
 
@@ -104,7 +119,9 @@ export function LandingPage() {
           }
         }
       } catch (err) {
-        console.warn('Failed to fetch CMS sections:', err);
+        const msg = 'Failed to load homepage content';
+        if (import.meta.env.DEV) console.warn(msg, err);
+        setSectionsError(msg);
       }
     };
 
@@ -116,6 +133,27 @@ export function LandingPage() {
       <PublicNavigation />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        {/* Error Alerts */}
+        {settingsError && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+            <div className="text-amber-600 text-lg mt-0.5">⚠️</div>
+            <div>
+              <p className="font-medium text-amber-900">Site Configuration Issue</p>
+              <p className="text-sm text-amber-800 mt-1">{settingsError}</p>
+            </div>
+          </div>
+        )}
+
+        {sectionsError && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+            <div className="text-amber-600 text-lg mt-0.5">⚠️</div>
+            <div>
+              <p className="font-medium text-amber-900">Content Load Warning</p>
+              <p className="text-sm text-amber-800 mt-1">{sectionsError}</p>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section - CMS-driven or hardcoded fallback */}
         {heroSection ? (
           <div className="text-center mb-16">

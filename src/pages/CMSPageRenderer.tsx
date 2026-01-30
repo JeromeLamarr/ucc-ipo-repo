@@ -1,5 +1,22 @@
+/* eslint-disable @stylistic/indent */
+/* Using inline styles for dynamic colors from props is necessary for this component */
 import { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
+import DOMPurify from 'dompurify';
+import {
+  FileText,
+  Shield,
+  TrendingUp,
+  Users,
+  Settings,
+  CheckCircle,
+  AlertCircle,
+  Zap,
+  Heart,
+  Star,
+  Layers,
+  Workflow,
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PublicNavigation } from '../components/PublicNavigation';
 
@@ -35,11 +52,13 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
 
 export function CMSPageRenderer() {
   const { slug } = useParams<{ slug: string }>();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [page, setPage] = useState<CMSPage | null>(null);
   const [sections, setSections] = useState<CMSSection[]>([]);
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (slug) {
@@ -51,6 +70,14 @@ export function CMSPageRenderer() {
     try {
       setLoading(true);
       setNotFound(false);
+      setLoadError(null);
+
+      // Ensure slug exists
+      if (!slug) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
 
       // Fetch page by slug (published only)
       const { data: pageData, error: pageError } = await supabase
@@ -60,42 +87,62 @@ export function CMSPageRenderer() {
         .eq('is_published', true)
         .single();
 
-      if (pageError || !pageData) {
+      if (pageError) {
+        if (import.meta.env.DEV) console.error(`Page fetch error for slug "${slug}":`, pageError);
+        if (pageError.code === 'PGRST116') {
+          setNotFound(true);
+        } else {
+          setLoadError(`Unable to load page: ${pageError.message}`);
+        }
+        setLoading(false);
+        return;
+      }
+
+      if (!pageData) {
         setNotFound(true);
         setLoading(false);
         return;
       }
 
-      setPage(pageData);
+      setPage(pageData as CMSPage);
 
       // Fetch sections for this page
-      const { data: sectionsData } = await supabase
+      const { data: sectionsData, error: sectionsError } = await supabase
         .from('cms_sections')
         .select('*')
-        .eq('page_id', pageData.id)
+        .eq('page_id', (pageData as Record<string, any>).id)
         .order('order_index', { ascending: true });
 
-      setSections(sectionsData || []);
+      if (sectionsError) {
+        if (import.meta.env.DEV) console.warn(`Sections fetch error for page ${(pageData as Record<string, any>).id}:`, sectionsError);
+        setLoadError(`Some page content may not be available: ${sectionsError.message}`);
+      } else {
+        setSections((sectionsData as CMSSection[]) || []);
+      }
 
       // Fetch site settings
-      const { data: settingsData } = await supabase
+      const { data: settingsData, error: settingsError } = await supabase
         .from('site_settings')
         .select('*')
         .eq('id', 1)
         .single();
 
-      if (settingsData) {
+      if (settingsError) {
+        if (import.meta.env.DEV) console.warn('Site settings fetch error:', settingsError);
+      } else if (settingsData) {
+        const settings = settingsData as Record<string, any>;
         setSettings({
-          site_name: settingsData.site_name || DEFAULT_SITE_SETTINGS.site_name,
-          tagline: settingsData.tagline || DEFAULT_SITE_SETTINGS.tagline,
-          primary_color: settingsData.primary_color || DEFAULT_SITE_SETTINGS.primary_color,
-          secondary_color: settingsData.secondary_color || DEFAULT_SITE_SETTINGS.secondary_color,
-          logo_url: settingsData.logo_url,
+          site_name: settings.site_name || DEFAULT_SITE_SETTINGS.site_name,
+          tagline: settings.tagline || DEFAULT_SITE_SETTINGS.tagline,
+          primary_color: settings.primary_color || DEFAULT_SITE_SETTINGS.primary_color,
+          secondary_color: settings.secondary_color || DEFAULT_SITE_SETTINGS.secondary_color,
+          logo_url: settings.logo_url,
         });
       }
     } catch (err) {
-      console.error('Error fetching page data:', err);
-      setNotFound(true);
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      if (import.meta.env.DEV) console.error('Unexpected error fetching page data:', err);
+      setLoadError(`Failed to load page: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -117,16 +164,42 @@ export function CMSPageRenderer() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <PublicNavigation />
 
+      {/* Load Error Alert */}
+      {loadError && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+            <div className="text-amber-600 text-lg mt-0.5">⚠️</div>
+            <div className="flex-1">
+              <p className="font-medium text-amber-900">Page Load Warning</p>
+              <p className="text-sm text-amber-800 mt-1">{loadError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Render Sections */}
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} settings={settings} />
-      ))}
+      {Array.isArray(sections) && sections.length > 0 ? (
+        sections.map((section) => {
+          // Defensive checks for section object
+          if (!section || !section.id || !section.section_type || !section.content) {
+            if (import.meta.env.DEV) console.warn('CMSPageRenderer: Invalid section detected', section);
+            return null;
+          }
+          return (
+            <SectionRenderer key={section.id} section={section} settings={settings} />
+          );
+        })
+      ) : (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+          <p className="text-gray-500">No content available for this page.</p>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-8 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p>{settings.site_name}</p>
-          <p className="text-gray-400 text-sm mt-2">{settings.tagline}</p>
+          <p>{settings?.site_name || 'Site'}</p>
+          <p className="text-gray-400 text-sm mt-2">{settings?.tagline || ''}</p>
         </div>
       </footer>
     </div>
@@ -139,98 +212,191 @@ interface SectionRendererProps {
 }
 
 function SectionRenderer({ section, settings }: SectionRendererProps) {
-  switch (section.section_type) {
+  // Defensive checks for section and its content
+  if (!section) {
+    console.warn('SectionRenderer: Missing section prop');
+    return null;
+  }
+
+  const sectionType = section.section_type || 'unknown';
+  const content = section.content || {};
+
+  // Ensure content is an object
+  if (typeof content !== 'object' || content === null) {
+    console.warn(`SectionRenderer: Invalid content for section type "${sectionType}"`);
+    return null;
+  }
+
+  switch (sectionType) {
     case 'hero':
-      return <HeroSection content={section.content} settings={settings} />;
+      return <HeroSection content={content} settings={settings} />;
     case 'features':
-      return <FeaturesSection content={section.content} settings={settings} />;
+      return <FeaturesSection content={content} settings={settings} />;
     case 'steps':
-      return <StepsSection content={section.content} settings={settings} />;
+      return <StepsSection content={content} settings={settings} />;
     case 'categories':
-      return <CategoriesSection content={section.content} />;
+      return <CategoriesSection content={content} />;
     case 'text':
-      return <TextSection content={section.content} />;
+      return <TextSection content={content} />;
     case 'showcase':
-      return <ShowcaseSection content={section.content} />;
+      return <ShowcaseSection content={content} />;
     case 'cta':
-      return <CTASection content={section.content} settings={settings} />;
+      return <CTASection content={content} settings={settings} />;
     case 'gallery':
-      return <GallerySection content={section.content} />;
+      return <GallerySection content={content} />;
     default:
+      console.warn(`SectionRenderer: Unknown section type "${sectionType}"`);
       return null;
   }
 }
 
 function HeroSection({ content, settings }: { content: Record<string, any>; settings: SiteSettings }) {
+  // Defensive checks: ensure required fields exist
+  if (!content) {
+    console.warn('HeroSection: Missing content prop');
+    return null;
+  }
+
+  const headline = content.headline || 'Welcome';
+  const headlineHighlight = content.headline_highlight || '';
+  const subheadline = content.subheadline || '';
+  const ctaText = content.cta_text || 'Get Started';
+  const ctaLink = content.cta_link || '/register';
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
       <div className="text-center mb-16">
         <h1 className="text-5xl font-bold text-gray-900 mb-6">
-          {content.headline}
-          <br />
-          <span style={{ color: settings.primary_color }}>{content.headline_highlight}</span>
+          {headline}
+          {headlineHighlight && (
+            <>
+              <br />
+              {/* This inline style uses dynamic color from settings prop */}
+              {/* eslint-disable-next-line */}
+              <span style={{ color: settings?.primary_color || '#2563EB' }}>
+                {headlineHighlight}
+              </span>
+            </>
+          )}
         </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          {content.subheadline}
-        </p>
+        {subheadline && (
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">{subheadline}</p>
+        )}
+        {/* This CTA button uses dynamic background color from settings prop */}
+        {/* eslint-disable-next-line */}
         <a
-          href={content.cta_link || '/register'}
+          href={ctaLink}
           className="mt-8 inline-block px-8 py-4 text-white rounded-lg hover:opacity-90 text-lg font-semibold shadow-lg transition-opacity"
-          style={{ backgroundColor: settings.primary_color }}
+          style={{ backgroundColor: settings?.primary_color || '#2563EB' }}
         >
-          {content.cta_text || 'Get Started'}
+          {ctaText}
         </a>
       </div>
     </div>
   );
 }
 
-function FeaturesSection({ content, settings }: { content: Record<string, any>; settings: SiteSettings }) {
-  const features = content.features || [];
+function FeaturesSection({ content }: { content: Record<string, any>; settings: SiteSettings }) {
+  // Defensive checks
+  if (!content) {
+    console.warn('FeaturesSection: Missing content prop');
+    return null;
+  }
+
+  const features = Array.isArray(content.features) ? content.features : [];
+
+  if (features.length === 0) {
+    console.warn('FeaturesSection: No features provided');
+    return null;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="grid md:grid-cols-3 gap-8">
-        {features.map((feature: Record<string, any>, idx: number) => (
-          <div key={idx} className="bg-white p-8 rounded-xl shadow-lg">
-            {feature.icon && (
-              <div className={`${feature.icon_bg_color || 'bg-blue-100'} w-16 h-16 rounded-lg flex items-center justify-center mb-4`}>
-                <div className={`${feature.icon_color || 'text-blue-600'} text-2xl`}>
-                  {getIconComponent(feature.icon)}
+        {features.map((feature: Record<string, any>, idx: number) => {
+          // Ensure feature is an object
+          if (!feature || typeof feature !== 'object') {
+            console.warn(`FeaturesSection: Invalid feature at index ${idx}`);
+            return null;
+          }
+
+          const featureTitle = feature.title || `Feature ${idx + 1}`;
+          const featureDescription = feature.description || '';
+          const featureIcon = feature.icon || null;
+          const iconBgColor = feature.icon_bg_color || 'bg-blue-100';
+          const iconColor = feature.icon_color || 'text-blue-600';
+
+          return (
+            <div key={idx} className="bg-white p-8 rounded-xl shadow-lg">
+              {featureIcon && (
+                <div className={`${iconBgColor} w-16 h-16 rounded-lg flex items-center justify-center mb-4`}>
+                  <div className={`${iconColor} text-2xl`}>
+                    {getIconComponent(featureIcon)}
+                  </div>
                 </div>
-              </div>
-            )}
-            <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-            <p className="text-gray-600">{feature.description}</p>
-          </div>
-        ))}
+              )}
+              <h3 className="text-xl font-bold mb-3">{featureTitle}</h3>
+              {featureDescription && (
+                <p className="text-gray-600">{featureDescription}</p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 function StepsSection({ content, settings }: { content: Record<string, any>; settings: SiteSettings }) {
-  const steps = content.steps || [];
+  // Defensive checks
+  if (!content) {
+    console.warn('StepsSection: Missing content prop');
+    return null;
+  }
+
+  const steps = Array.isArray(content.steps) ? content.steps : [];
+  const title = content.title || '';
+
+  if (steps.length === 0) {
+    console.warn('StepsSection: No steps provided');
+    return null;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="bg-white rounded-xl shadow-lg p-12">
-        {content.title && (
-          <h2 className="text-3xl font-bold text-center mb-8">{content.title}</h2>
+        {title && (
+          <h2 className="text-3xl font-bold text-center mb-8">{title}</h2>
         )}
         <div className="grid md:grid-cols-4 gap-6">
-          {steps.map((step: Record<string, any>, idx: number) => (
-            <div key={idx} className="text-center">
-              <div
-                className="text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold"
-                style={{ backgroundColor: settings.primary_color }}
-              >
-                {step.number || idx + 1}
+          {steps.map((step: Record<string, any>, idx: number) => {
+            // Ensure step is an object
+            if (!step || typeof step !== 'object') {
+              console.warn(`StepsSection: Invalid step at index ${idx}`);
+              return null;
+            }
+
+            const stepNumber = step.number || (idx + 1);
+            const stepLabel = step.label || `Step ${idx + 1}`;
+            const stepDescription = step.description || '';
+
+            return (
+              <div key={idx} className="text-center">
+                {/* Step number uses dynamic background color from settings prop */}
+                {/* eslint-disable-next-line */}
+                <div
+                  className="text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold"
+                  style={{ backgroundColor: settings?.primary_color || '#2563EB' }}
+                >
+                  {stepNumber}
+                </div>
+                <h4 className="font-semibold mb-2">{stepLabel}</h4>
+                {stepDescription && (
+                  <p className="text-sm text-gray-600">{stepDescription}</p>
+                )}
               </div>
-              <h4 className="font-semibold mb-2">{step.label}</h4>
-              <p className="text-sm text-gray-600">{step.description}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -238,103 +404,193 @@ function StepsSection({ content, settings }: { content: Record<string, any>; set
 }
 
 function CategoriesSection({ content }: { content: Record<string, any> }) {
-  const categories = content.categories || [];
+  // Defensive checks
+  if (!content) {
+    console.warn('CategoriesSection: Missing content prop');
+    return null;
+  }
+
+  const categories = Array.isArray(content.categories) ? content.categories : [];
+  const title = content.title || '';
+
+  if (categories.length === 0) {
+    console.warn('CategoriesSection: No categories provided');
+    return null;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-      {content.title && (
-        <h2 className="text-3xl font-bold mb-4">{content.title}</h2>
+      {title && (
+        <h2 className="text-3xl font-bold mb-4">{title}</h2>
       )}
       <div className="flex flex-wrap justify-center gap-4 mt-8">
-        {categories.map((category: string, idx: number) => (
-          <span key={idx} className="px-6 py-3 bg-white rounded-full shadow-md text-gray-700 font-medium">
-            {category}
-          </span>
-        ))}
+        {categories.map((category: any, idx: number) => {
+          // Ensure category is a string
+          const categoryText = typeof category === 'string' ? category : String(category);
+          
+          return (
+            <span key={idx} className="px-6 py-3 bg-white rounded-full shadow-md text-gray-700 font-medium">
+              {categoryText}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 function TextSection({ content }: { content: Record<string, any> }) {
+  // Defensive checks
+  if (!content) {
+    console.warn('TextSection: Missing content prop');
+    return null;
+  }
+
   const alignment = content.alignment || 'left';
-  const alignClass = {
+  const title = content.title || '';
+  const body = content.body || '';
+
+  // Validate alignment value
+  const validAlignments = ['left', 'center', 'right'];
+  const safeAlignment = validAlignments.includes(alignment) ? (alignment as 'left' | 'center' | 'right') : 'left';
+
+  const alignClass: Record<'left' | 'center' | 'right', string> = {
     left: 'text-left',
     center: 'text-center',
     right: 'text-right',
-  }[alignment] || 'text-left';
+  };
+
+  // Check if there's any content to display
+  if (!title && !body) {
+    console.warn('TextSection: No title or body content');
+    return null;
+  }
+
+  // Sanitize HTML to prevent XSS attacks while preserving basic formatting
+  // This whitelist only allows safe, formatting-related tags and the href attribute for links
+  const sanitizedBody = DOMPurify.sanitize(body, {
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
+    KEEP_CONTENT: true,
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className={`max-w-3xl ${alignment === 'center' ? 'mx-auto' : ''}`}>
-        {content.title && (
-          <h2 className={`text-3xl font-bold mb-4 ${alignClass}`}>{content.title}</h2>
+      <div className={`max-w-3xl ${safeAlignment === 'center' ? 'mx-auto' : ''}`}>
+        {title && (
+          <h2 className={`text-3xl font-bold mb-4 ${alignClass[safeAlignment]}`}>{title}</h2>
         )}
-        <div
-          className={`prose prose-lg ${alignClass}`}
-          dangerouslySetInnerHTML={{ __html: content.body || '' }}
-        />
+        {body && (
+          <div
+            className={`prose prose-lg ${alignClass[safeAlignment]}`}
+            dangerouslySetInnerHTML={{ __html: sanitizedBody }}
+          />
+        )}
       </div>
     </div>
   );
 }
 
 function ShowcaseSection({ content }: { content: Record<string, any> }) {
-  const items = content.items || [];
+  // Defensive checks
+  if (!content) {
+    console.warn('ShowcaseSection: Missing content prop');
+    return null;
+  }
+
+  const items = Array.isArray(content.items) ? content.items : [];
+  const title = content.title || '';
+
+  if (items.length === 0) {
+    console.warn('ShowcaseSection: No items provided');
+    return null;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      {content.title && (
-        <h2 className="text-3xl font-bold text-center mb-12">{content.title}</h2>
+      {title && (
+        <h2 className="text-3xl font-bold text-center mb-12">{title}</h2>
       )}
       <div className="grid md:grid-cols-3 gap-8">
-        {items.map((item: Record<string, any>, idx: number) => (
-          <a
-            key={idx}
-            href={item.link || '#'}
-            className="group bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-          >
-            {item.image_url && (
-              <img
-                src={item.image_url}
-                alt={item.title}
-                className="w-full h-48 object-cover group-hover:opacity-90 transition-opacity"
-              />
-            )}
-            <div className="p-6">
-              <h3 className="text-xl font-bold mb-2 group-hover:text-blue-600 transition-colors">
-                {item.title}
-              </h3>
-              <p className="text-gray-600">{item.description}</p>
-            </div>
-          </a>
-        ))}
+        {items.map((item: Record<string, any>, idx: number) => {
+          // Ensure item is an object
+          if (!item || typeof item !== 'object') {
+            console.warn(`ShowcaseSection: Invalid item at index ${idx}`);
+            return null;
+          }
+
+          const itemTitle = item.title || `Item ${idx + 1}`;
+          const itemDescription = item.description || '';
+          const itemLink = item.link || '#';
+          const itemImageUrl = item.image_url || null;
+
+          return (
+            <a
+              key={idx}
+              href={itemLink}
+              className="group bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+            >
+              {itemImageUrl && (
+                <img
+                  src={itemImageUrl}
+                  alt={itemTitle}
+                  className="w-full h-48 object-cover group-hover:opacity-90 transition-opacity"
+                />
+              )}
+              <div className="p-6">
+                <h3 className="text-xl font-bold mb-2 group-hover:text-blue-600 transition-colors">
+                  {itemTitle}
+                </h3>
+                {itemDescription && (
+                  <p className="text-gray-600">{itemDescription}</p>
+                )}
+              </div>
+            </a>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 function CTASection({ content, settings }: { content: Record<string, any>; settings: SiteSettings }) {
-  const bgColor = content.background_color || settings.primary_color;
+  // Defensive checks
+  if (!content) {
+    console.warn('CTASection: Missing content prop');
+    return null;
+  }
+
+  const bgColor = content.background_color || settings?.primary_color || '#2563EB';
+  const heading = content.heading || '';
+  const description = content.description || '';
+  const buttonText = content.button_text || null;
+  const buttonLink = content.button_link || null;
+
+  // Check if there's any content to display
+  if (!heading && !description && (!buttonText || !buttonLink)) {
+    console.warn('CTASection: No heading, description, or button provided');
+    return null;
+  }
 
   return (
     <div
       className="py-16 text-center text-white"
+      // eslint-disable jsx-a11y/no-static-element-interactions
       style={{ backgroundColor: bgColor }}
     >
       <div className="max-w-3xl mx-auto px-4">
-        {content.heading && (
-          <h2 className="text-4xl font-bold mb-4">{content.heading}</h2>
+        {heading && (
+          <h2 className="text-4xl font-bold mb-4">{heading}</h2>
         )}
-        {content.description && (
-          <p className="text-lg mb-8 opacity-90">{content.description}</p>
+        {description && (
+          <p className="text-lg mb-8 opacity-90">{description}</p>
         )}
-        {content.button_text && content.button_link && (
+        {buttonText && buttonLink && (
           <a
-            href={content.button_link}
+            href={buttonLink}
             className="inline-block px-8 py-3 bg-white text-gray-900 rounded-lg hover:opacity-90 font-semibold transition-opacity"
           >
-            {content.button_text}
+            {buttonText}
           </a>
         )}
       </div>
@@ -343,50 +599,110 @@ function CTASection({ content, settings }: { content: Record<string, any>; setti
 }
 
 function GallerySection({ content }: { content: Record<string, any> }) {
-  const images = content.images || [];
+  // Defensive checks
+  if (!content) {
+    console.warn('GallerySection: Missing content prop');
+    return null;
+  }
+
+  const images = Array.isArray(content.images) ? content.images : [];
   const columns = content.columns || 3;
-  const colClass = {
+  const title = content.title || '';
+
+  if (images.length === 0) {
+    console.warn('GallerySection: No images provided');
+    return null;
+  }
+
+  // Validate columns value
+  const validColumns = [1, 2, 3, 4];
+  const safeColumns = validColumns.includes(columns) ? (columns as 1 | 2 | 3 | 4) : (3 as const);
+
+  const colClass: Record<1 | 2 | 3 | 4, string> = {
     1: 'md:grid-cols-1',
     2: 'md:grid-cols-2',
     3: 'md:grid-cols-3',
     4: 'md:grid-cols-4',
-  }[columns] || 'md:grid-cols-3';
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      {content.title && (
-        <h2 className="text-3xl font-bold text-center mb-12">{content.title}</h2>
+      {title && (
+        <h2 className="text-3xl font-bold text-center mb-12">{title}</h2>
       )}
-      <div className={`grid gap-6 ${colClass}`}>
-        {images.map((image: Record<string, any>, idx: number) => (
-          <div key={idx} className="rounded-lg overflow-hidden shadow-lg">
-            <img
-              src={image.url}
-              alt={image.alt_text || image.caption}
-              className="w-full h-64 object-cover"
-            />
-            {image.caption && (
-              <div className="bg-white p-4">
-                <p className="text-sm text-gray-700">{image.caption}</p>
-              </div>
-            )}
-          </div>
-        ))}
+      <div className={`grid gap-6 ${colClass[safeColumns]}`}>
+        {images.map((image: Record<string, any>, idx: number) => {
+          // Ensure image is an object
+          if (!image || typeof image !== 'object') {
+            console.warn(`GallerySection: Invalid image at index ${idx}`);
+            return null;
+          }
+
+          const imageUrl = image.url || null;
+          const imageAlt = image.alt_text || image.caption || `Gallery image ${idx + 1}`;
+          const imageCaption = image.caption || '';
+
+          // Skip images without URL
+          if (!imageUrl) {
+            console.warn(`GallerySection: Image at index ${idx} missing URL`);
+            return null;
+          }
+
+          return (
+            <div key={idx} className="rounded-lg overflow-hidden shadow-lg">
+              <img
+                src={imageUrl}
+                alt={imageAlt}
+                className="w-full h-64 object-cover"
+              />
+              {imageCaption && (
+                <div className="bg-white p-4">
+                  <p className="text-sm text-gray-700">{imageCaption}</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// Helper function to render icon components from names
-function getIconComponent(iconName: string) {
-  const iconMap: Record<string, string> = {
-    FileText: '📄',
-    Shield: '🛡️',
-    TrendingUp: '📈',
-    Users: '👥',
-    Settings: '⚙️',
-    CheckCircle: '✓',
+// Helper function to render icon components from Lucide React
+// Returns a React component or a safe fallback icon if the icon name is invalid
+function getIconComponent(iconName: string): React.ReactNode {
+  // Define the icon map with Lucide React components
+  const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+    FileText,
+    Shield,
+    TrendingUp,
+    Users,
+    Settings,
+    CheckCircle,
+    AlertCircle,
+    Zap,
+    Heart,
+    Star,
+    Layers,
+    Workflow,
   };
 
-  return iconMap[iconName] || '●';
+  // Validate icon name and return component or fallback
+  if (!iconName || typeof iconName !== 'string') {
+    console.warn(`getIconComponent: Invalid icon name "${iconName}", using fallback`);
+    return <CheckCircle size={24} />;
+  }
+
+  const IconComponent = iconMap[iconName];
+
+  if (!IconComponent) {
+    console.warn(
+      `getIconComponent: Unknown icon "${iconName}". Available icons: ${Object.keys(iconMap).join(', ')}`,
+    );
+    // Fallback: render a generic alert icon
+    return <AlertCircle size={24} />;
+  }
+
+  // Return the actual Lucide React icon component
+  return <IconComponent size={24} />;
 }

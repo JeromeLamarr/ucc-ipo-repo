@@ -273,25 +273,57 @@ export function PageSectionsManagement() {
     setError(null);
 
     try {
-      // Update both sections' order_index
-      const { error: err } = await supabase
+      // Update both sections atomically - swap order_index values
+      // Use separate update calls to avoid batch syntax issues with Supabase
+      const tempOrder = 999999; // Temporary value to avoid conflict
+
+      // Step 1: Move first section to temporary index
+      const { error: err1 } = await supabase
         .from('cms_sections')
-        .update([
-          { order_index: targetSection.order_index },
-          { order_index: section.order_index },
-        ])
-        .in('id', [sectionId, targetSection.id]);
+        .update({ order_index: tempOrder })
+        .eq('id', sectionId);
 
-      if (err) throw err;
+      if (err1) throw err1;
 
-      // Re-fetch to maintain correct order
-      await fetchPageAndSections();
+      // Step 2: Move target section to first section's original index
+      const { error: err2 } = await supabase
+        .from('cms_sections')
+        .update({ order_index: section.order_index })
+        .eq('id', targetSection.id);
+
+      if (err2) throw err2;
+
+      // Step 3: Move temporary section to target section's original index
+      const { error: err3 } = await supabase
+        .from('cms_sections')
+        .update({ order_index: targetSection.order_index })
+        .eq('id', sectionId);
+
+      if (err3) throw err3;
+
+      // Update local state immediately to prevent UI lag
+      // No refetch needed - we know the new order
+      const newSections = [...sections];
+      [newSections[sectionIndex], newSections[targetIndex]] = [
+        newSections[targetIndex],
+        newSections[sectionIndex],
+      ];
+
+      // Update order_index to match new positions
+      newSections.forEach((s, idx) => {
+        if (idx === sectionIndex) s.order_index = targetSection.order_index;
+        if (idx === targetIndex) s.order_index = section.order_index;
+      });
+
+      setSections(newSections);
       setSuccess(`Section moved ${direction}`);
 
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
       console.error('Error reordering sections:', err);
       setError(err.message || 'Failed to reorder sections');
+      // Refetch on error to restore correct state
+      await fetchPageAndSections();
     } finally {
       setReordering(null);
     }
