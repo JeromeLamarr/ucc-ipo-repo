@@ -1,19 +1,5 @@
--- FINAL FIX: Disable RLS temporarily to test, then enable with proper policies
--- This will ensure the policies are correct
-
--- ============================================================================
--- TEMPORARILY DISABLE RLS ON CMS TABLES
--- ============================================================================
-ALTER TABLE site_settings DISABLE ROW LEVEL SECURITY;
-ALTER TABLE cms_pages DISABLE ROW LEVEL SECURITY;
-ALTER TABLE cms_sections DISABLE ROW LEVEL SECURITY;
-
--- Wait a moment for changes to propagate
--- Then re-enable RLS with clean policies
-
-ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cms_pages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cms_sections ENABLE ROW LEVEL SECURITY;
+-- FINAL FIX: Drop all policies and recreate with proper authenticated user support
+-- This migration clears all existing policies and creates fresh ones
 
 -- ============================================================================
 -- DROP ALL EXISTING POLICIES (if they exist)
@@ -23,6 +9,10 @@ DROP POLICY IF EXISTS "site_settings_admin_insert" ON site_settings;
 DROP POLICY IF EXISTS "site_settings_admin_update" ON site_settings;
 DROP POLICY IF EXISTS "site_settings_admin_delete" ON site_settings;
 DROP POLICY IF EXISTS "site_settings_admin_write" ON site_settings;
+DROP POLICY IF EXISTS "site_settings_read" ON site_settings;
+DROP POLICY IF EXISTS "site_settings_write" ON site_settings;
+DROP POLICY IF EXISTS "site_settings_modify" ON site_settings;
+DROP POLICY IF EXISTS "site_settings_remove" ON site_settings;
 
 DROP POLICY IF EXISTS "cms_pages_published_read" ON cms_pages;
 DROP POLICY IF EXISTS "cms_pages_admin_insert" ON cms_pages;
@@ -30,6 +20,10 @@ DROP POLICY IF EXISTS "cms_pages_admin_update" ON cms_pages;
 DROP POLICY IF EXISTS "cms_pages_admin_delete" ON cms_pages;
 DROP POLICY IF EXISTS "cms_pages_admin_read" ON cms_pages;
 DROP POLICY IF EXISTS "cms_pages_admin_write" ON cms_pages;
+DROP POLICY IF EXISTS "cms_pages_public_read" ON cms_pages;
+DROP POLICY IF EXISTS "cms_pages_write" ON cms_pages;
+DROP POLICY IF EXISTS "cms_pages_modify" ON cms_pages;
+DROP POLICY IF EXISTS "cms_pages_remove" ON cms_pages;
 
 DROP POLICY IF EXISTS "cms_sections_published_read" ON cms_sections;
 DROP POLICY IF EXISTS "cms_sections_admin_insert" ON cms_sections;
@@ -37,6 +31,10 @@ DROP POLICY IF EXISTS "cms_sections_admin_update" ON cms_sections;
 DROP POLICY IF EXISTS "cms_sections_admin_delete" ON cms_sections;
 DROP POLICY IF EXISTS "cms_sections_admin_read" ON cms_sections;
 DROP POLICY IF EXISTS "cms_sections_admin_write" ON cms_sections;
+DROP POLICY IF EXISTS "cms_sections_public_read" ON cms_sections;
+DROP POLICY IF EXISTS "cms_sections_write" ON cms_sections;
+DROP POLICY IF EXISTS "cms_sections_modify" ON cms_sections;
+DROP POLICY IF EXISTS "cms_sections_remove" ON cms_sections;
 
 -- ============================================================================
 -- CREATE FRESH, SIMPLE POLICIES
