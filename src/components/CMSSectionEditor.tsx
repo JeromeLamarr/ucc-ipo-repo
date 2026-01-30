@@ -165,6 +165,16 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
         />
       )}
 
+      {section.section_type === 'showcase' && (
+        <ShowcaseBlockForm 
+          formData={formData} 
+          updateField={updateField}
+          addArrayItem={addArrayItem}
+          removeArrayItem={removeArrayItem}
+          updateArrayItem={updateArrayItem}
+        />
+      )}
+
       <div className="flex gap-2 pt-4 border-t border-gray-200">
         <button
           onClick={handleSave}
@@ -821,6 +831,162 @@ function GalleryBlockForm({ formData, updateField, addArrayItem, removeArrayItem
               placeholder="Image caption shown below photo"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+// ============================================================================
+// Showcase Block Form
+// ============================================================================
+
+function ShowcaseBlockForm({ formData, updateField, addArrayItem, removeArrayItem, updateArrayItem }: any) {
+  const items = Array.isArray(formData.items) ? formData.items : [];
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Showcase Title
+        </label>
+        <input
+          type="text"
+          value={formData.title || ''}
+          onChange={(e) => updateField('title', e.target.value)}
+          placeholder="e.g., Our Achievements"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+
+      <div className="flex items-center justify-between mb-4">
+        <label className="block text-sm font-medium text-gray-700">
+          Items ({items.length})
+        </label>
+        <button
+          onClick={() => addArrayItem('items', { 
+            title: '', 
+            description: '', 
+            image_url: '',
+            image_width: 300,
+            image_height: 300,
+            image_position: 'center'
+          })}
+          className="text-sm px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+        >
+          + Add Item
+        </button>
+      </div>
+
+      {items.map((item: any, idx: number) => (
+        <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold text-gray-900">Item {idx + 1}</h4>
+            <button
+              onClick={() => removeArrayItem('items', idx)}
+              className="text-red-600 hover:text-red-700 text-sm"
+            >
+              Remove
+            </button>
+          </div>
+
+          {/* Item Title */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Item Title</label>
+            <input
+              type="text"
+              value={item.title || ''}
+              onChange={(e) => updateArrayItem('items', idx, 'title', e.target.value)}
+              placeholder="Item title"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            />
+          </div>
+
+          {/* Item Description */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              value={item.description || ''}
+              onChange={(e) => updateArrayItem('items', idx, 'description', e.target.value)}
+              placeholder="Item description"
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            />
+          </div>
+
+          {/* Image Management */}
+          <div className="bg-white p-3 rounded border border-blue-200">
+            <h5 className="text-xs font-semibold text-gray-900 mb-3">Image Settings</h5>
+
+            {/* Image URL */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Image URL</label>
+              <input
+                type="text"
+                value={item.image_url || ''}
+                onChange={(e) => updateArrayItem('items', idx, 'image_url', e.target.value)}
+                placeholder="https://bucket.supabase.co/image.jpg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              />
+            </div>
+
+            {/* Image Preview */}
+            {item.image_url && (
+              <div className="mb-3 p-2 bg-gray-100 rounded border border-gray-300">
+                <img
+                  src={item.image_url}
+                  alt={item.title}
+                  style={{
+                    width: `${item.image_width || 300}px`,
+                    height: `${item.image_height || 300}px`,
+                    objectFit: 'cover',
+                    margin: '0 auto',
+                    display: 'block'
+                  }}
+                  className="rounded"
+                />
+              </div>
+            )}
+
+            {/* Image Dimensions */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Width (px)</label>
+                <input
+                  type="number"
+                  value={item.image_width || 300}
+                  onChange={(e) => updateArrayItem('items', idx, 'image_width', parseInt(e.target.value) || 300)}
+                  min="100"
+                  max="800"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Height (px)</label>
+                <input
+                  type="number"
+                  value={item.image_height || 300}
+                  onChange={(e) => updateArrayItem('items', idx, 'image_height', parseInt(e.target.value) || 300)}
+                  min="100"
+                  max="800"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Image Position */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Image Position</label>
+              <select
+                value={item.image_position || 'center'}
+                onChange={(e) => updateArrayItem('items', idx, 'image_position', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              >
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
           </div>
         </div>
       ))}
