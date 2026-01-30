@@ -127,7 +127,8 @@ export function PublicNavigation() {
         </div>
 
         {/* Mobile Navigation Links */}
-        {!loading && (\n          <div className="md:hidden pb-4 flex flex-wrap gap-4">
+        {!loading && (
+          <div className="md:hidden pb-4 flex flex-wrap gap-4">
             <button
               onClick={() => navigate('/')}
               className="text-gray-700 hover:text-gray-900 font-medium text-sm transition-colors"
