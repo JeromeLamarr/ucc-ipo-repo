@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Plus, Edit, Trash2, Search, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { PAGE_TEMPLATES, getTemplate } from '../lib/pageTemplates';
 
 interface CMSPage {
   id: string;
@@ -18,6 +19,7 @@ export function PublicPagesManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('blank');
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
@@ -81,22 +83,42 @@ export function PublicPagesManagement() {
     setError(null);
 
     try {
-      const { data, error: err } = await supabase
+      // Create the page
+      const { data: pageData, error: pageErr } = await supabase
         .from('cms_pages')
-        .insert([
-          {
-            title: formData.title.trim(),
-            slug: formData.slug.trim(),
-            is_published: false,
-          },
-        ])
+        .insert([{
+          title: formData.title.trim(),
+          slug: formData.slug.trim(),
+          is_published: false,
+        }])
         .select();
 
-      if (err) throw err;
+      if (pageErr) throw pageErr;
+      if (!pageData || pageData.length === 0) throw new Error('Failed to create page');
 
-      setPages([...pages, ...(data || [])]);
-      setSuccess('Page created successfully');
+      const newPageId = pageData[0].id;
+
+      // Get template and create blocks if not blank
+      const template = getTemplate(selectedTemplate);
+      if (template && template.blocks.length > 0) {
+        const blocksToInsert = template.blocks.map((block, index) => ({
+          page_id: newPageId,
+          section_type: block.section_type,
+          content: block.content,
+          order_index: index,
+        }));
+
+        const { error: blocksErr } = await supabase
+          .from('cms_sections')
+          .insert(blocksToInsert);
+
+        if (blocksErr) throw blocksErr;
+      }
+
+      setPages([...pages, ...pageData]);
+      setSuccess(`Page created successfully with ${selectedTemplate === 'blank' ? 'no' : selectedTemplate} template`);
       setFormData({ title: '', slug: '' });
+      setSelectedTemplate('blank');
       setShowCreateModal(false);
 
       // Clear success message after 3 seconds
@@ -305,47 +327,81 @@ export function PublicPagesManagement() {
       {/* Create Page Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Create New Page</h2>
 
-            <form onSubmit={handleCreatePage} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Page Title *
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., About Us, Terms & Conditions"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={creating}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Page URL *
-                </label>
-                <div className="flex items-center">
-                  <span className="text-gray-500 mr-2">/pages/</span>
+            <form onSubmit={handleCreatePage} className="space-y-6">
+              {/* Page Details */}
+              <div className="space-y-4 pb-6 border-b border-gray-200">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Page Title *
+                  </label>
                   <input
                     type="text"
-                    value={formData.slug}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        slug: e.target.value.toLowerCase().replace(/\s+/g, '-'),
-                      })
-                    }
-                    placeholder="e.g., about-us"
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="e.g., About Us, Terms & Conditions"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={creating}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Use lowercase letters, numbers, and hyphens only
-                </p>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Page URL *
+                  </label>
+                  <div className="flex items-center">
+                    <span className="text-gray-500 mr-2">/pages/</span>
+                    <input
+                      type="text"
+                      value={formData.slug}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          slug: e.target.value.toLowerCase().replace(/\s+/g, '-'),
+                        })
+                      }
+                      placeholder="e.g., about-us"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={creating}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Use lowercase letters, numbers, and hyphens only
+                  </p>
+                </div>
+              </div>
+
+              {/* Template Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Select a Template
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {PAGE_TEMPLATES.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => setSelectedTemplate(template.id)}
+                      disabled={creating}
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${
+                        selectedTemplate === template.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      } disabled:opacity-50`}
+                    >
+                      <div className="text-2xl mb-2">{template.icon}</div>
+                      <h3 className="font-semibold text-gray-900">{template.name}</h3>
+                      <p className="text-xs text-gray-600 mt-1">{template.description}</p>
+                      {template.blocks.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          📦 {template.blocks.length} block{template.blocks.length !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex gap-2 pt-4">
@@ -361,6 +417,7 @@ export function PublicPagesManagement() {
                   onClick={() => {
                     setShowCreateModal(false);
                     setFormData({ title: '', slug: '' });
+                    setSelectedTemplate('blank');
                   }}
                   disabled={creating}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
