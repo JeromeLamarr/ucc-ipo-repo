@@ -200,7 +200,7 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
 function TextSection({ content }: { content: Record<string, any> }) {
   const title = content.title || '';
   const body = content.body || '';
-  const textAlign = content.text_align || 'left';
+  const textStyle = content.text_style || 'default';
 
   if (!title && !body) return null;
 
@@ -221,12 +221,24 @@ function TextSection({ content }: { content: Record<string, any> }) {
     KEEP_CONTENT: true,
   });
 
-  // Map text_align to Tailwind class
-  const alignClass = textAlign === 'right' ? 'text-right' : textAlign === 'center' ? 'text-center' : 'text-left';
+  // Apply intent-based styling
+  const getTextStyleClass = (style: string): string => {
+    switch (style) {
+      case 'intro':
+        return 'text-lg leading-relaxed text-gray-600';
+      case 'emphasized':
+        return 'text-base leading-relaxed bg-blue-50 px-6 py-4 rounded-lg border-l-4 border-blue-500 text-gray-800';
+      default:
+        return 'text-base text-gray-700';
+    }
+  };
+
+  const styleClass = getTextStyleClass(textStyle);
 
   return (
-    <div className="w-full bg-white py-12 px-4">
-      <div className={`max-w-3xl mx-auto ${alignClass}`}>
+    <div className="w-full bg-white py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={`max-w-2xl mx-auto text-section ${styleClass}`}>
         {title && <h2 className="text-2xl font-bold mb-4 text-gray-900">{title}</h2>}
         <div
           className="text-section text-gray-700 text-sm"

@@ -514,23 +514,20 @@ function TextBlockForm({ formData, updateField }: any) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Text Alignment
+          Text Style
         </label>
-        <div className="flex gap-2">
-          {['left', 'center', 'right'].map((align) => (
-            <button
-              key={align}
-              onClick={() => updateField('text_align', align)}
-              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
-                (formData.text_align || 'left') === align
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {align.charAt(0).toUpperCase() + align.slice(1)}
-            </button>
-          ))}
-        </div>
+        <select
+          value={formData.text_style || 'default'}
+          onChange={(e) => updateField('text_style', e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="default">Default</option>
+          <option value="intro">Intro / Lead Text</option>
+          <option value="emphasized">Emphasized Section</option>
+        </select>
+        <p className="text-xs text-gray-500 mt-2">
+          Choose a style to automatically format your text appropriately.
+        </p>
       </div>
 
       <div>
