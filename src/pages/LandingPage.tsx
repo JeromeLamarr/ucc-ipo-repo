@@ -235,6 +235,11 @@ function TextSection({ content }: { content: Record<string, any> }) {
   const body = content.body || '';
   const textStyle = content.text_style || 'default';
 
+  // Detect whether content is already HTML or plain text
+  const isHtmlContent = (text: string): boolean => {
+    return /<[^>]+>/g.test(text);
+  };
+
   // Convert plain text to paragraphs: split by line breaks
   const convertPlainTextToHtml = (text: string): string => {
     return text
@@ -244,11 +249,22 @@ function TextSection({ content }: { content: Record<string, any> }) {
       .join('');
   };
 
-  const htmlBody = convertPlainTextToHtml(body);
+  // Process content: detect HTML vs plain text
+  const processTextContent = (text: string): string => {
+    if (isHtmlContent(text)) {
+      // Existing HTML content - use as-is (backward compatible)
+      return text;
+    } else {
+      // New plain text - convert to HTML paragraphs
+      return convertPlainTextToHtml(text);
+    }
+  };
+
+  const htmlBody = processTextContent(body);
 
   const sanitizedBody = DOMPurify.sanitize(htmlBody, {
-    ALLOWED_TAGS: ['p', 'br'],
-    ALLOWED_ATTR: [],
+    ALLOWED_TAGS: ['p', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'li', 'ol', 'strong', 'em', 'b', 'i', 'a'],
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
     KEEP_CONTENT: true,
   });
 
