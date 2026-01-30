@@ -781,8 +781,8 @@ function CTABlockForm({ formData, updateField }: any) {
 
 function GalleryBlockForm({ formData, updateField, addArrayItem, removeArrayItem, updateArrayItem }: any) {
   const images = Array.isArray(formData.images) ? formData.images : [];
-  const [draggedImageIdx, setDraggedImageIdx] = React.useState<number | null>(null);
-  const [isDragging, setIsDragging] = React.useState(false);
+  const [draggedImageIdx, setDraggedImageIdx] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleImageDragStart = (idx: number, e: React.MouseEvent<HTMLDivElement>) => {
     setDraggedImageIdx(idx);
