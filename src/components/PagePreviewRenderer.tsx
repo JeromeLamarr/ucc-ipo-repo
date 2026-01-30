@@ -203,14 +203,32 @@ function TextSection({ content }: { content: Record<string, any> }) {
       <div className="max-w-3xl mx-auto text-center">
         {title && <h2 className="text-2xl font-bold mb-4 text-gray-900">{title}</h2>}
         <div
-          className="text-section text-gray-700 space-y-3 text-sm"
+          className="text-section text-gray-700 text-sm"
+          style={{
+            lineHeight: '1.7',
+          }}
           dangerouslySetInnerHTML={{ __html: sanitizedBody }}
         />
         <style>{`
-          .text-section h3 { font-size: 1.25rem; color: #1e40af; font-weight: bold; margin-top: 1rem; margin-bottom: 0.5rem; }
-          .text-section p { margin-bottom: 0.75rem; }
-          .text-section ul, .text-section ol { margin-left: 1.25rem; margin-bottom: 0.75rem; }
-          .text-section li { margin-bottom: 0.25rem; }
+          .text-section h1, .text-section h2, .text-section h3, .text-section h4, .text-section h5, .text-section h6 {
+            font-weight: 700;
+            line-height: 1.3;
+            color: #1f2937;
+          }
+          .text-section h1 { font-size: 1.875rem; margin-top: 1.75rem; margin-bottom: 1rem; }
+          .text-section h2 { font-size: 1.5rem; margin-top: 1.5rem; margin-bottom: 0.875rem; }
+          .text-section h3 { font-size: 1.25rem; color: #1e40af; margin-top: 1.25rem; margin-bottom: 0.75rem; }
+          .text-section h4 { font-size: 1.125rem; margin-top: 1rem; margin-bottom: 0.625rem; font-weight: 600; }
+          .text-section h5 { font-size: 1rem; margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; }
+          .text-section h6 { font-size: 0.95rem; margin-top: 0.875rem; margin-bottom: 0.5rem; font-weight: 600; }
+          .text-section p { margin-bottom: 1rem; text-align: left; }
+          .text-section p:first-child { margin-top: 0; }
+          .text-section ul, .text-section ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+          .text-section li { margin-bottom: 0.5rem; text-align: left; }
+          .text-section a { color: #1e40af; text-decoration: underline; font-weight: 500; }
+          .text-section a:hover { color: #1e3a8a; }
+          .text-section strong { font-weight: 700; }
+          .text-section em { font-style: italic; }
         `}</style>
       </div>
     </div>
