@@ -310,19 +310,10 @@ function GallerySection({ content }: { content: Record<string, any> }) {
 }
 
 function Footer({ settings }: { settings: SiteSettings }) {
-  const navigate = useNavigate();
   return (
     <footer className="bg-gray-900 text-white py-12 mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-6 mb-8">
-          <p className="text-gray-400">© 2026 {settings.site_name}. All rights reserved.</p>
-          <button
-            onClick={() => navigate('/')}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-          >
-            Home
-          </button>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <p className="text-gray-400">© 2026 {settings.site_name}. All rights reserved.</p>
       </div>
     </footer>
   );
@@ -336,6 +327,15 @@ function DefaultLandingPage({ navigate, settings }: { navigate: any; settings: S
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <PublicNavigation />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex justify-end mb-4">
+        <button
+          onClick={() => navigate('/')}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+        >
+          Home
+        </button>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
