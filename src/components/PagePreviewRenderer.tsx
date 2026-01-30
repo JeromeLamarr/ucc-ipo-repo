@@ -204,9 +204,20 @@ function TextSection({ content }: { content: Record<string, any> }) {
 
   if (!title && !body) return null;
 
-  const sanitizedBody = DOMPurify.sanitize(body, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
+  // Convert plain text to paragraphs: split by line breaks
+  const convertPlainTextToHtml = (text: string): string => {
+    return text
+      .split('\n')
+      .filter((line) => line.trim() !== '')
+      .map((line) => `<p>${line.trim()}</p>`)
+      .join('');
+  };
+
+  const htmlBody = convertPlainTextToHtml(body);
+
+  const sanitizedBody = DOMPurify.sanitize(htmlBody, {
+    ALLOWED_TAGS: ['p', 'br'],
+    ALLOWED_ATTR: [],
     KEEP_CONTENT: true,
   });
 
@@ -225,25 +236,10 @@ function TextSection({ content }: { content: Record<string, any> }) {
           dangerouslySetInnerHTML={{ __html: sanitizedBody }}
         />
         <style>{`
-          .text-section h1, .text-section h2, .text-section h3, .text-section h4, .text-section h5, .text-section h6 {
-            font-weight: 700;
-            line-height: 1.3;
-            color: #1f2937;
-          }
-          .text-section h1 { font-size: 1.875rem; margin-top: 1.75rem; margin-bottom: 1rem; }
-          .text-section h2 { font-size: 1.5rem; margin-top: 1.5rem; margin-bottom: 0.875rem; }
-          .text-section h3 { font-size: 1.25rem; color: #1e40af; margin-top: 1.25rem; margin-bottom: 0.75rem; }
-          .text-section h4 { font-size: 1.125rem; margin-top: 1rem; margin-bottom: 0.625rem; font-weight: 600; }
-          .text-section h5 { font-size: 1rem; margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; }
-          .text-section h6 { font-size: 0.95rem; margin-top: 0.875rem; margin-bottom: 0.5rem; font-weight: 600; }
-          .text-section p { margin-bottom: 1rem; text-align: left; }
+          .text-section p { margin-bottom: 1rem; }
           .text-section p:first-child { margin-top: 0; }
-          .text-section ul, .text-section ol { margin-left: 1.5rem; margin-bottom: 1rem; }
-          .text-section li { margin-bottom: 0.5rem; text-align: left; }
           .text-section a { color: #1e40af; text-decoration: underline; font-weight: 500; }
           .text-section a:hover { color: #1e3a8a; }
-          .text-section strong { font-weight: 700; }
-          .text-section em { font-style: italic; }
         `}</style>
       </div>
     </div>

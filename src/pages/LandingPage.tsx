@@ -235,9 +235,20 @@ function TextSection({ content }: { content: Record<string, any> }) {
   const body = content.body || '';
   const textAlign = content.text_align || 'left';
 
-  const sanitizedBody = DOMPurify.sanitize(body, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
+  // Convert plain text to paragraphs: split by line breaks
+  const convertPlainTextToHtml = (text: string): string => {
+    return text
+      .split('\n')
+      .filter((line) => line.trim() !== '')
+      .map((line) => `<p>${line.trim()}</p>`)
+      .join('');
+  };
+
+  const htmlBody = convertPlainTextToHtml(body);
+
+  const sanitizedBody = DOMPurify.sanitize(htmlBody, {
+    ALLOWED_TAGS: ['p', 'br'],
+    ALLOWED_ATTR: [],
     KEEP_CONTENT: true,
   });
 
@@ -257,116 +268,12 @@ function TextSection({ content }: { content: Record<string, any> }) {
             dangerouslySetInnerHTML={{ __html: sanitizedBody }}
           />
           <style>{`
-            .text-section h1 {
-              font-size: 2.25rem;
-              font-weight: 700;
-              color: #111827;
-              margin-top: 2.5rem;
-              margin-bottom: 1.25rem;
-              line-height: 1.3;
-              letter-spacing: -0.5px;
-            }
-            .text-section h2 {
-              font-size: 1.875rem;
-              font-weight: 700;
-              color: #1f2937;
-              margin-top: 2rem;
-              margin-bottom: 1rem;
-              line-height: 1.3;
-              letter-spacing: -0.3px;
-            }
-            .text-section h3 {
-              font-size: 1.5rem;
-              font-weight: 700;
-              color: #1e40af;
-              margin-top: 1.75rem;
-              margin-bottom: 0.875rem;
-              line-height: 1.4;
-              letter-spacing: -0.2px;
-            }
-            .text-section h4 {
-              font-size: 1.25rem;
-              font-weight: 600;
-              color: #374151;
-              margin-top: 1.5rem;
-              margin-bottom: 0.75rem;
-              line-height: 1.4;
-            }
-            .text-section h5 {
-              font-size: 1.125rem;
-              font-weight: 600;
-              color: #374151;
-              margin-top: 1.25rem;
-              margin-bottom: 0.625rem;
-              line-height: 1.4;
-            }
-            .text-section h6 {
-              font-size: 1rem;
-              font-weight: 600;
-              color: #374151;
-              margin-top: 1rem;
-              margin-bottom: 0.5rem;
-              line-height: 1.5;
-            }
             .text-section p {
               margin-bottom: 1.125rem;
               text-align: left;
             }
             .text-section p:first-child {
               margin-top: 0;
-            }
-            .text-section ul, .text-section ol {
-              margin-left: 1.75rem;
-              margin-bottom: 1.125rem;
-              list-style-position: outside;
-            }
-            .text-section li {
-              margin-bottom: 0.625rem;
-              text-align: left;
-            }
-            .text-section a {
-              color: #1e40af;
-              text-decoration: underline;
-              font-weight: 500;
-              transition: color 0.2s ease;
-            }
-            .text-section a:hover {
-              color: #1e3a8a;
-            }
-            .text-section strong {
-              font-weight: 700;
-              color: #1f2937;
-            }
-            .text-section em {
-              font-style: italic;
-            }
-            .text-section blockquote {
-              border-left: 4px solid #dbeafe;
-              padding-left: 1.25rem;
-              margin-left: 0;
-              margin-top: 1.5rem;
-              margin-bottom: 1.5rem;
-              color: #4b5563;
-              font-style: italic;
-            }
-            .text-section code {
-              background-color: #f3f4f6;
-              padding: 0.25rem 0.5rem;
-              border-radius: 0.375rem;
-              font-family: monospace;
-              font-size: 0.9em;
-              color: #d97706;
-            }
-            .text-section pre {
-              background-color: #1f2937;
-              color: #e5e7eb;
-              padding: 1rem;
-              border-radius: 0.5rem;
-              overflow-x: auto;
-              margin-top: 1.125rem;
-              margin-bottom: 1.125rem;
-              font-family: monospace;
-              font-size: 0.875rem;
             }
           `}</style>
         </div>

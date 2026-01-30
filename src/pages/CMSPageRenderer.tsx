@@ -467,11 +467,22 @@ function TextSection({ content }: { content: Record<string, any> }) {
     return null;
   }
 
+  // Convert plain text to paragraphs: split by double line breaks or single line breaks
+  const convertPlainTextToHtml = (text: string): string => {
+    return text
+      .split('\n')
+      .filter((line) => line.trim() !== '')
+      .map((line) => `<p>${line.trim()}</p>`)
+      .join('');
+  };
+
+  const htmlBody = convertPlainTextToHtml(body);
+
   // Sanitize HTML to prevent XSS attacks while preserving basic formatting
   // This whitelist only allows safe, formatting-related tags and the href attribute for links
-  const sanitizedBody = DOMPurify.sanitize(body, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'li', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
+  const sanitizedBody = DOMPurify.sanitize(htmlBody, {
+    ALLOWED_TAGS: ['p', 'br'],
+    ALLOWED_ATTR: [],
     KEEP_CONTENT: true,
   });
 
