@@ -286,6 +286,12 @@ export function PublicPagesManagement() {
             />
           </div>
           <button
+            onClick={() => navigate('/')}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors"
+          >
+            Home
+          </button>
+          <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
           >
