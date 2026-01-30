@@ -181,17 +181,30 @@ function StepsSection({ content }: { content: Record<string, any> }) {
   const title = content.title || '';
   const steps = content.steps || [];
 
+  if (steps.length === 0) return null;
+
+  // Adaptive grid layout based on step count
+  const getGridClass = (count: number): string => {
+    if (count === 1) return 'flex justify-center';
+    if (count === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto';
+    if (count === 3) return 'grid grid-cols-1 md:grid-cols-3 gap-6';
+    if (count === 4) return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6';
+    if (count === 5 || count === 6) return 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6';
+    // 7+ steps: wrap intelligently
+    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       {title && <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">{title}</h2>}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={getGridClass(steps.length)}>
         {steps.map((step: any, index: number) => (
           <div key={index} className="text-center">
             <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto mb-4 text-lg font-bold">
-              {step.number}
+              {step.number || index + 1}
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">{step.label}</h3>
-            <p className="text-gray-600 text-sm">{step.description}</p>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">{step.label || `Step ${index + 1}`}</h3>
+            <p className="text-gray-600 text-sm">{step.description || ''}</p>
           </div>
         ))}
       </div>

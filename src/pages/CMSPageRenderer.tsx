@@ -362,13 +362,24 @@ function StepsSection({ content, settings }: { content: Record<string, any>; set
     return null;
   }
 
+  // Adaptive grid layout based on step count
+  const getGridClass = (count: number): string => {
+    if (count === 1) return 'flex justify-center';
+    if (count === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto';
+    if (count === 3) return 'grid grid-cols-1 md:grid-cols-3 gap-6';
+    if (count === 4) return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6';
+    if (count === 5 || count === 6) return 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6';
+    // 7+ steps: wrap intelligently
+    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="bg-white rounded-xl shadow-lg p-12">
         {title && (
           <h2 className="text-3xl font-bold text-center mb-8">{title}</h2>
         )}
-        <div className="grid md:grid-cols-4 gap-6">
+        <div className={getGridClass(steps.length)}>
           {steps.map((step: Record<string, any>, idx: number) => {
             // Ensure step is an object
             if (!step || typeof step !== 'object') {
