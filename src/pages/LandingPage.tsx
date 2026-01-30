@@ -269,10 +269,10 @@ function TextSection({ content }: { content: Record<string, any> }) {
   return (
     <div className="w-full bg-white py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`max-w-3xl mx-auto ${styleClass}`}>
-          {title && <h2 className="text-3xl font-bold mb-6 text-gray-900">{title}</h2>}
+        <div className={`max-w-2xl mx-auto ${styleClass}`}>
+          {title && <h2 className="text-2xl md:text-3xl font-bold mb-8 text-gray-900">{title}</h2>}
           <div
-            className="text-section text-gray-700"
+            className="text-section prose prose-sm max-w-none"
             style={{
               lineHeight: '1.8',
             }}
@@ -280,11 +280,15 @@ function TextSection({ content }: { content: Record<string, any> }) {
           />
           <style>{`
             .text-section p {
-              margin-bottom: 1.125rem;
+              margin-bottom: 1.25rem;
               text-align: left;
+              word-break: break-word;
             }
             .text-section p:first-child {
               margin-top: 0;
+            }
+            .text-section p:last-child {
+              margin-bottom: 0;
             }
           `}</style>
         </div>

@@ -503,15 +503,14 @@ function TextSection({ content }: { content: Record<string, any> }) {
   return (
     <div className="w-full bg-white py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`max-w-3xl mx-auto text-section ${styleClass}`}>
+        <div className={`max-w-2xl mx-auto text-section ${styleClass}`}>
           {title && (
-            <h2 className="text-3xl font-bold mb-6 text-gray-900">{title}</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-8 text-gray-900">{title}</h2>
           )}
           {body && (
             <div
-              className="text-gray-700"
+              className="prose prose-sm max-w-none"
               style={{
-                fontSize: '16px',
                 lineHeight: '1.8',
               }}
               dangerouslySetInnerHTML={{ __html: sanitizedBody }}
@@ -570,11 +569,15 @@ function TextSection({ content }: { content: Record<string, any> }) {
             line-height: 1.5;
           }
           .text-section p {
-            margin-bottom: 1.125rem;
+            margin-bottom: 1.25rem;
             text-align: left;
+            word-break: break-word;
           }
           .text-section p:first-child {
             margin-top: 0;
+          }
+          .text-section p:last-child {
+            margin-bottom: 0;
           }
           .text-section ul, .text-section ol {
             margin-left: 1.75rem;
