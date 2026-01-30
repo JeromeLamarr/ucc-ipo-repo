@@ -80,9 +80,15 @@ export function PublicNavigation() {
           </button>
 
           {/* Center Navigation Links */}
-          {!loading && pages.length > 0 && (
-            <div className="hidden md:flex gap-6">
-              {pages.map((page) => (
+          {!loading && (
+            <div className="hidden md:flex gap-6 items-center">
+              <button
+                onClick={() => navigate('/')}
+                className="text-gray-700 hover:text-gray-900 font-medium transition-colors"
+              >
+                Home
+              </button>
+              {pages.length > 0 && pages.map((page) => (
                 <a
                   key={page.slug}
                   href={`/pages/${page.slug}`}
@@ -121,9 +127,14 @@ export function PublicNavigation() {
         </div>
 
         {/* Mobile Navigation Links */}
-        {!loading && pages.length > 0 && (
-          <div className="md:hidden pb-4 flex flex-wrap gap-4">
-            {pages.map((page) => (
+        {!loading && (\n          <div className="md:hidden pb-4 flex flex-wrap gap-4">
+            <button
+              onClick={() => navigate('/')}
+              className="text-gray-700 hover:text-gray-900 font-medium text-sm transition-colors"
+            >
+              Home
+            </button>
+            {pages.length > 0 && pages.map((page) => (
               <a
                 key={page.slug}
                 href={`/pages/${page.slug}`}
