@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Plus, Trash2, Edit, AlertCircle, ChevronLeft, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Edit, AlertCircle, AlertTriangle, ChevronLeft, GripVertical, Copy } from 'lucide-react';
 import { CMSSectionEditor } from '../components/CMSSectionEditor';
 import { BlockTypePicker } from '../components/BlockTypePicker';
 import { PagePreviewRenderer } from '../components/PagePreviewRenderer';
@@ -110,6 +110,11 @@ export function PageSectionsManagement() {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
+  // New features state
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
   useEffect(() => {
     if (pageId) {
       fetchPageAndSections();
@@ -175,6 +180,7 @@ export function PageSectionsManagement() {
       if (err) throw err;
 
       setSections([...sections, ...(data || [])]);
+      setHasUnsavedChanges(true); // Mark as unsaved until published
       setSuccess('Section created successfully');
       setShowCreateModal(false);
       setSelectedSectionType('hero');
@@ -213,6 +219,7 @@ export function PageSectionsManagement() {
         )
       );
 
+      setHasUnsavedChanges(true); // Mark as unsaved until published
       setSuccess('Block saved successfully');
       setShowEditModal(false);
       setEditingSection(null);
@@ -227,8 +234,6 @@ export function PageSectionsManagement() {
   };
 
   const handleDeleteSection = async (sectionId: string) => {
-    if (!confirm('Are you sure you want to delete this section?')) return;
-
     setDeleting(sectionId);
     setError(null);
 
@@ -242,6 +247,7 @@ export function PageSectionsManagement() {
 
       setSections(sections.filter((s) => s.id !== sectionId));
       setSuccess('Section deleted successfully');
+      setShowDeleteConfirm(null);
 
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
@@ -250,6 +256,55 @@ export function PageSectionsManagement() {
     } finally {
       setDeleting(null);
     }
+  };
+
+  const handleDuplicateSection = async (section: CMSSection) => {
+    if (!pageId) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const newOrderIndex = Math.max(...sections.map(s => s.order_index)) + 1;
+
+      const { data, error: err } = await supabase
+        .from('cms_sections')
+        .insert([
+          {
+            page_id: pageId,
+            section_type: section.section_type,
+            content: JSON.parse(JSON.stringify(section.content)), // Deep clone
+            order_index: newOrderIndex,
+          },
+        ])
+        .select();
+
+      if (err) throw err;
+
+      setSections([...sections, ...(data || [])]);
+      setSuccess('Block duplicated successfully');
+
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error duplicating section:', err);
+      setError(err.message || 'Failed to duplicate block');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleNavigateBack = () => {
+    if (hasUnsavedChanges) {
+      setShowExitConfirm(true);
+    } else {
+      navigate('/dashboard/public-pages');
+    }
+  };
+
+  const handleConfirmNavigateBack = () => {
+    setHasUnsavedChanges(false);
+    setShowExitConfirm(false);
+    navigate('/dashboard/public-pages');
   };
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, sectionId: string) => {
@@ -347,14 +402,28 @@ export function PageSectionsManagement() {
       <div className="border-b border-gray-200 bg-white p-4 sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/dashboard/public-pages')}
+            onClick={handleNavigateBack}
             className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
           >
             <ChevronLeft className="h-5 w-5" />
             Back
           </button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">{page.title}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900">{page.title}</h1>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                page.is_published
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-gray-100 text-gray-700'
+              }`}>
+                {page.is_published ? '✓ Published' : '✎ Draft'}
+              </span>
+              {hasUnsavedChanges && (
+                <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-700 flex items-center gap-1">
+                  <span className="animate-pulse">●</span> Unsaved changes
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-600">Edit blocks • Changes preview in real-time</p>
           </div>
         </div>
@@ -431,15 +500,23 @@ export function PageSectionsManagement() {
                         <button
                           onClick={() => handleEditSection(section)}
                           className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
-                          title="Edit"
+                          title="Edit block"
                         >
                           <Edit className="h-5 w-5" />
                         </button>
                         <button
-                          onClick={() => handleDeleteSection(section.id)}
+                          onClick={() => handleDuplicateSection(section)}
+                          disabled={saving}
+                          className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors disabled:opacity-50"
+                          title="Duplicate block"
+                        >
+                          <Copy className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(section.id)}
                           disabled={deleting === section.id}
                           className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors disabled:opacity-50"
-                          title="Delete"
+                          title="Delete block"
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>
@@ -523,6 +600,70 @@ export function PageSectionsManagement() {
               }}
               saving={saving}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
+              Delete Block?
+            </h3>
+            <p className="text-sm text-gray-600 text-center mb-6">
+              This action cannot be undone. The block will be permanently deleted from this page.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                disabled={deleting === showDeleteConfirm}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => showDeleteConfirm && handleDeleteSection(showDeleteConfirm)}
+                disabled={deleting === showDeleteConfirm}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50"
+              >
+                {deleting === showDeleteConfirm ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-yellow-100 rounded-full mb-4">
+              <AlertTriangle className="h-6 w-6 text-yellow-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
+              Unsaved Changes
+            </h3>
+            <p className="text-sm text-gray-600 text-center mb-6">
+              You have unsaved changes. Do you want to save before leaving?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+              >
+                Keep Editing
+              </button>
+              <button
+                onClick={handleConfirmNavigateBack}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Leave Without Saving
+              </button>
+            </div>
           </div>
         </div>
       )}

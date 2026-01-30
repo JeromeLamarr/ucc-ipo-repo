@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Plus, Edit, Trash2, Search, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { PAGE_TEMPLATES, getTemplate } from '../lib/pageTemplates';
+import { canPublishPage } from '../lib/sectionValidation';
 
 interface CMSPage {
   id: string;
@@ -29,6 +30,8 @@ export function PublicPagesManagement() {
     title: '',
     slug: '',
   });
+  // Track validation errors for each page
+  const [pageValidationErrors, setPageValidationErrors] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     fetchPages();
@@ -47,8 +50,32 @@ export function PublicPagesManagement() {
         .order('created_at', { ascending: false });
 
       if (err) throw err;
-      setPages(data || []);
+      const pagesData = (data || []) as CMSPage[];
+      setPages(pagesData);
       setError(null);
+
+      // For each draft page, fetch sections and validate
+      if (pagesData) {
+        const validationMap: Record<string, string[]> = {};
+
+        for (const page of pagesData) {
+          if (!page.is_published) {
+            const { data: sections, error: sectionsErr } = await supabase
+              .from('cms_sections')
+              .select('*')
+              .eq('page_id', page.id);
+
+            if (!sectionsErr && sections) {
+              const validation = canPublishPage(sections as any[]);
+              if (!validation.canPublish) {
+                validationMap[page.id] = validation.issues;
+              }
+            }
+          }
+        }
+
+        setPageValidationErrors(validationMap);
+      }
     } catch (err: any) {
       console.error('Error fetching pages:', err);
       setError(err.message || 'Failed to fetch pages');
@@ -90,13 +117,13 @@ export function PublicPagesManagement() {
           title: formData.title.trim(),
           slug: formData.slug.trim(),
           is_published: false,
-        }])
+        }] as any)
         .select();
 
       if (pageErr) throw pageErr;
       if (!pageData || pageData.length === 0) throw new Error('Failed to create page');
 
-      const newPageId = pageData[0].id;
+      const newPageId = (pageData[0] as CMSPage).id;
 
       // Get template and create blocks if not blank
       const template = getTemplate(selectedTemplate);
@@ -110,12 +137,12 @@ export function PublicPagesManagement() {
 
         const { error: blocksErr } = await supabase
           .from('cms_sections')
-          .insert(blocksToInsert);
+          .insert(blocksToInsert as any);
 
         if (blocksErr) throw blocksErr;
       }
 
-      setPages([...pages, ...pageData]);
+      setPages([...pages, ...(pageData as CMSPage[])]);
       setSuccess(`Page created successfully with ${selectedTemplate === 'blank' ? 'no' : selectedTemplate} template`);
       setFormData({ title: '', slug: '' });
       setSelectedTemplate('blank');
@@ -132,14 +159,43 @@ export function PublicPagesManagement() {
   };
 
   const handleTogglePublish = async (pageId: string, currentStatus: boolean) => {
-    setToggling(pageId);
-    setError(null);
+    // If trying to publish (not unpublish), validate first
+    if (!currentStatus) {
+      setToggling(pageId);
+      setError(null);
+
+      try {
+        // Fetch all sections for this page
+        const { data: sections, error: sectionsErr } = await supabase
+          .from('cms_sections')
+          .select('*')
+          .eq('page_id', pageId);
+
+        if (sectionsErr) throw sectionsErr;
+
+        // Check if page can be published
+        const validation = canPublishPage(sections || []);
+
+        if (!validation.canPublish) {
+          setError(
+            `Cannot publish: ${validation.issues[0]} (${validation.issues.length} issue${validation.issues.length !== 1 ? 's' : ''})`
+          );
+          setToggling(null);
+          return;
+        }
+      } catch (err: any) {
+        console.error('Error validating page:', err);
+        setError(err.message || 'Failed to validate page');
+        setToggling(null);
+        return;
+      }
+    }
 
     try {
-      const { error: err } = await supabase
+      const { error: err } = await (supabase
         .from('cms_pages')
         .update({ is_published: !currentStatus })
-        .eq('id', pageId);
+        .eq('id', pageId) as any);
 
       if (err) throw err;
 
@@ -272,15 +328,22 @@ export function PublicPagesManagement() {
                       </code>
                     </td>
                     <td className="py-3 px-4">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                          page.is_published
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {page.is_published ? 'Published' : 'Draft'}
-                      </span>
+                      <div className="space-y-1">
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                            page.is_published
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {page.is_published ? 'Published' : 'Draft'}
+                        </span>
+                        {!page.is_published && pageValidationErrors[page.id]?.length && (
+                          <div className="text-xs text-red-600 flex items-center gap-1">
+                            <span>⚠ {pageValidationErrors[page.id].length} issues</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
                       {formatDate(page.created_at)}
@@ -297,8 +360,18 @@ export function PublicPagesManagement() {
                         <button
                           onClick={() => handleTogglePublish(page.id, page.is_published)}
                           disabled={toggling === page.id}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors disabled:opacity-50"
-                          title={page.is_published ? 'Unpublish' : 'Publish'}
+                          className={`p-2 rounded-lg transition-colors ${
+                            !page.is_published && pageValidationErrors[page.id]?.length
+                              ? 'text-gray-400 hover:bg-gray-50 cursor-not-allowed'
+                              : 'text-blue-600 hover:bg-blue-50 disabled:opacity-50'
+                          }`}
+                          title={
+                            !page.is_published && pageValidationErrors[page.id]?.length
+                              ? `Cannot publish: ${pageValidationErrors[page.id][0]}`
+                              : page.is_published
+                              ? 'Unpublish'
+                              : 'Publish'
+                          }
                         >
                           {page.is_published ? (
                             <Eye className="h-5 w-5" />

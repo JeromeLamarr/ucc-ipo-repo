@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
-import { BACKGROUND_PRESETS, BUTTON_PRESETS, ICON_COLOR_PRESETS, findPresetName } from '../lib/stylePresets';
+import { useState, useMemo } from 'react';
+import { X, AlertCircle } from 'lucide-react';
+import { BACKGROUND_PRESETS, ICON_COLOR_PRESETS, findPresetName } from '../lib/stylePresets';
+import { validateSection, formatFieldName } from '../lib/sectionValidation';
 
 interface CMSSection {
   id: string;
@@ -19,9 +20,20 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
   const [formData, setFormData] = useState(section.content);
   const [error, setError] = useState<string | null>(null);
 
+  // Validate in real-time
+  const validation = useMemo(() => {
+    return validateSection(section.section_type, formData);
+  }, [formData, section.section_type]);
+
   const handleSave = async () => {
     setError(null);
     
+    // Check for hard errors (cannot save with these)
+    if (!validation.isValid) {
+      setError(`Cannot save: ${validation.errors[0]?.message || 'Please fix validation errors'}`);
+      return;
+    }
+
     // Basic validation
     if (!formData || Object.keys(formData).length === 0) {
       setError('Please fill in at least one field');
@@ -60,9 +72,45 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
 
   return (
     <div className="space-y-6">
+      {/* Main Error Message */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex gap-2">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+          <div>{error}</div>
+        </div>
+      )}
+
+      {/* Validation Errors (Blocking) */}
+      {validation.errors.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <h4 className="font-semibold text-red-900">Required fields are missing</h4>
+          </div>
+          <ul className="space-y-2">
+            {validation.errors.map((err, idx) => (
+              <li key={idx} className="text-sm text-red-700">
+                <span className="font-medium">• {formatFieldName(err.field)}:</span> {err.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Validation Warnings (Non-blocking) */}
+      {validation.warnings.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600" />
+            <h4 className="font-semibold text-yellow-900">Content warnings</h4>
+          </div>
+          <ul className="space-y-2">
+            {validation.warnings.map((warn, idx) => (
+              <li key={idx} className="text-sm text-yellow-700">
+                <span className="font-medium">⚠ {formatFieldName(warn.field)}:</span> {warn.message}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -120,8 +168,9 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
       <div className="flex gap-2 pt-4 border-t border-gray-200">
         <button
           onClick={handleSave}
-          disabled={saving}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+          disabled={saving || !validation.isValid}
+          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          title={!validation.isValid ? 'Fix validation errors before saving' : undefined}
         >
           {saving ? 'Saving...' : 'Save Block'}
         </button>
@@ -142,21 +191,40 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
 // ============================================================================
 
 function HeroBlockForm({ formData, updateField }: any) {
+  const validation = useMemo(() => {
+    return validateSection('hero', formData);
+  }, [formData]);
+
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Main Headline *
+      {/* Headline - Required */}
+      <div className={validation.errors.some(e => e.field === 'headline') ? 'p-3 rounded-lg bg-red-50 border border-red-200' : ''}>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          Main Headline
+          <span className="text-red-600 font-bold">*</span>
+          {validation.errors.some(e => e.field === 'headline') && (
+            <span className="text-red-600 text-xs font-semibold">ERROR</span>
+          )}
         </label>
         <input
           type="text"
           value={formData.headline || ''}
           onChange={(e) => updateField('headline', e.target.value)}
           placeholder="e.g., Welcome to UCC IP Office"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+            validation.errors.some(e => e.field === 'headline')
+              ? 'border-red-300 bg-white focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500'
+          }`}
         />
+        {validation.errors.find(e => e.field === 'headline') && (
+          <p className="text-xs text-red-600 mt-2 font-medium">
+            ✗ {validation.errors.find(e => e.field === 'headline')?.message}
+          </p>
+        )}
       </div>
 
+      {/* Highlighted Text - Optional */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Highlighted Text (optional)
@@ -171,43 +239,88 @@ function HeroBlockForm({ formData, updateField }: any) {
         <p className="text-xs text-gray-500 mt-1">This text will appear in the primary color</p>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Subheadline *
+      {/* Subheadline - Required */}
+      <div className={validation.errors.some(e => e.field === 'subheadline') ? 'p-3 rounded-lg bg-red-50 border border-red-200' : ''}>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          Subheadline
+          <span className="text-red-600 font-bold">*</span>
+          {validation.errors.some(e => e.field === 'subheadline') && (
+            <span className="text-red-600 text-xs font-semibold">ERROR</span>
+          )}
         </label>
         <textarea
           value={formData.subheadline || ''}
           onChange={(e) => updateField('subheadline', e.target.value)}
           placeholder="Brief description of your page"
           rows={2}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+            validation.errors.some(e => e.field === 'subheadline')
+              ? 'border-red-300 bg-white focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500'
+          }`}
         />
+        {validation.errors.find(e => e.field === 'subheadline') && (
+          <p className="text-xs text-red-600 mt-2 font-medium">
+            ✗ {validation.errors.find(e => e.field === 'subheadline')?.message}
+          </p>
+        )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Button Text *
+      {/* Button Text - Required */}
+      <div className={validation.errors.some(e => e.field === 'cta_text') ? 'p-3 rounded-lg bg-red-50 border border-red-200' : ''}>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          Button Text
+          <span className="text-red-600 font-bold">*</span>
+          {validation.errors.some(e => e.field === 'cta_text') && (
+            <span className="text-red-600 text-xs font-semibold">ERROR</span>
+          )}
         </label>
         <input
           type="text"
           value={formData.cta_text || ''}
           onChange={(e) => updateField('cta_text', e.target.value)}
           placeholder="e.g., Get Started"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+            validation.errors.some(e => e.field === 'cta_text')
+              ? 'border-red-300 bg-white focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500'
+          }`}
         />
+        {validation.errors.find(e => e.field === 'cta_text') && (
+          <p className="text-xs text-red-600 mt-2 font-medium">
+            ✗ {validation.errors.find(e => e.field === 'cta_text')?.message}
+          </p>
+        )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Button Link *
+      {/* Button Link - Required + Validation */}
+      <div className={validation.errors.some(e => e.field === 'cta_link') ? 'p-3 rounded-lg bg-red-50 border border-red-200' : ''}>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          Button Link
+          <span className="text-red-600 font-bold">*</span>
+          {validation.errors.some(e => e.field === 'cta_link') && (
+            <span className="text-red-600 text-xs font-semibold">ERROR</span>
+          )}
         </label>
         <input
           type="text"
           value={formData.cta_link || ''}
           onChange={(e) => updateField('cta_link', e.target.value)}
           placeholder="e.g., /register"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+            validation.errors.some(e => e.field === 'cta_link')
+              ? 'border-red-300 bg-white focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500'
+          }`}
         />
+        {validation.errors.find(e => e.field === 'cta_link') && (
+          <p className="text-xs text-red-600 mt-2 font-medium">
+            ✗ {validation.errors.find(e => e.field === 'cta_link')?.message}
+          </p>
+        )}
+        {!validation.errors.find(e => e.field === 'cta_link') && (
+          <p className="text-xs text-gray-500 mt-1">Use "/" for internal links (/register) or full URL (https://...)</p>
+        )}
       </div>
     </div>
   );
@@ -217,7 +330,7 @@ function HeroBlockForm({ formData, updateField }: any) {
 // Features Block Form
 // ============================================================================
 
-function FeaturesBlockForm({ formData, updateField, addArrayItem, removeArrayItem, updateArrayItem }: any) {
+function FeaturesBlockForm({ formData, addArrayItem, removeArrayItem, updateArrayItem }: any) {
   const features = Array.isArray(formData.features) ? formData.features : [];
 
   return (
@@ -459,6 +572,7 @@ function CategoriesBlockForm({ formData, updateField, addArrayItem, removeArrayI
             <button
               onClick={() => removeArrayItem('categories', idx)}
               className="px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg"
+              title="Remove category"
             >
               <X className="h-4 w-4" />
             </button>
@@ -475,38 +589,73 @@ function CategoriesBlockForm({ formData, updateField, addArrayItem, removeArrayI
 
 function CTABlockForm({ formData, updateField }: any) {
   const selectedBg = findPresetName('background', formData.background_color) || 'Custom';
+  const validation = useMemo(() => {
+    return validateSection('cta', formData);
+  }, [formData]);
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Heading *
+      {/* Heading - Required */}
+      <div className={validation.errors.some(e => e.field === 'heading') ? 'p-3 rounded-lg bg-red-50 border border-red-200' : ''}>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          Heading
+          <span className="text-red-600 font-bold">*</span>
+          {validation.errors.some(e => e.field === 'heading') && (
+            <span className="text-red-600 text-xs font-semibold">ERROR</span>
+          )}
         </label>
         <input
           type="text"
           value={formData.heading || ''}
           onChange={(e) => updateField('heading', e.target.value)}
           placeholder="e.g., Start Your Journey Today"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+            validation.errors.some(e => e.field === 'heading')
+              ? 'border-red-300 bg-white focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500'
+          }`}
         />
+        {validation.errors.find(e => e.field === 'heading') && (
+          <p className="text-xs text-red-600 mt-2 font-medium">
+            ✗ {validation.errors.find(e => e.field === 'heading')?.message}
+          </p>
+        )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Description *
+      {/* Description - Required */}
+      <div className={validation.errors.some(e => e.field === 'description') ? 'p-3 rounded-lg bg-red-50 border border-red-200' : ''}>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          Description
+          <span className="text-red-600 font-bold">*</span>
+          {validation.errors.some(e => e.field === 'description') && (
+            <span className="text-red-600 text-xs font-semibold">ERROR</span>
+          )}
         </label>
         <textarea
           value={formData.description || ''}
           onChange={(e) => updateField('description', e.target.value)}
           placeholder="Descriptive text for the CTA"
           rows={3}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+            validation.errors.some(e => e.field === 'description')
+              ? 'border-red-300 bg-white focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500'
+          }`}
         />
+        {validation.errors.find(e => e.field === 'description') && (
+          <p className="text-xs text-red-600 mt-2 font-medium">
+            ✗ {validation.errors.find(e => e.field === 'description')?.message}
+          </p>
+        )}
       </div>
 
+      {/* Background Color - Warning if missing */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Background Color *
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          Background Color
+          {validation.warnings.some(w => w.field === 'background_color') && (
+            <span className="text-yellow-600 text-xs font-semibold">⚠ WARNING</span>
+          )}
         </label>
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
@@ -527,33 +676,69 @@ function CTABlockForm({ formData, updateField }: any) {
           <p className="text-xs text-gray-500">
             Selected: {selectedBg === 'Custom' ? formData.background_color : selectedBg}
           </p>
+          {validation.warnings.find(w => w.field === 'background_color') && (
+            <p className="text-xs text-yellow-600">
+              ⚠ {validation.warnings.find(w => w.field === 'background_color')?.message}
+            </p>
+          )}
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Button Text *
+      {/* Button Text - Required */}
+      <div className={validation.errors.some(e => e.field === 'button_text') ? 'p-3 rounded-lg bg-red-50 border border-red-200' : ''}>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          Button Text
+          <span className="text-red-600 font-bold">*</span>
+          {validation.errors.some(e => e.field === 'button_text') && (
+            <span className="text-red-600 text-xs font-semibold">ERROR</span>
+          )}
         </label>
         <input
           type="text"
           value={formData.button_text || ''}
           onChange={(e) => updateField('button_text', e.target.value)}
           placeholder="e.g., Register Now"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+            validation.errors.some(e => e.field === 'button_text')
+              ? 'border-red-300 bg-white focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500'
+          }`}
         />
+        {validation.errors.find(e => e.field === 'button_text') && (
+          <p className="text-xs text-red-600 mt-2 font-medium">
+            ✗ {validation.errors.find(e => e.field === 'button_text')?.message}
+          </p>
+        )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Button Link *
+      {/* Button Link - Required + Validation */}
+      <div className={validation.errors.some(e => e.field === 'button_link') ? 'p-3 rounded-lg bg-red-50 border border-red-200' : ''}>
+        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+          Button Link
+          <span className="text-red-600 font-bold">*</span>
+          {validation.errors.some(e => e.field === 'button_link') && (
+            <span className="text-red-600 text-xs font-semibold">ERROR</span>
+          )}
         </label>
         <input
           type="text"
           value={formData.button_link || ''}
           onChange={(e) => updateField('button_link', e.target.value)}
           placeholder="e.g., /register"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+            validation.errors.some(e => e.field === 'button_link')
+              ? 'border-red-300 bg-white focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500'
+          }`}
         />
+        {validation.errors.find(e => e.field === 'button_link') && (
+          <p className="text-xs text-red-600 mt-2 font-medium">
+            ✗ {validation.errors.find(e => e.field === 'button_link')?.message}
+          </p>
+        )}
+        {!validation.errors.find(e => e.field === 'button_link') && (
+          <p className="text-xs text-gray-500 mt-1">Use "/" for internal links (/register) or full URL (https://...)</p>
+        )}
       </div>
     </div>
   );
