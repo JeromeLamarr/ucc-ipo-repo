@@ -818,29 +818,6 @@ function GallerySection({ content }: { content: Record<string, any> }) {
     </div>
   );
 }
-            console.warn(`GallerySection: Image at index ${idx} missing URL`);
-            return null;
-          }
-
-          return (
-            <div key={idx} className="rounded-lg overflow-hidden shadow-lg">
-              <img
-                src={imageUrl}
-                alt={imageAlt}
-                className="w-full h-64 object-cover"
-              />
-              {imageCaption && (
-                <div className="bg-white p-4">
-                  <p className="text-sm text-gray-700">{imageCaption}</p>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 // Helper function to render icon components from Lucide React
 // Returns a React component or a safe fallback icon if the icon name is invalid
