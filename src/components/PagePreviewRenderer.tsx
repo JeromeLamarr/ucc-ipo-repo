@@ -263,12 +263,13 @@ function TextSection({ content }: { content: Record<string, any> }) {
             }}
             dangerouslySetInnerHTML={{ __html: sanitizedBody }}
           />
-        <style>{`
-          .text-section p { margin-bottom: 1rem; }
-          .text-section p:first-child { margin-top: 0; }
-          .text-section a { color: #1e40af; text-decoration: underline; font-weight: 500; }
-          .text-section a:hover { color: #1e3a8a; }
-        `}</style>
+          <style>{`
+            .text-section p { margin-bottom: 1rem; }
+            .text-section p:first-child { margin-top: 0; }
+            .text-section a { color: #1e40af; text-decoration: underline; font-weight: 500; }
+            .text-section a:hover { color: #1e3a8a; }
+          `}</style>
+        </div>
       </div>
     </div>
   );
