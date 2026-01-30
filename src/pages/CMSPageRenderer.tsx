@@ -446,19 +446,8 @@ function TextSection({ content }: { content: Record<string, any> }) {
     return null;
   }
 
-  const alignment = content.alignment || 'left';
   const title = content.title || '';
   const body = content.body || '';
-
-  // Validate alignment value
-  const validAlignments = ['left', 'center', 'right'];
-  const safeAlignment = validAlignments.includes(alignment) ? (alignment as 'left' | 'center' | 'right') : 'left';
-
-  const alignClass: Record<'left' | 'center' | 'right', string> = {
-    left: 'text-left',
-    center: 'text-center',
-    right: 'text-right',
-  };
 
   // Check if there's any content to display
   if (!title && !body) {
@@ -475,23 +464,23 @@ function TextSection({ content }: { content: Record<string, any> }) {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className={`max-w-3xl ${safeAlignment === 'center' ? 'mx-auto' : ''} text-section`}>
-        {title && (
-          <h2 className={`text-3xl font-bold mb-4 ${alignClass[safeAlignment]}`}>{title}</h2>
-        )}
-        {body && (
-          <div
-            className={`${alignClass[safeAlignment]} space-y-4`}
-            style={{
-              fontSize: '16px',
-              lineHeight: '1.6',
-              color: '#1f2937',
-            }}
-            dangerouslySetInnerHTML={{ __html: sanitizedBody }}
-          />
-        )}
-        <style>{`
+    <div className="w-full bg-white py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto text-center text-section">
+          {title && (
+            <h2 className="text-3xl font-bold mb-6 text-gray-900">{title}</h2>
+          )}
+          {body && (
+            <div
+              className="space-y-4 text-gray-700"
+              style={{
+                fontSize: '16px',
+                lineHeight: '1.6',
+              }}
+              dangerouslySetInnerHTML={{ __html: sanitizedBody }}
+            />
+          )}
+          <style>{`
           .text-section h1, .text-section h2, .text-section h3, .text-section h4, .text-section h5, .text-section h6 {
             font-weight: bold;
             margin-top: 1.5rem;
@@ -508,7 +497,8 @@ function TextSection({ content }: { content: Record<string, any> }) {
           .text-section li { margin-bottom: 0.5rem; }
           .text-section strong { font-weight: bold; }
           .text-section em { font-style: italic; }
-        `}</style>
+          `}</style>
+        </div>
       </div>
     </div>
   );

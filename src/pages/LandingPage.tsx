@@ -228,17 +228,19 @@ function TextSection({ content }: { content: Record<string, any> }) {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className="max-w-3xl">
-        {title && <h2 className="text-3xl font-bold mb-6 text-gray-900">{title}</h2>}
-        <div
-          className="text-section text-gray-700 space-y-4"
-          dangerouslySetInnerHTML={{ __html: sanitizedBody }}
-        />
-        <style>{`
-          .text-section h3 { font-size: 1.5rem; color: #1e40af; font-weight: bold; margin-top: 1.5rem; margin-bottom: 0.75rem; }
-          .text-section p { margin-bottom: 1rem; }
-        `}</style>
+    <div className="w-full bg-white py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto text-center">
+          {title && <h2 className="text-3xl font-bold mb-6 text-gray-900">{title}</h2>}
+          <div
+            className="text-section text-gray-700 space-y-4"
+            dangerouslySetInnerHTML={{ __html: sanitizedBody }}
+          />
+          <style>{`
+            .text-section h3 { font-size: 1.5rem; color: #1e40af; font-weight: bold; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+            .text-section p { margin-bottom: 1rem; }
+          `}</style>
+        </div>
       </div>
     </div>
   );

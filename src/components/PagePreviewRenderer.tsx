@@ -200,7 +200,7 @@ function TextSection({ content }: { content: Record<string, any> }) {
 
   return (
     <div className="w-full bg-white py-12 px-4">
-      <div className="max-w-3xl">
+      <div className="max-w-3xl mx-auto text-center">
         {title && <h2 className="text-2xl font-bold mb-4 text-gray-900">{title}</h2>}
         <div
           className="text-section text-gray-700 space-y-3 text-sm"
