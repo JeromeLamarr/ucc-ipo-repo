@@ -546,6 +546,12 @@ function ShowcaseSection({ content }: { content: Record<string, any> }) {
           const itemDescription = item.description || '';
           const itemLink = item.link || '#';
           const itemImageUrl = item.image_url || null;
+          const imageWidth = item.image_width || 300;
+          const imageHeight = item.image_height || 300;
+          const imagePosition = item.image_position || 'center';
+
+          // Map position to Tailwind alignment class
+          const positionClass = imagePosition === 'left' ? 'justify-start' : imagePosition === 'right' ? 'justify-end' : 'justify-center';
 
           return (
             <a
@@ -554,11 +560,18 @@ function ShowcaseSection({ content }: { content: Record<string, any> }) {
               className="group bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
             >
               {itemImageUrl && (
-                <img
-                  src={itemImageUrl}
-                  alt={itemTitle}
-                  className="w-full h-48 object-cover group-hover:opacity-90 transition-opacity"
-                />
+                <div className={`flex items-center bg-gray-100 h-48 ${positionClass}`}>
+                  <img
+                    src={itemImageUrl}
+                    alt={itemTitle}
+                    style={{
+                      width: `${imageWidth}px`,
+                      height: `${imageHeight}px`,
+                      objectFit: 'cover'
+                    }}
+                    className="group-hover:opacity-90 transition-opacity"
+                  />
+                </div>
               )}
               <div className="p-6">
                 <h3 className="text-xl font-bold mb-2 group-hover:text-blue-600 transition-colors">

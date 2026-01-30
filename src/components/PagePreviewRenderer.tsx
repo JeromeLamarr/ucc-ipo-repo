@@ -287,15 +287,31 @@ function ShowcaseSection({ content }: { content: Record<string, any> }) {
       <div className="max-w-7xl mx-auto">
         {title && <h2 className="text-2xl font-bold text-center mb-8 text-gray-900">{title}</h2>}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {items.map((item: any, index: number) => (
+          {items.map((item: any, index: number) => {
+            const imagePosition = item.image_position || 'center';
+            const positionClass = imagePosition === 'left' ? 'justify-start' : imagePosition === 'right' ? 'justify-end' : 'justify-center';
+
+            return (
             <div key={index} className="bg-white rounded-lg overflow-hidden shadow-md p-6">
               {item.image_url && (
-                <img src={item.image_url} alt={item.title} className="w-full h-40 object-cover rounded-lg mb-4 bg-gray-100" />
+                <div className={`flex items-center justify-${imagePosition} bg-gray-100 rounded-lg mb-4 h-40`}>
+                  <img
+                    src={item.image_url}
+                    alt={item.title}
+                    style={{
+                      width: `${item.image_width || 300}px`,
+                      height: `${item.image_height || 300}px`,
+                      objectFit: 'cover'
+                    }}
+                    className="rounded-lg"
+                  />
+                </div>
               )}
               <h3 className="text-lg font-bold text-gray-900 mb-2">{item.title || 'Item'}</h3>
               <p className="text-sm text-gray-600">{item.description || ''}</p>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
