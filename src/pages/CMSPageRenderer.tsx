@@ -529,62 +529,75 @@ function ShowcaseSection({ content }: { content: Record<string, any> }) {
     return null;
   }
 
+  const renderItem = (item: Record<string, any>, idx: number) => {
+    // Ensure item is an object
+    if (!item || typeof item !== 'object') {
+      console.warn(`ShowcaseSection: Invalid item at index ${idx}`);
+      return null;
+    }
+
+    const itemTitle = item.title || `Item ${idx + 1}`;
+    const itemDescription = item.description || '';
+    const itemLink = item.link || '#';
+    const itemImageUrl = item.image_url || null;
+    const imageWidth = item.image_width || 300;
+    const imageHeight = item.image_height || 300;
+    const imagePosition = item.image_position || 'center';
+
+    // Map position to Tailwind alignment class
+    const positionClass = imagePosition === 'left' ? 'justify-start' : imagePosition === 'right' ? 'justify-end' : 'justify-center';
+
+    return (
+      <a
+        key={idx}
+        href={itemLink}
+        className="group bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+      >
+        {itemImageUrl && (
+          <div className={`flex items-center bg-gray-100 h-48 ${positionClass}`}>
+            <img
+              src={itemImageUrl}
+              alt={itemTitle}
+              style={{
+                width: `${imageWidth}px`,
+                height: `${imageHeight}px`,
+                objectFit: 'cover'
+              }}
+              className="group-hover:opacity-90 transition-opacity"
+            />
+          </div>
+        )}
+        <div className="p-6">
+          <h3 className="text-xl font-bold mb-2 group-hover:text-blue-600 transition-colors">
+            {itemTitle}
+          </h3>
+          {itemDescription && (
+            <p className="text-gray-600">{itemDescription}</p>
+          )}
+        </div>
+      </a>
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       {title && (
         <h2 className="text-3xl font-bold text-center mb-12">{title}</h2>
       )}
-      <div className="grid md:grid-cols-3 gap-8">
-        {items.map((item: Record<string, any>, idx: number) => {
-          // Ensure item is an object
-          if (!item || typeof item !== 'object') {
-            console.warn(`ShowcaseSection: Invalid item at index ${idx}`);
-            return null;
-          }
-
-          const itemTitle = item.title || `Item ${idx + 1}`;
-          const itemDescription = item.description || '';
-          const itemLink = item.link || '#';
-          const itemImageUrl = item.image_url || null;
-          const imageWidth = item.image_width || 300;
-          const imageHeight = item.image_height || 300;
-          const imagePosition = item.image_position || 'center';
-
-          // Map position to Tailwind alignment class
-          const positionClass = imagePosition === 'left' ? 'justify-start' : imagePosition === 'right' ? 'justify-end' : 'justify-center';
-
-          return (
-            <a
-              key={idx}
-              href={itemLink}
-              className="group bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-            >
-              {itemImageUrl && (
-                <div className={`flex items-center bg-gray-100 h-48 ${positionClass}`}>
-                  <img
-                    src={itemImageUrl}
-                    alt={itemTitle}
-                    style={{
-                      width: `${imageWidth}px`,
-                      height: `${imageHeight}px`,
-                      objectFit: 'cover'
-                    }}
-                    className="group-hover:opacity-90 transition-opacity"
-                  />
-                </div>
-              )}
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-2 group-hover:text-blue-600 transition-colors">
-                  {itemTitle}
-                </h3>
-                {itemDescription && (
-                  <p className="text-gray-600">{itemDescription}</p>
-                )}
-              </div>
-            </a>
-          );
-        })}
-      </div>
+      {/* Dynamic grid based on item count */}
+      {items.length === 1 ? (
+        <div className="flex justify-center">
+          {items.map((item: Record<string, any>, idx: number) => renderItem(item, idx))}
+        </div>
+      ) : items.length === 2 ? (
+        <div className="flex justify-center gap-8 flex-wrap">
+          {items.map((item: Record<string, any>, idx: number) => renderItem(item, idx))}
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-3 gap-8">
+          {items.map((item: Record<string, any>, idx: number) => renderItem(item, idx))}
+        </div>
+      )}
     </div>
   );
 }

@@ -282,37 +282,50 @@ function ShowcaseSection({ content }: { content: Record<string, any> }) {
 
   if (items.length === 0) return null;
 
+  const renderItem = (item: any, index: number) => {
+    const imagePosition = item.image_position || 'center';
+    const positionClass = imagePosition === 'left' ? 'justify-start' : imagePosition === 'right' ? 'justify-end' : 'justify-center';
+
+    return (
+      <div key={index} className="bg-white rounded-lg overflow-hidden shadow-md p-6">
+        {item.image_url && (
+          <div className={`flex items-center ${positionClass} bg-gray-100 rounded-lg mb-4 h-40`}>
+            <img
+              src={item.image_url}
+              alt={item.title}
+              style={{
+                width: `${item.image_width || 300}px`,
+                height: `${item.image_height || 300}px`,
+                objectFit: 'cover'
+              }}
+              className="rounded-lg"
+            />
+          </div>
+        )}
+        <h3 className="text-lg font-bold text-gray-900 mb-2">{item.title || 'Item'}</h3>
+        <p className="text-sm text-gray-600">{item.description || ''}</p>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full bg-gray-50 py-12 px-4">
       <div className="max-w-7xl mx-auto">
         {title && <h2 className="text-2xl font-bold text-center mb-8 text-gray-900">{title}</h2>}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {items.map((item: any, index: number) => {
-            const imagePosition = item.image_position || 'center';
-            const positionClass = imagePosition === 'left' ? 'justify-start' : imagePosition === 'right' ? 'justify-end' : 'justify-center';
-
-            return (
-            <div key={index} className="bg-white rounded-lg overflow-hidden shadow-md p-6">
-              {item.image_url && (
-                <div className={`flex items-center justify-${imagePosition} bg-gray-100 rounded-lg mb-4 h-40`}>
-                  <img
-                    src={item.image_url}
-                    alt={item.title}
-                    style={{
-                      width: `${item.image_width || 300}px`,
-                      height: `${item.image_height || 300}px`,
-                      objectFit: 'cover'
-                    }}
-                    className="rounded-lg"
-                  />
-                </div>
-              )}
-              <h3 className="text-lg font-bold text-gray-900 mb-2">{item.title || 'Item'}</h3>
-              <p className="text-sm text-gray-600">{item.description || ''}</p>
-            </div>
-            );
-          })}
-        </div>
+        {/* Dynamic grid based on item count */}
+        {items.length === 1 ? (
+          <div className="flex justify-center">
+            {items.map((item: any, index: number) => renderItem(item, index))}
+          </div>
+        ) : items.length === 2 ? (
+          <div className="flex justify-center gap-6 flex-wrap">
+            {items.map((item: any, index: number) => renderItem(item, index))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {items.map((item: any, index: number) => renderItem(item, index))}
+          </div>
+        )}
       </div>
     </div>
   );
