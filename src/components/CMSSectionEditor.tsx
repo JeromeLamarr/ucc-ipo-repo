@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { BACKGROUND_PRESETS, BUTTON_PRESETS, ICON_COLOR_PRESETS, findPresetName } from '../lib/stylePresets';
 
 interface CMSSection {
   id: string;
@@ -267,27 +268,27 @@ function FeaturesBlockForm({ formData, updateField, addArrayItem, removeArrayIte
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Icon Background</label>
-              <input
-                type="text"
-                value={feature.icon_bg_color || ''}
-                onChange={(e) => updateArrayItem('features', idx, 'icon_bg_color', e.target.value)}
-                placeholder="e.g., bg-blue-100"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-2">Icon Color</label>
+            <div className="grid grid-cols-4 gap-2">
+              {Object.entries(ICON_COLOR_PRESETS).map(([name, colors]) => (
+                <button
+                  key={name}
+                  onClick={() => {
+                    updateArrayItem('features', idx, 'icon_bg_color', (colors as any).bg);
+                    updateArrayItem('features', idx, 'icon_color', (colors as any).text);
+                  }}
+                  className={`px-2 py-2 rounded-lg text-xs font-medium transition-all border-2 flex items-center justify-center ${
+                    feature.icon_bg_color === (colors as any).bg
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <span className={`text-lg ${(colors as any).text}`}>●</span>
+                </button>
+              ))}
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Icon Color</label>
-              <input
-                type="text"
-                value={feature.icon_color || ''}
-                onChange={(e) => updateArrayItem('features', idx, 'icon_color', e.target.value)}
-                placeholder="e.g., text-blue-600"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-            </div>
+            <p className="text-xs text-gray-500 mt-1">{Object.keys(ICON_COLOR_PRESETS).find(k => ICON_COLOR_PRESETS[k as keyof typeof ICON_COLOR_PRESETS].bg === feature.icon_bg_color) || 'Select color'}</p>
           </div>
         </div>
       ))}
@@ -473,6 +474,8 @@ function CategoriesBlockForm({ formData, updateField, addArrayItem, removeArrayI
 // ============================================================================
 
 function CTABlockForm({ formData, updateField }: any) {
+  const selectedBg = findPresetName('background', formData.background_color) || 'Custom';
+
   return (
     <div className="space-y-4">
       <div>
@@ -505,16 +508,26 @@ function CTABlockForm({ formData, updateField }: any) {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Background Color *
         </label>
-        <input
-          type="text"
-          value={formData.background_color || ''}
-          onChange={(e) => updateField('background_color', e.target.value)}
-          placeholder="e.g., #2563EB or bg-gradient-to-r from-blue-600 to-blue-800"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-        <p className="text-xs text-gray-500 mt-1">
-          Use hex color (#2563EB) or Tailwind gradient (bg-gradient-to-r from-blue-600 to-blue-800)
-        </p>
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(BACKGROUND_PRESETS).map(([name, value]) => (
+              <button
+                key={name}
+                onClick={() => updateField('background_color', value)}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border-2 ${
+                  selectedBg === name
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500">
+            Selected: {selectedBg === 'Custom' ? formData.background_color : selectedBg}
+          </p>
+        </div>
       </div>
 
       <div>
