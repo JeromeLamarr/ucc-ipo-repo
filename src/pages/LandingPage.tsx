@@ -245,22 +245,36 @@ function TextSection({ content }: { content: Record<string, any> }) {
 }
 
 function CTASection({ content, navigate }: { content: Record<string, any>; navigate: any }) {
-  const headline = content.headline || '';
+  const bgColor = content.background_color || '#2563EB';
+  const heading = content.heading || '';
   const description = content.description || '';
-  const buttonText = content.button_text || 'Learn More';
-  const buttonLink = content.button_link || '/register';
+  const buttonText = content.button_text || null;
+  const buttonLink = content.button_link || null;
+
+  if (!heading && !description && (!buttonText || !buttonLink)) {
+    return null;
+  }
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-blue-800 py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 className="text-3xl font-bold text-white mb-4">{headline}</h2>
-        <p className="text-blue-100 mb-8 max-w-2xl mx-auto">{description}</p>
-        <button
-          onClick={() => navigate(buttonLink)}
-          className="px-8 py-3 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-semibold"
-        >
-          {buttonText}
-        </button>
+    <div
+      className="py-16 text-center text-white"
+      style={{ backgroundColor: bgColor }}
+    >
+      <div className="max-w-3xl mx-auto px-4">
+        {heading && (
+          <h2 className="text-4xl font-bold mb-4">{heading}</h2>
+        )}
+        {description && (
+          <p className="text-lg mb-8 opacity-90">{description}</p>
+        )}
+        {buttonText && buttonLink && (
+          <button
+            onClick={() => navigate(buttonLink)}
+            className="inline-block px-8 py-3 bg-white text-gray-900 rounded-lg hover:opacity-90 font-semibold transition-opacity"
+          >
+            {buttonText}
+          </button>
+        )}
       </div>
     </div>
   );
