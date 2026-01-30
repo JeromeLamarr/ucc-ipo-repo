@@ -275,19 +275,41 @@ function GallerySection({ content }: { content: Record<string, any> }) {
 
   if (images.length === 0) return null;
 
+  // Determine layout based on image count
+  const getGridClass = (count: number): string => {
+    if (count === 1) return 'flex justify-center';
+    if (count === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto';
+    if (count === 3) return 'grid grid-cols-1 md:grid-cols-3 gap-4';
+    if (count === 4) return 'grid grid-cols-1 md:grid-cols-2 gap-4';
+    // 5+ images: responsive grid
+    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+  };
+
+  const renderImage = (image: any, index: number) => {
+    const isSingleImage = images.length === 1;
+    const widthClass = isSingleImage ? 'max-w-sm' : '';
+
+    return (
+      <div key={index} className={`rounded-lg overflow-hidden shadow-md ${widthClass}`}>
+        <img
+          src={image.url}
+          alt={image.alt_text}
+          className={`w-full ${isSingleImage ? 'h-64' : 'h-48'} object-cover bg-gray-100`}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="system-ui" font-size="18" fill="%239ca3af"%3EImage not found%3C/text%3E%3C/svg%3E';
+          }}
+        />
+        {image.caption && <p className="p-3 text-gray-700 text-center text-sm">{image.caption}</p>}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full bg-white py-12 px-4">
       <div className="max-w-7xl mx-auto">
         {title && <h2 className="text-2xl font-bold text-center mb-8 text-gray-900">{title}</h2>}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {images.map((image: any, index: number) => (
-            <div key={index} className="rounded-lg overflow-hidden shadow-md">
-              <img src={image.url} alt={image.alt_text} className="w-full h-48 object-cover bg-gray-100" onError={(e) => {
-                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="system-ui" font-size="18" fill="%239ca3af"%3EImage not found%3C/text%3E%3C/svg%3E';
-              }} />
-              {image.caption && <p className="p-3 text-gray-700 text-center text-sm">{image.caption}</p>}
-            </div>
-          ))}
+        <div className={getGridClass(images.length)}>
+          {images.map((image: any, index: number) => renderImage(image, index))}
         </div>
       </div>
     </div>

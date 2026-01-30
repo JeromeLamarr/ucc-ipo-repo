@@ -740,7 +740,6 @@ function GallerySection({ content }: { content: Record<string, any> }) {
   }
 
   const images = Array.isArray(content.images) ? content.images : [];
-  const columns = content.columns || 3;
   const title = content.title || '';
 
   if (images.length === 0) {
@@ -748,15 +747,50 @@ function GallerySection({ content }: { content: Record<string, any> }) {
     return null;
   }
 
-  // Validate columns value
-  const validColumns = [1, 2, 3, 4];
-  const safeColumns = validColumns.includes(columns) ? (columns as 1 | 2 | 3 | 4) : (3 as const);
+  // Determine layout based on image count
+  const getGridClass = (count: number): string => {
+    if (count === 1) return 'flex justify-center';
+    if (count === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto';
+    if (count === 3) return 'grid grid-cols-1 md:grid-cols-3 gap-6';
+    if (count === 4) return 'grid grid-cols-1 md:grid-cols-2 gap-6';
+    // 5+ images: responsive grid
+    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+  };
 
-  const colClass: Record<1 | 2 | 3 | 4, string> = {
-    1: 'md:grid-cols-1',
-    2: 'md:grid-cols-2',
-    3: 'md:grid-cols-3',
-    4: 'md:grid-cols-4',
+  const renderImage = (image: Record<string, any>, idx: number) => {
+    if (!image || typeof image !== 'object') {
+      console.warn(`GallerySection: Invalid image at index ${idx}`);
+      return null;
+    }
+
+    const imageUrl = image.url || null;
+    const imageAlt = image.alt_text || image.caption || `Gallery image ${idx + 1}`;
+    const imageCaption = image.caption || '';
+
+    if (!imageUrl) {
+      return null;
+    }
+
+    // Determine image size based on layout
+    const isSingleImage = images.length === 1;
+    const heightClass = isSingleImage ? 'h-96' : 'h-64';
+    const widthClass = isSingleImage ? 'max-w-lg' : '';
+
+    return (
+      <div key={idx} className={`rounded-lg overflow-hidden shadow-lg ${widthClass}`}>
+        <img
+          src={imageUrl}
+          alt={imageAlt}
+          className={`w-full ${heightClass} object-cover`}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="system-ui" font-size="18" fill="%239ca3af"%3EImage not found%3C/text%3E%3C/svg%3E';
+          }}
+        />
+        {imageCaption && (
+          <p className="p-4 text-gray-700 text-center text-sm">{imageCaption}</p>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -764,20 +798,12 @@ function GallerySection({ content }: { content: Record<string, any> }) {
       {title && (
         <h2 className="text-3xl font-bold text-center mb-12">{title}</h2>
       )}
-      <div className={`grid gap-6 ${colClass[safeColumns]}`}>
-        {images.map((image: Record<string, any>, idx: number) => {
-          // Ensure image is an object
-          if (!image || typeof image !== 'object') {
-            console.warn(`GallerySection: Invalid image at index ${idx}`);
-            return null;
-          }
-
-          const imageUrl = image.url || null;
-          const imageAlt = image.alt_text || image.caption || `Gallery image ${idx + 1}`;
-          const imageCaption = image.caption || '';
-
-          // Skip images without URL
-          if (!imageUrl) {
+      <div className={getGridClass(images.length)}>
+        {images.map((image: Record<string, any>, idx: number) => renderImage(image, idx))}
+      </div>
+    </div>
+  );
+}
             console.warn(`GallerySection: Image at index ${idx} missing URL`);
             return null;
           }
