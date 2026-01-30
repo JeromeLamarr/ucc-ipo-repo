@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, ArrowUp, ArrowDown, Edit, AlertCircle, ChevronLeft } from 'lucide-react';
+import { CMSSectionEditor } from '../components/CMSSectionEditor';
 
 interface CMSPage {
   id: string;
@@ -101,7 +102,6 @@ export function PageSectionsManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedSectionType, setSelectedSectionType] = useState<string>('hero');
   const [editingSection, setEditingSection] = useState<CMSSection | null>(null);
-  const [editingContent, setEditingContent] = useState<string>('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -187,46 +187,37 @@ export function PageSectionsManagement() {
 
   const handleEditSection = (section: CMSSection) => {
     setEditingSection(section);
-    setEditingContent(JSON.stringify(section.content, null, 2));
     setShowEditModal(true);
   };
 
-  const handleSaveSection = async () => {
+  const handleSaveSection = async (content: Record<string, any>) => {
     if (!editingSection) return;
 
     setSaving(true);
     setError(null);
 
     try {
-      let parsedContent: Record<string, any>;
-      try {
-        parsedContent = JSON.parse(editingContent);
-      } catch (e) {
-        throw new Error('Invalid JSON format');
-      }
-
       const { error: err } = await supabase
         .from('cms_sections')
-        .update({ content: parsedContent })
+        .update({ content })
         .eq('id', editingSection.id);
 
       if (err) throw err;
 
       setSections(
         sections.map((s) =>
-          s.id === editingSection.id ? { ...s, content: parsedContent } : s
+          s.id === editingSection.id ? { ...s, content } : s
         )
       );
 
-      setSuccess('Section updated successfully');
+      setSuccess('Block saved successfully');
       setShowEditModal(false);
       setEditingSection(null);
-      setEditingContent('');
 
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      console.error('Error saving section:', err);
-      setError(err.message || 'Failed to save section');
+      console.error('Error saving block:', err);
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -510,49 +501,19 @@ export function PageSectionsManagement() {
       {showEditModal && editingSection && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
               Edit {editingSection.section_type.toUpperCase()} Block
             </h2>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Content (JSON) *
-                </label>
-                <textarea
-                  value={editingContent}
-                  onChange={(e) => setEditingContent(e.target.value)}
-                  rows={12}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                  placeholder="Enter JSON content..."
-                  disabled={saving}
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  Valid JSON required. Use quotes for all keys and string values.
-                </p>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button
-                  onClick={handleSaveSection}
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setEditingSection(null);
-                    setEditingContent('');
-                  }}
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+            <CMSSectionEditor
+              section={editingSection}
+              onSave={handleSaveSection}
+              onCancel={() => {
+                setShowEditModal(false);
+                setEditingSection(null);
+              }}
+              saving={saving}
+            />
           </div>
         </div>
       )}
