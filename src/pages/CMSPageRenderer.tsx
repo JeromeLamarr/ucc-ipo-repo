@@ -773,19 +773,22 @@ function GallerySection({ content }: { content: Record<string, any> }) {
 
     // Determine image size based on layout
     const isSingleImage = images.length === 1;
+    const aspectRatio = isSingleImage ? '4/3' : '16/10';
     const heightClass = isSingleImage ? 'h-96' : 'h-64';
     const widthClass = isSingleImage ? 'max-w-lg' : '';
 
     return (
       <div key={idx} className={`rounded-lg overflow-hidden shadow-lg ${widthClass}`}>
-        <img
-          src={imageUrl}
-          alt={imageAlt}
-          className={`w-full ${heightClass} object-cover`}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="system-ui" font-size="18" fill="%239ca3af"%3EImage not found%3C/text%3E%3C/svg%3E';
-          }}
-        />
+        <div className={`${heightClass} w-full`} style={{ aspectRatio }}>
+          <img
+            src={imageUrl}
+            alt={imageAlt}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="system-ui" font-size="18" fill="%239ca3af"%3EImage not found%3C/text%3E%3C/svg%3E';
+            }}
+          />
+        </div>
         {imageCaption && (
           <p className="p-4 text-gray-700 text-center text-sm">{imageCaption}</p>
         )}

@@ -287,18 +287,22 @@ function GallerySection({ content }: { content: Record<string, any> }) {
 
   const renderImage = (image: any, index: number) => {
     const isSingleImage = images.length === 1;
+    const heightClass = isSingleImage ? 'h-64' : 'h-48';
     const widthClass = isSingleImage ? 'max-w-sm' : '';
+    const aspectRatio = isSingleImage ? '4/3' : '16/10';
 
     return (
       <div key={index} className={`rounded-lg overflow-hidden shadow-md ${widthClass}`}>
-        <img
-          src={image.url}
-          alt={image.alt_text}
-          className={`w-full ${isSingleImage ? 'h-64' : 'h-48'} object-cover bg-gray-100`}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="system-ui" font-size="18" fill="%239ca3af"%3EImage not found%3C/text%3E%3C/svg%3E';
-          }}
-        />
+        <div className={`${heightClass} w-full bg-gray-100`} style={{ aspectRatio }}>
+          <img
+            src={image.url}
+            alt={image.alt_text}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="system-ui" font-size="18" fill="%239ca3af"%3EImage not found%3C/text%3E%3C/svg%3E';
+            }}
+          />
+        </div>
         {image.caption && <p className="p-3 text-gray-700 text-center text-sm">{image.caption}</p>}
       </div>
     );
