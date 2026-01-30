@@ -245,7 +245,7 @@ function TextSection({ content }: { content: Record<string, any> }) {
 }
 
 function CTASection({ content, navigate }: { content: Record<string, any>; navigate: any }) {
-  const bgColor = content.background_color || '#2563EB';
+  const bgColor = content.background_color || 'bg-gradient-to-r from-blue-600 to-blue-800';
   const heading = content.heading || '';
   const description = content.description || '';
   const buttonText = content.button_text || null;
@@ -255,22 +255,26 @@ function CTASection({ content, navigate }: { content: Record<string, any>; navig
     return null;
   }
 
+  // Check if bgColor is a Tailwind class (contains 'bg-', 'from-', 'to-', 'gradient')
+  // or a color value (hex, rgb, etc.)
+  const isTailwindClass = bgColor.includes('bg-') || bgColor.includes('from-') || bgColor.includes('to-') || bgColor.includes('gradient');
+
   return (
     <div
-      className="py-16 text-center text-white"
-      style={{ backgroundColor: bgColor }}
+      className={`py-20 text-center text-white ${isTailwindClass ? bgColor : ''}`}
+      style={!isTailwindClass ? { backgroundColor: bgColor } : {}}
     >
       <div className="max-w-3xl mx-auto px-4">
         {heading && (
           <h2 className="text-4xl font-bold mb-4">{heading}</h2>
         )}
         {description && (
-          <p className="text-lg mb-8 opacity-90">{description}</p>
+          <p className="text-xl mb-8 opacity-95">{description}</p>
         )}
         {buttonText && buttonLink && (
           <button
             onClick={() => navigate(buttonLink)}
-            className="inline-block px-8 py-3 bg-white text-gray-900 rounded-lg hover:opacity-90 font-semibold transition-opacity"
+            className="inline-block px-8 py-3 bg-white text-gray-900 rounded-lg hover:bg-gray-100 font-semibold transition-colors"
           >
             {buttonText}
           </button>
