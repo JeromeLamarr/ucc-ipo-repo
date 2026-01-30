@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Plus, Trash2, ArrowUp, ArrowDown, Edit, AlertCircle, ChevronLeft } from 'lucide-react';
 import { CMSSectionEditor } from '../components/CMSSectionEditor';
+import { BlockTypePicker } from '../components/BlockTypePicker';
 
 interface CMSPage {
   id: string;
@@ -455,25 +456,17 @@ export function PageSectionsManagement() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Block Type *
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Select Block Type *
                 </label>
-                <select
-                  value={selectedSectionType}
-                  onChange={(e) => setSelectedSectionType(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={saving}
-                >
-                  {SECTION_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </option>
-                  ))}
-                </select>
+                <BlockTypePicker
+                  selectedType={selectedSectionType}
+                  onSelect={setSelectedSectionType}
+                />
               </div>
 
               <p className="text-sm text-gray-600">
-                A new block will be created with template content that you can edit.
+                Choose a block type, then click "Create Block" to add it to your page.
               </p>
 
               <div className="flex gap-2 pt-4">
