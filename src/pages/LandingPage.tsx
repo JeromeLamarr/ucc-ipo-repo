@@ -427,7 +427,7 @@ function GallerySection({ content }: { content: Record<string, any> }) {
     const aspectRatio = isSingleImage ? '4/3' : '16/10';
 
     return (
-      <div key={index} className={`rounded-lg overflow-hidden shadow-lg ${widthClass}`}>
+      <div key={index} className={`rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 ${widthClass}`}>
         <div className={`${heightClass} w-full`} style={{ aspectRatio }}>
           <img
             src={image.url}
