@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Plus, Trash2, ArrowUp, ArrowDown, Edit, AlertCircle, ChevronLeft } from 'lucide-react';
+import { Plus, Trash2, Edit, AlertCircle, ChevronLeft, GripVertical } from 'lucide-react';
 import { CMSSectionEditor } from '../components/CMSSectionEditor';
 import { BlockTypePicker } from '../components/BlockTypePicker';
 
@@ -106,7 +106,8 @@ export function PageSectionsManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [reordering, setReordering] = useState<string | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   useEffect(() => {
     if (pageId) {
@@ -250,74 +251,76 @@ export function PageSectionsManagement() {
     }
   };
 
-  const handleMoveSection = async (sectionId: string, direction: 'up' | 'down') => {
-    const sectionIndex = sections.findIndex((s) => s.id === sectionId);
-    if (sectionIndex === -1) return;
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, sectionId: string) => {
+    setDraggedId(sectionId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
 
-    if (direction === 'up' && sectionIndex === 0) return;
-    if (direction === 'down' && sectionIndex === sections.length - 1) return;
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, sectionId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverId(sectionId);
+  };
 
-    const targetIndex = direction === 'up' ? sectionIndex - 1 : sectionIndex + 1;
-    const section = sections[sectionIndex];
-    const targetSection = sections[targetIndex];
+  const handleDragLeave = () => {
+    setDragOverId(null);
+  };
 
-    setReordering(sectionId);
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, targetSectionId: string) => {
+    e.preventDefault();
+    setDragOverId(null);
+
+    if (!draggedId || draggedId === targetSectionId) {
+      setDraggedId(null);
+      return;
+    }
+
+    const draggedIndex = sections.findIndex((s) => s.id === draggedId);
+    const targetIndex = sections.findIndex((s) => s.id === targetSectionId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedId(null);
+      return;
+    }
+
+    // Reorder locally first
+    const newSections = [...sections];
+    const [draggedSection] = newSections.splice(draggedIndex, 1);
+    newSections.splice(targetIndex, 0, draggedSection);
+
+    // Update order_index values to match new visual order
+    newSections.forEach((section, index) => {
+      section.order_index = index;
+    });
+
+    setSections(newSections);
+    setDraggedId(null);
     setError(null);
 
+    // Update database with new order_index values
     try {
-      // Update both sections atomically - swap order_index values
-      // Use separate update calls to avoid batch syntax issues with Supabase
-      const tempOrder = 999999; // Temporary value to avoid conflict
+      const updates = newSections.map((section) => ({
+        id: section.id,
+        order_index: section.order_index,
+      }));
 
-      // Step 1: Move first section to temporary index
-      const { error: err1 } = await supabase
-        .from('cms_sections')
-        .update({ order_index: tempOrder })
-        .eq('id', sectionId);
+      // Update all sections with their new order_index
+      for (const update of updates) {
+        const { error: err } = await supabase
+          .from('cms_sections')
+          .update({ order_index: update.order_index })
+          .eq('id', update.id);
 
-      if (err1) throw err1;
+        if (err) throw err;
+      }
 
-      // Step 2: Move target section to first section's original index
-      const { error: err2 } = await supabase
-        .from('cms_sections')
-        .update({ order_index: section.order_index })
-        .eq('id', targetSection.id);
-
-      if (err2) throw err2;
-
-      // Step 3: Move temporary section to target section's original index
-      const { error: err3 } = await supabase
-        .from('cms_sections')
-        .update({ order_index: targetSection.order_index })
-        .eq('id', sectionId);
-
-      if (err3) throw err3;
-
-      // Update local state immediately to prevent UI lag
-      // No refetch needed - we know the new order
-      const newSections = [...sections];
-      [newSections[sectionIndex], newSections[targetIndex]] = [
-        newSections[targetIndex],
-        newSections[sectionIndex],
-      ];
-
-      // Update order_index to match new positions
-      newSections.forEach((s, idx) => {
-        if (idx === sectionIndex) s.order_index = targetSection.order_index;
-        if (idx === targetIndex) s.order_index = section.order_index;
-      });
-
-      setSections(newSections);
-      setSuccess(`Section moved ${direction}`);
-
-      setTimeout(() => setSuccess(null), 3000);
+      setSuccess('Block order updated');
+      setTimeout(() => setSuccess(null), 2000);
     } catch (err: any) {
-      console.error('Error reordering sections:', err);
-      setError(err.message || 'Failed to reorder sections');
-      // Refetch on error to restore correct state
+      console.error('Error updating section order:', err);
+      setError(err.message || 'Failed to update block order');
+      // Refetch to restore correct state on error
       await fetchPageAndSections();
-    } finally {
-      setReordering(null);
     }
   };
 
@@ -386,45 +389,38 @@ export function PageSectionsManagement() {
             <p className="text-gray-500">No sections yet. Create one to get started.</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {sections.map((section, index) => (
+          <div className="space-y-3">
+            {sections.map((section) => (
               <div
                 key={section.id}
-                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                draggable
+                onDragStart={(e) => handleDragStart(e, section.id)}
+                onDragOver={(e) => handleDragOver(e, section.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, section.id)}
+                className={`border-2 rounded-lg p-4 transition-all cursor-grab active:cursor-grabbing ${
+                  draggedId === section.id
+                    ? 'opacity-50 bg-gray-100 border-gray-300'
+                    : dragOverId === section.id
+                    ? 'bg-blue-50 border-blue-400 shadow-md'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <GripVertical className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                  
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
                         {section.section_type.toUpperCase()}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mt-2">
+                    <p className="text-sm text-gray-600 mt-1">
                       {Object.keys(section.content).length} fields
                     </p>
                   </div>
 
                   <div className="flex gap-2">
-                    {index > 0 && (
-                      <button
-                        onClick={() => handleMoveSection(section.id, 'up')}
-                        disabled={reordering === section.id}
-                        className="p-2 hover:bg-gray-100 text-gray-600 rounded-lg transition-colors disabled:opacity-50"
-                        title="Move up"
-                      >
-                        <ArrowUp className="h-5 w-5" />
-                      </button>
-                    )}
-                    {index < sections.length - 1 && (
-                      <button
-                        onClick={() => handleMoveSection(section.id, 'down')}
-                        disabled={reordering === section.id}
-                        className="p-2 hover:bg-gray-100 text-gray-600 rounded-lg transition-colors disabled:opacity-50"
-                        title="Move down"
-                      >
-                        <ArrowDown className="h-5 w-5" />
-                      </button>
-                    )}
                     <button
                       onClick={() => handleEditSection(section)}
                       className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
