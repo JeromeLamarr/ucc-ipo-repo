@@ -25,6 +25,7 @@ interface CMSPage {
   slug: string;
   title: string;
   is_published: boolean;
+  layout?: Record<string, any>; // Grid layout configuration (JSONB)
 }
 
 interface CMSSection {
@@ -49,6 +50,83 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
   secondary_color: '#9333EA',
   logo_url: null,
 };
+
+/**
+ * Builds Tailwind CSS grid classes from layout configuration
+ * Falls back to vertical layout if grid is disabled or configuration is invalid
+ * 
+ * @param layout Optional layout configuration from database
+ * @returns Object with container class and wrapper class for grid layout
+ * 
+ * Example layout config:
+ * {
+ *   "grid": {
+ *     "enabled": true,
+ *     "columns": 3,
+ *     "gap": "gap-6",
+ *     "max_width": "max-w-7xl",
+ *     "align": "center"
+ *   }
+ * }
+ */
+function buildGridClasses(layout?: Record<string, any>) {
+  // Safe optional chaining: check if grid is enabled
+  const gridEnabled = layout?.grid?.enabled === true;
+
+  if (!gridEnabled) {
+    // Fallback to vertical layout (existing behavior)
+    return {
+      containerClass: '',
+      wrapperClass: '',
+    };
+  }
+
+  try {
+    // Extract grid configuration with safe optional chaining
+    const columns = layout?.grid?.columns;
+    const gap = layout?.grid?.gap;
+    const maxWidth = layout?.grid?.max_width;
+    const align = layout?.grid?.align;
+
+    // Build grid container classes
+    let gridClasses = 'grid';
+
+    // Add columns if specified (use value directly, e.g., "grid-cols-3")
+    if (columns && typeof columns === 'number') {
+      gridClasses += ` grid-cols-${columns}`;
+    }
+
+    // Add gap if specified (use value directly, e.g., "gap-6")
+    if (gap && typeof gap === 'string') {
+      gridClasses += ` ${gap}`;
+    }
+
+    // Determine wrapper alignment and max-width
+    let wrapperClass = '';
+    if (maxWidth && typeof maxWidth === 'string') {
+      wrapperClass = maxWidth;
+    }
+    
+    // Add horizontal centering if align is "center"
+    if (align === 'center' && maxWidth) {
+      wrapperClass += ' mx-auto';
+    }
+
+    return {
+      containerClass: gridClasses,
+      wrapperClass: wrapperClass ? `${wrapperClass} px-4` : 'px-4',
+    };
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn('buildGridClasses: Error parsing layout configuration, falling back to vertical layout', error);
+    }
+    // Fallback to vertical layout on any parsing error
+    return {
+      containerClass: '',
+      wrapperClass: '',
+    };
+  }
+}
 
 export function CMSPageRenderer() {
   const { slug } = useParams<{ slug: string }>();
@@ -179,16 +257,28 @@ export function CMSPageRenderer() {
 
       {/* Render Sections */}
       {Array.isArray(sections) && sections.length > 0 ? (
-        sections.map((section) => {
-          // Defensive checks for section object
-          if (!section || !section.id || !section.section_type || !section.content) {
-            if (import.meta.env.DEV) console.warn('CMSPageRenderer: Invalid section detected', section);
-            return null;
-          }
+        (() => {
+          // Build grid layout classes based on page configuration
+          const gridClasses = buildGridClasses(page?.layout);
+          const isGridEnabled = gridClasses.containerClass !== '';
+
           return (
-            <SectionRenderer key={section.id} section={section} settings={settings} />
+            <div className={isGridEnabled ? gridClasses.wrapperClass : ''}>
+              <div className={isGridEnabled ? gridClasses.containerClass : ''}>
+                {sections.map((section) => {
+                  // Defensive checks for section object
+                  if (!section || !section.id || !section.section_type || !section.content) {
+                    if (import.meta.env.DEV) console.warn('CMSPageRenderer: Invalid section detected', section);
+                    return null;
+                  }
+                  return (
+                    <SectionRenderer key={section.id} section={section} settings={settings} />
+                  );
+                })}
+              </div>
+            </div>
           );
-        })
+        })()
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
           <p className="text-gray-500">No content available for this page.</p>
