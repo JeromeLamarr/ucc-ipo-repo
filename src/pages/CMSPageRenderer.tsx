@@ -296,6 +296,108 @@ export function CMSPageRenderer() {
   );
 }
 
+/**
+ * Builds Tailwind CSS grid positioning classes from section layout configuration
+ * Applies col-span, row-span, align-self, and justify-self classes only if values exist
+ * 
+ * @param layout Optional layout configuration from section.content.layout
+ * @returns String of Tailwind grid positioning classes
+ * 
+ * Example layout config:
+ * {
+ *   "col_span": 2,
+ *   "row_span": 1,
+ *   "align_self": "self-center",
+ *   "justify_self": "justify-self-center"
+ * }
+ */
+function buildSectionGridClasses(layout?: Record<string, any>): string {
+  if (!layout || typeof layout !== 'object') {
+    // Default: full width span for sections within grid
+    return 'col-span-full';
+  }
+
+  try {
+    let classes = '';
+
+    // Apply col_span if specified (e.g., col-span-2)
+    const colSpan = layout.col_span;
+    if (colSpan && typeof colSpan === 'number' && colSpan > 0 && colSpan <= 12) {
+      classes += `col-span-${colSpan} `;
+    } else if (!layout.col_span) {
+      // Default to full width only if col_span was not specified
+      classes += 'col-span-full ';
+    }
+
+    // Apply row_span if specified (e.g., row-span-2)
+    const rowSpan = layout.row_span;
+    if (rowSpan && typeof rowSpan === 'number' && rowSpan > 0) {
+      classes += `row-span-${rowSpan} `;
+    }
+
+    // Apply align_self if specified (e.g., self-center, self-start, self-end)
+    const alignSelf = layout.align_self;
+    if (alignSelf && typeof alignSelf === 'string') {
+      const validAlignValues = ['self-start', 'self-center', 'self-end', 'self-stretch', 'self-auto'];
+      if (validAlignValues.includes(alignSelf)) {
+        classes += `${alignSelf} `;
+      }
+    }
+
+    // Apply justify_self if specified (e.g., justify-self-start, center, end)
+    const justifySelf = layout.justify_self;
+    if (justifySelf && typeof justifySelf === 'string') {
+      const validJustifyValues = [
+        'justify-self-start',
+        'justify-self-center',
+        'justify-self-end',
+        'justify-self-stretch',
+        'justify-self-auto',
+      ];
+      if (validJustifyValues.includes(justifySelf)) {
+        classes += `${justifySelf} `;
+      }
+    }
+
+    return classes.trim();
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn('buildSectionGridClasses: Error parsing section layout, using default', error);
+    }
+    // Fallback to default col-span-full
+    return 'col-span-full';
+  }
+}
+
+/**
+ * SectionWrapper Component
+ * 
+ * Wraps section content with grid positioning classes
+ * Applies col-span, row-span, align-self, and justify-self from section.content.layout
+ * Default behavior: col-span-full (full width within grid)
+ * 
+ * BACKWARD COMPATIBLE: If layout is not defined, defaults to col-span-full
+ * FLEXIBLE: Works with both grid-enabled and vertical layouts
+ * 
+ * Props:
+ *   - children: React component to wrap
+ *   - layout: Optional layout configuration from section.content.layout
+ */
+interface SectionWrapperProps {
+  children: React.ReactNode;
+  layout?: Record<string, any>;
+}
+
+function SectionWrapper({ children, layout }: SectionWrapperProps): React.ReactElement {
+  // Build grid positioning classes from layout configuration
+  const gridClasses = buildSectionGridClasses(layout);
+
+  // Render children wrapped in div with grid positioning classes
+  // If page has grid enabled, these classes position the section within the grid
+  // If page has no grid, col-span-full has no effect (graceful degradation)
+  return <div className={gridClasses}>{children}</div>;
+}
+
 interface SectionRendererProps {
   section: CMSSection;
   settings: SiteSettings;
@@ -317,23 +419,59 @@ function SectionRenderer({ section, settings }: SectionRendererProps) {
     return null;
   }
 
+  // Extract layout positioning from section content (if defined)
+  // This enables block-level grid positioning for each section
+  const sectionLayout = content.layout as Record<string, any> | undefined;
+
   switch (sectionType) {
     case 'hero':
-      return <HeroSection content={content} settings={settings} />;
+      return (
+        <SectionWrapper layout={sectionLayout}>
+          <HeroSection content={content} settings={settings} />
+        </SectionWrapper>
+      );
     case 'features':
-      return <FeaturesSection content={content} settings={settings} />;
+      return (
+        <SectionWrapper layout={sectionLayout}>
+          <FeaturesSection content={content} settings={settings} />
+        </SectionWrapper>
+      );
     case 'steps':
-      return <StepsSection content={content} settings={settings} />;
+      return (
+        <SectionWrapper layout={sectionLayout}>
+          <StepsSection content={content} settings={settings} />
+        </SectionWrapper>
+      );
     case 'categories':
-      return <CategoriesSection content={content} />;
+      return (
+        <SectionWrapper layout={sectionLayout}>
+          <CategoriesSection content={content} />
+        </SectionWrapper>
+      );
     case 'text':
-      return <TextSection content={content} />;
+      return (
+        <SectionWrapper layout={sectionLayout}>
+          <TextSection content={content} />
+        </SectionWrapper>
+      );
     case 'showcase':
-      return <ShowcaseSection content={content} />;
+      return (
+        <SectionWrapper layout={sectionLayout}>
+          <ShowcaseSection content={content} />
+        </SectionWrapper>
+      );
     case 'cta':
-      return <CTASection content={content} settings={settings} />;
+      return (
+        <SectionWrapper layout={sectionLayout}>
+          <CTASection content={content} settings={settings} />
+        </SectionWrapper>
+      );
     case 'gallery':
-      return <GallerySection content={content} />;
+      return (
+        <SectionWrapper layout={sectionLayout}>
+          <GallerySection content={content} />
+        </SectionWrapper>
+      );
     default:
       console.warn(`SectionRenderer: Unknown section type "${sectionType}"`);
       return null;
