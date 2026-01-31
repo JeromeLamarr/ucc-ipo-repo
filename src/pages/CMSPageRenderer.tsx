@@ -297,6 +297,85 @@ export function CMSPageRenderer() {
 }
 
 /**
+ * Builds Tailwind CSS internal grid classes from internal_grid configuration
+ * Used to override the default layout inside a section's content area
+ * 
+ * @param internalGrid Optional internal grid configuration from section.content.internal_grid
+ * @returns String of Tailwind grid classes (e.g., "grid grid-cols-2 gap-4")
+ * 
+ * Example internal_grid config:
+ * {
+ *   "enabled": true,
+ *   "columns": 2,
+ *   "gap": "gap-4"
+ * }
+ * 
+ * If enabled === false or undefined, returns empty string (uses default section layout)
+ */
+function buildInternalGridClasses(internalGrid?: Record<string, any>): string {
+  // Check if internal grid is explicitly enabled
+  if (!internalGrid || internalGrid.enabled !== true) {
+    // Grid disabled: use section's default layout
+    return '';
+  }
+
+  try {
+    let classes = 'grid';
+
+    // Apply columns if specified (e.g., grid-cols-2)
+    const columns = internalGrid.columns;
+    if (columns && typeof columns === 'number' && columns > 0 && columns <= 12) {
+      classes += ` grid-cols-${columns}`;
+    }
+
+    // Apply gap if specified (e.g., gap-4, gap-6, gap-8)
+    const gap = internalGrid.gap;
+    if (gap && typeof gap === 'string') {
+      classes += ` ${gap}`;
+    }
+
+    return classes.trim();
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn('buildInternalGridClasses: Error parsing internal_grid configuration, using default layout', error);
+    }
+    // Fallback to empty string (use default layout)
+    return '';
+  }
+}
+
+/**
+ * InternalGrid Component
+ * 
+ * Wraps section content with optional grid layout
+ * If internal_grid.enabled === true, applies grid classes to override default section layout
+ * Otherwise, renders children as-is using the section's default layout
+ * 
+ * BACKWARD COMPATIBLE: If internal_grid is not defined or enabled is false, no grid is applied
+ * ISOLATED: Changes are confined to the section's content area
+ * 
+ * Props:
+ *   - children: Section content to render
+ *   - internalGrid: Optional configuration from section.content.internal_grid
+ */
+interface InternalGridProps {
+  children: React.ReactNode;
+  internalGrid?: Record<string, any>;
+}
+
+function InternalGrid({ children, internalGrid }: InternalGridProps): React.ReactElement {
+  const gridClasses = buildInternalGridClasses(internalGrid);
+
+  // If internal grid is enabled, wrap children in grid
+  if (gridClasses) {
+    return <div className={gridClasses}>{children}</div>;
+  }
+
+  // Otherwise, render children as-is (default layout)
+  return <>{children}</>;
+}
+
+/**
  * Builds Tailwind CSS grid positioning classes from section layout configuration
  * Applies col-span, row-span, align-self, and justify-self classes only if values exist
  * 
@@ -538,39 +617,84 @@ function FeaturesSection({ content }: { content: Record<string, any>; settings: 
     return null;
   }
 
+  // Check for internal grid override configuration
+  const internalGrid = content.internal_grid as Record<string, any> | undefined;
+  const hasInternalGrid = internalGrid?.enabled === true;
+
+  // Default grid layout: 3 columns on desktop
+  // Can be overridden by internal_grid configuration
+  const defaultGridClass = 'md:grid-cols-3 gap-8';
+  const gridClass = hasInternalGrid ? buildInternalGridClasses(internalGrid) : defaultGridClass;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className="grid md:grid-cols-3 gap-8">
-        {features.map((feature: Record<string, any>, idx: number) => {
-          // Ensure feature is an object
-          if (!feature || typeof feature !== 'object') {
-            console.warn(`FeaturesSection: Invalid feature at index ${idx}`);
-            return null;
-          }
+      {hasInternalGrid ? (
+        // If internal_grid is enabled, use the custom grid configuration
+        <InternalGrid internalGrid={internalGrid}>
+          {features.map((feature: Record<string, any>, idx: number) => {
+            // Ensure feature is an object
+            if (!feature || typeof feature !== 'object') {
+              console.warn(`FeaturesSection: Invalid feature at index ${idx}`);
+              return null;
+            }
 
-          const featureTitle = feature.title || `Feature ${idx + 1}`;
-          const featureDescription = feature.description || '';
-          const featureIcon = feature.icon || null;
-          const iconBgColor = feature.icon_bg_color || 'bg-blue-100';
-          const iconColor = feature.icon_color || 'text-blue-600';
+            const featureTitle = feature.title || `Feature ${idx + 1}`;
+            const featureDescription = feature.description || '';
+            const featureIcon = feature.icon || null;
+            const iconBgColor = feature.icon_bg_color || 'bg-blue-100';
+            const iconColor = feature.icon_color || 'text-blue-600';
 
-          return (
-            <div key={idx} className="bg-white p-8 rounded-xl shadow-lg">
-              {featureIcon && (
-                <div className={`${iconBgColor} w-16 h-16 rounded-lg flex items-center justify-center mb-4`}>
-                  <div className={`${iconColor} text-2xl`}>
-                    {getIconComponent(featureIcon)}
+            return (
+              <div key={idx} className="bg-white p-8 rounded-xl shadow-lg">
+                {featureIcon && (
+                  <div className={`${iconBgColor} w-16 h-16 rounded-lg flex items-center justify-center mb-4`}>
+                    <div className={`${iconColor} text-2xl`}>
+                      {getIconComponent(featureIcon)}
+                    </div>
                   </div>
-                </div>
-              )}
-              <h3 className="text-xl font-bold mb-3">{featureTitle}</h3>
-              {featureDescription && (
-                <p className="text-gray-600">{featureDescription}</p>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                )}
+                <h3 className="text-xl font-bold mb-3">{featureTitle}</h3>
+                {featureDescription && (
+                  <p className="text-gray-600">{featureDescription}</p>
+                )}
+              </div>
+            );
+          })}
+        </InternalGrid>
+      ) : (
+        // Default layout: responsive grid (1 column on mobile, 2 on tablet, 3 on desktop)
+        <div className={`grid ${gridClass}`}>
+          {features.map((feature: Record<string, any>, idx: number) => {
+            // Ensure feature is an object
+            if (!feature || typeof feature !== 'object') {
+              console.warn(`FeaturesSection: Invalid feature at index ${idx}`);
+              return null;
+            }
+
+            const featureTitle = feature.title || `Feature ${idx + 1}`;
+            const featureDescription = feature.description || '';
+            const featureIcon = feature.icon || null;
+            const iconBgColor = feature.icon_bg_color || 'bg-blue-100';
+            const iconColor = feature.icon_color || 'text-blue-600';
+
+            return (
+              <div key={idx} className="bg-white p-8 rounded-xl shadow-lg">
+                {featureIcon && (
+                  <div className={`${iconBgColor} w-16 h-16 rounded-lg flex items-center justify-center mb-4`}>
+                    <div className={`${iconColor} text-2xl`}>
+                      {getIconComponent(featureIcon)}
+                    </div>
+                  </div>
+                )}
+                <h3 className="text-xl font-bold mb-3">{featureTitle}</h3>
+                {featureDescription && (
+                  <p className="text-gray-600">{featureDescription}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -590,8 +714,12 @@ function StepsSection({ content, settings }: { content: Record<string, any>; set
     return null;
   }
 
-  // Adaptive grid layout based on step count
-  const getGridClass = (count: number): string => {
+  // Check for internal grid override configuration
+  const internalGrid = content.internal_grid as Record<string, any> | undefined;
+  const hasInternalGrid = internalGrid?.enabled === true;
+
+  // Adaptive grid layout based on step count (default behavior)
+  const getDefaultGridClass = (count: number): string => {
     if (count === 1) return 'flex justify-center';
     if (count === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto';
     if (count === 3) return 'grid grid-cols-1 md:grid-cols-3 gap-6';
@@ -601,42 +729,52 @@ function StepsSection({ content, settings }: { content: Record<string, any>; set
     return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
   };
 
+  const renderStep = (step: Record<string, any>, idx: number) => {
+    // Ensure step is an object
+    if (!step || typeof step !== 'object') {
+      console.warn(`StepsSection: Invalid step at index ${idx}`);
+      return null;
+    }
+
+    const stepNumber = step.number || (idx + 1);
+    const stepLabel = step.label || `Step ${idx + 1}`;
+    const stepDescription = step.description || '';
+
+    return (
+      <div key={idx} className="text-center">
+        {/* Step number uses dynamic background color from settings prop */}
+        {/* eslint-disable-next-line */}
+        <div
+          className="text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold"
+          style={{ backgroundColor: settings?.primary_color || '#2563EB' }}
+        >
+          {stepNumber}
+        </div>
+        <h4 className="font-semibold mb-2">{stepLabel}</h4>
+        {stepDescription && (
+          <p className="text-sm text-gray-600">{stepDescription}</p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="bg-white rounded-xl shadow-lg p-12">
         {title && (
           <h2 className="text-3xl font-bold text-center mb-8">{title}</h2>
         )}
-        <div className={getGridClass(steps.length)}>
-          {steps.map((step: Record<string, any>, idx: number) => {
-            // Ensure step is an object
-            if (!step || typeof step !== 'object') {
-              console.warn(`StepsSection: Invalid step at index ${idx}`);
-              return null;
-            }
-
-            const stepNumber = step.number || (idx + 1);
-            const stepLabel = step.label || `Step ${idx + 1}`;
-            const stepDescription = step.description || '';
-
-            return (
-              <div key={idx} className="text-center">
-                {/* Step number uses dynamic background color from settings prop */}
-                {/* eslint-disable-next-line */}
-                <div
-                  className="text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold"
-                  style={{ backgroundColor: settings?.primary_color || '#2563EB' }}
-                >
-                  {stepNumber}
-                </div>
-                <h4 className="font-semibold mb-2">{stepLabel}</h4>
-                {stepDescription && (
-                  <p className="text-sm text-gray-600">{stepDescription}</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {hasInternalGrid ? (
+          // If internal_grid is enabled, use the custom grid configuration
+          <InternalGrid internalGrid={internalGrid}>
+            {steps.map((step: Record<string, any>, idx: number) => renderStep(step, idx))}
+          </InternalGrid>
+        ) : (
+          // Default layout: adaptive grid based on step count
+          <div className={getDefaultGridClass(steps.length)}>
+            {steps.map((step: Record<string, any>, idx: number) => renderStep(step, idx))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -657,23 +795,44 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
     return null;
   }
 
+  // Check for internal grid override configuration
+  const internalGrid = content.internal_grid as Record<string, any> | undefined;
+  const hasInternalGrid = internalGrid?.enabled === true;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
       {title && (
         <h2 className="text-3xl font-bold mb-4">{title}</h2>
       )}
-      <div className="flex flex-wrap justify-center gap-4 mt-8">
-        {categories.map((category: any, idx: number) => {
-          // Ensure category is a string
-          const categoryText = typeof category === 'string' ? category : String(category);
-          
-          return (
-            <span key={idx} className="px-6 py-3 bg-white rounded-full shadow-md text-gray-700 font-medium">
-              {categoryText}
-            </span>
-          );
-        })}
-      </div>
+      {hasInternalGrid ? (
+        // If internal_grid is enabled, use the custom grid configuration
+        <InternalGrid internalGrid={internalGrid}>
+          {categories.map((category: any, idx: number) => {
+            // Ensure category is a string
+            const categoryText = typeof category === 'string' ? category : String(category);
+            
+            return (
+              <span key={idx} className="px-6 py-3 bg-white rounded-full shadow-md text-gray-700 font-medium">
+                {categoryText}
+              </span>
+            );
+          })}
+        </InternalGrid>
+      ) : (
+        // Default layout: flex wrap with centered alignment
+        <div className="flex flex-wrap justify-center gap-4 mt-8">
+          {categories.map((category: any, idx: number) => {
+            // Ensure category is a string
+            const categoryText = typeof category === 'string' ? category : String(category);
+            
+            return (
+              <span key={idx} className="px-6 py-3 bg-white rounded-full shadow-md text-gray-700 font-medium">
+                {categoryText}
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -904,6 +1063,10 @@ function ShowcaseSection({ content }: { content: Record<string, any> }) {
     return null;
   }
 
+  // Check for internal grid override configuration
+  const internalGrid = content.internal_grid as Record<string, any> | undefined;
+  const hasInternalGrid = internalGrid?.enabled === true;
+
   const renderItem = (item: Record<string, any>, idx: number) => {
     // Ensure item is an object
     if (!item || typeof item !== 'object') {
@@ -959,19 +1122,28 @@ function ShowcaseSection({ content }: { content: Record<string, any> }) {
       {title && (
         <h2 className="text-3xl font-bold text-center mb-12">{title}</h2>
       )}
-      {/* Dynamic grid based on item count */}
-      {items.length === 1 ? (
-        <div className="flex justify-center">
+      {hasInternalGrid ? (
+        // If internal_grid is enabled, use the custom grid configuration
+        <InternalGrid internalGrid={internalGrid}>
           {items.map((item: Record<string, any>, idx: number) => renderItem(item, idx))}
-        </div>
-      ) : items.length === 2 ? (
-        <div className="flex justify-center gap-8 flex-wrap">
-          {items.map((item: Record<string, any>, idx: number) => renderItem(item, idx))}
-        </div>
+        </InternalGrid>
       ) : (
-        <div className="grid md:grid-cols-3 gap-8">
-          {items.map((item: Record<string, any>, idx: number) => renderItem(item, idx))}
-        </div>
+        // Default layout: dynamic grid based on item count
+        <>
+          {items.length === 1 ? (
+            <div className="flex justify-center">
+              {items.map((item: Record<string, any>, idx: number) => renderItem(item, idx))}
+            </div>
+          ) : items.length === 2 ? (
+            <div className="flex justify-center gap-8 flex-wrap">
+              {items.map((item: Record<string, any>, idx: number) => renderItem(item, idx))}
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-8">
+              {items.map((item: Record<string, any>, idx: number) => renderItem(item, idx))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -1037,8 +1209,12 @@ function GallerySection({ content }: { content: Record<string, any> }) {
     return null;
   }
 
-  // Determine layout based on image count
-  const getGridClass = (count: number): string => {
+  // Check for internal grid override configuration
+  const internalGrid = content.internal_grid as Record<string, any> | undefined;
+  const hasInternalGrid = internalGrid?.enabled === true;
+
+  // Determine layout based on image count (default behavior)
+  const getDefaultGridClass = (count: number): string => {
     if (count === 1) return 'flex justify-center';
     if (count === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto';
     if (count === 3) return 'grid grid-cols-1 md:grid-cols-3 gap-6';
@@ -1096,9 +1272,17 @@ function GallerySection({ content }: { content: Record<string, any> }) {
       {title && (
         <h2 className="text-3xl font-bold text-center mb-12">{title}</h2>
       )}
-      <div className={getGridClass(images.length)}>
-        {images.map((image: Record<string, any>, idx: number) => renderImage(image, idx))}
-      </div>
+      {hasInternalGrid ? (
+        // If internal_grid is enabled, use the custom grid configuration
+        <InternalGrid internalGrid={internalGrid}>
+          {images.map((image: Record<string, any>, idx: number) => renderImage(image, idx))}
+        </InternalGrid>
+      ) : (
+        // Default layout: responsive grid based on image count
+        <div className={getDefaultGridClass(images.length)}>
+          {images.map((image: Record<string, any>, idx: number) => renderImage(image, idx))}
+        </div>
+      )}
     </div>
   );
 }
