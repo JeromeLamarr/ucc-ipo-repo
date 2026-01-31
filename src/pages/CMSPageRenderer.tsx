@@ -52,6 +52,181 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
 };
 
 /**
+ * Button interface for simple link buttons
+ */
+interface SimpleButton {
+  type?: 'simple' | undefined;
+  text: string;
+  link: string;
+}
+
+/**
+ * Dropdown item interface for dropdown menus
+ */
+interface DropdownItem {
+  text: string;
+  link: string;
+}
+
+/**
+ * Button interface for dropdown buttons
+ */
+interface DropdownButton {
+  type: 'dropdown';
+  label: string;
+  items: DropdownItem[];
+}
+
+/**
+ * Union type for all button types
+ */
+type CMSButtonType = SimpleButton | DropdownButton;
+
+/**
+ * CMSButton component - renders simple or dropdown buttons with Tailwind CSS
+ * 
+ * Props:
+ * - button: Button configuration (SimpleButton or DropdownButton)
+ * - bgColor: Background color for button (used for simple buttons)
+ * - textColor: Text color for button (default: 'text-white')
+ * - hoverClass: Hover effect class (default: 'hover:opacity-90')
+ * 
+ * Example usage:
+ * // Simple button
+ * <CMSButton button={{ text: 'Get Started', link: '/register' }} bgColor="#2563EB" />
+ * 
+ * // Dropdown button
+ * <CMSButton 
+ *   button={{
+ *     type: 'dropdown',
+ *     label: 'Actions',
+ *     items: [
+ *       { text: 'Register', link: '/register' },
+ *       { text: 'Login', link: '/login' }
+ *     ]
+ *   }}
+ *   bgColor="#2563EB"
+ * />
+ */
+function CMSButton({
+  button,
+  bgColor = '#2563EB',
+  textColor = 'text-white',
+  hoverClass = 'hover:opacity-90',
+}: {
+  button: CMSButtonType;
+  bgColor?: string;
+  textColor?: string;
+  hoverClass?: string;
+}): React.ReactElement | null {
+  // Defensive check: button must be provided
+  if (!button) {
+    if (import.meta.env.DEV) {
+      console.warn('CMSButton: Missing button prop');
+    }
+    return null;
+  }
+
+  // Handle simple button (default type or explicit 'simple')
+  if (button.type !== 'dropdown') {
+    const simpleButton = button as SimpleButton;
+    const text = simpleButton.text || 'Click here';
+    const link = simpleButton.link || '#';
+
+    return (
+      <a
+        href={link}
+        className={`inline-block px-8 py-4 rounded-lg font-semibold shadow-lg transition-opacity ${textColor} ${hoverClass}`}
+        style={{ backgroundColor: bgColor }}
+      >
+        {text}
+      </a>
+    );
+  }
+
+  // Handle dropdown button
+  const dropdownButton = button as DropdownButton;
+  const label = dropdownButton.label || 'Menu';
+  const items = Array.isArray(dropdownButton.items) ? dropdownButton.items : [];
+
+  if (items.length === 0) {
+    if (import.meta.env.DEV) {
+      console.warn('CMSButton: Dropdown button has no items, rendering as simple button');
+    }
+    return (
+      <button
+        className={`inline-block px-8 py-4 rounded-lg font-semibold shadow-lg transition-opacity ${textColor} ${hoverClass}`}
+        style={{ backgroundColor: bgColor }}
+        disabled
+      >
+        {label}
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative group inline-block">
+      {/* Dropdown trigger button */}
+      <button
+        className={`inline-block px-8 py-4 rounded-lg font-semibold shadow-lg transition-opacity ${textColor} ${hoverClass} flex items-center gap-2`}
+        style={{ backgroundColor: bgColor }}
+        aria-haspopup="true"
+        aria-expanded="false"
+        title={`${label} menu`}
+      >
+        {label}
+        <svg
+          className="w-4 h-4 transition-transform group-hover:rotate-180"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 14l-7 7m0 0l-7-7m7 7V3"
+          />
+        </svg>
+      </button>
+
+      {/* Dropdown menu (hidden by default, shown on hover) */}
+      <div
+        className="absolute left-0 mt-0 w-48 bg-white rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50"
+        role="menu"
+        aria-orientation="vertical"
+        aria-labelledby="dropdown-button"
+      >
+        {items.map((item: DropdownItem, idx: number) => {
+          // Ensure item is an object with text and link
+          if (!item || typeof item !== 'object') {
+            if (import.meta.env.DEV) {
+              console.warn(`CMSButton: Invalid dropdown item at index ${idx}`);
+            }
+            return null;
+          }
+
+          const itemText = item.text || `Item ${idx + 1}`;
+          const itemLink = item.link || '#';
+
+          return (
+            <a
+              key={idx}
+              href={itemLink}
+              className="block px-4 py-3 text-gray-800 hover:bg-gray-100 hover:text-blue-600 transition-colors first:rounded-t-lg last:rounded-b-lg"
+              role="menuitem"
+            >
+              {itemText}
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Builds Tailwind CSS grid classes from layout configuration
  * Falls back to vertical layout if grid is disabled or configuration is invalid
  * 
@@ -536,7 +711,7 @@ function SectionRenderer({ section, settings }: SectionRendererProps) {
     case 'showcase':
       return (
         <SectionWrapper layout={sectionLayout}>
-          <ShowcaseSection content={content} />
+          <ShowcaseSection content={content} settings={settings} />
         </SectionWrapper>
       );
     case 'cta':
@@ -567,8 +742,12 @@ function HeroSection({ content, settings }: { content: Record<string, any>; sett
   const headline = content.headline || 'Welcome';
   const headlineHighlight = content.headline_highlight || '';
   const subheadline = content.subheadline || '';
-  const ctaText = content.cta_text || 'Get Started';
-  const ctaLink = content.cta_link || '/register';
+  
+  // Support both legacy format (cta_text/cta_link) and new button object format
+  const button = content.button || {
+    text: content.cta_text || 'Get Started',
+    link: content.cta_link || '/register',
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -589,15 +768,17 @@ function HeroSection({ content, settings }: { content: Record<string, any>; sett
         {subheadline && (
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">{subheadline}</p>
         )}
-        {/* This CTA button uses dynamic background color from settings prop */}
-        {/* eslint-disable-next-line */}
-        <a
-          href={ctaLink}
-          className="mt-8 inline-block px-8 py-4 text-white rounded-lg hover:opacity-90 text-lg font-semibold shadow-lg transition-opacity"
-          style={{ backgroundColor: settings?.primary_color || '#2563EB' }}
-        >
-          {ctaText}
-        </a>
+        {/* CTA button using reusable CMSButton component */}
+        {button && (
+          <div className="mt-8">
+            <CMSButton
+              button={button}
+              bgColor={settings?.primary_color || '#2563EB'}
+              textColor="text-white"
+              hoverClass="hover:opacity-90"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1048,7 +1229,7 @@ function TextSection({ content }: { content: Record<string, any> }) {
   );
 }
 
-function ShowcaseSection({ content }: { content: Record<string, any> }) {
+function ShowcaseSection({ content, settings }: { content: Record<string, any>; settings?: SiteSettings }) {
   // Defensive checks
   if (!content) {
     console.warn('ShowcaseSection: Missing content prop');
@@ -1081,6 +1262,9 @@ function ShowcaseSection({ content }: { content: Record<string, any> }) {
     const imageWidth = item.image_width || 300;
     const imageHeight = item.image_height || 300;
     const imagePosition = item.image_position || 'center';
+    
+    // Support for action button (simple or dropdown)
+    const itemButton = item.button || null;
 
     // Map position to Tailwind alignment class
     const positionClass = imagePosition === 'left' ? 'justify-start' : imagePosition === 'right' ? 'justify-end' : 'justify-center';
@@ -1110,7 +1294,18 @@ function ShowcaseSection({ content }: { content: Record<string, any> }) {
             {itemTitle}
           </h3>
           {itemDescription && (
-            <p className="text-gray-600">{itemDescription}</p>
+            <p className="text-gray-600 mb-4">{itemDescription}</p>
+          )}
+          {/* Action button for showcase item (optional) */}
+          {itemButton && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <CMSButton
+                button={itemButton}
+                bgColor={settings?.primary_color || '#2563EB'}
+                textColor="text-white"
+                hoverClass="hover:opacity-90"
+              />
+            </div>
           )}
         </div>
       </a>
@@ -1159,11 +1354,15 @@ function CTASection({ content, settings }: { content: Record<string, any>; setti
   const bgColor = content.background_color || settings?.primary_color || '#2563EB';
   const heading = content.heading || '';
   const description = content.description || '';
-  const buttonText = content.button_text || null;
-  const buttonLink = content.button_link || null;
+  
+  // Support both legacy format (button_text/button_link) and new button object format
+  const button = content.button || (content.button_text && content.button_link ? {
+    text: content.button_text,
+    link: content.button_link,
+  } : null);
 
   // Check if there's any content to display
-  if (!heading && !description && (!buttonText || !buttonLink)) {
+  if (!heading && !description && !button) {
     console.warn('CTASection: No heading, description, or button provided');
     return null;
   }
@@ -1181,13 +1380,14 @@ function CTASection({ content, settings }: { content: Record<string, any>; setti
         {description && (
           <p className="text-lg mb-8 opacity-90">{description}</p>
         )}
-        {buttonText && buttonLink && (
-          <a
-            href={buttonLink}
-            className="inline-block px-8 py-3 bg-white text-gray-900 rounded-lg hover:opacity-90 font-semibold transition-opacity"
-          >
-            {buttonText}
-          </a>
+        {/* CTA button using reusable CMSButton component */}
+        {button && (
+          <CMSButton
+            button={button}
+            bgColor="white"
+            textColor="text-gray-900"
+            hoverClass="hover:opacity-90"
+          />
         )}
       </div>
     </div>
