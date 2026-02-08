@@ -157,11 +157,14 @@ export async function deleteLogo(logoPath: string): Promise<boolean> {
 }
 export async function fetchBrandingData(): Promise<BrandingData> {
   try {
+    console.log('[fetchBrandingData] Fetching branding data from site_settings table...');
     const { data, error } = await supabase
       .from('site_settings')
-      .select('id, site_name, logo_path, primary_color, updated_at')
+      .select('id, site_name, logo_url, primary_color, updated_at')
       .eq('id', 1)
       .single();
+
+    console.log('[fetchBrandingData] Response - Error:', error, 'Data:', data);
 
     if (error) {
       console.warn('Failed to fetch branding data:', error.message);
@@ -173,6 +176,7 @@ export async function fetchBrandingData(): Promise<BrandingData> {
       return DEFAULT_BRANDING;
     }
 
+    console.log('[fetchBrandingData] Successfully fetched branding:', data);
     return data as BrandingData;
   } catch (err) {
     console.error('Error fetching branding data:', err);
@@ -229,8 +233,10 @@ export async function updateBrandingData(
  * Useful for keeping branding data in sync across the app
  */
 export function subscribeToBrandingChanges(callback: (branding: BrandingData) => void) {
-  console.log('[subscribeToBrandingChanges] Setting up subscription...');
-  const subscription = (supabase as any)
+  console.log('[subscribeToBrandingChanges] Setting up real-time subscription...');
+  
+  const subscription = supabase
+    .channel('public:site_settings')
     .on(
       'postgres_changes',
       {
@@ -240,15 +246,17 @@ export function subscribeToBrandingChanges(callback: (branding: BrandingData) =>
         filter: 'id=eq.1',
       },
       (payload: any) => {
-        console.log('[subscribeToBrandingChanges] Event received:', payload.eventType, payload);
+        console.log('[subscribeToBrandingChanges] Event received:', payload.eventType, 'Payload:', payload);
         if (payload.new) {
-          console.log('[subscribeToBrandingChanges] Calling callback with new data:', payload.new);
+          console.log('[subscribeToBrandingChanges] Updating with new data:', payload.new);
           callback(payload.new as BrandingData);
         }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log('[subscribeToBrandingChanges] Subscription status:', status);
+    });
 
-  console.log('[subscribeToBrandingChanges] Subscription created:', subscription);
+  console.log('[subscribeToBrandingChanges] Subscription setup complete');
   return subscription;
 }
