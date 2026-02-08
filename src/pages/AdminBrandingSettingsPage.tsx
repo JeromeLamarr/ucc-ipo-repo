@@ -49,18 +49,23 @@ export function AdminBrandingSettingsPage() {
       // Upload new logo if selected
       if (logoFile) {
         try {
+          console.log('[handleSave] Logo file selected, starting upload...');
           setLogoUploading(true);
           const newLogoUrl = await uploadLogo(logoFile);
+          console.log('[handleSave] Upload complete, URL:', newLogoUrl);
           if (newLogoUrl) {
             // Delete old logo if it exists
             if (branding.logo_path) {
+              console.log('[handleSave] Deleting old logo:', branding.logo_path);
               await deleteLogo(branding.logo_path);
             }
             updateData.logo_path = newLogoUrl;
             setLogoFile(null);
+            console.log('[handleSave] updateData with logo_path:', updateData);
           }
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : 'Failed to upload logo';
+          console.error('[handleSave] Upload error:', errorMsg);
           setError(errorMsg);
           setLoading(false);
           setLogoUploading(false);
@@ -70,8 +75,10 @@ export function AdminBrandingSettingsPage() {
 
       // Update site name
       updateData.site_name = siteName.trim();
+      console.log('[handleSave] Final updateData:', updateData);
 
       const result = await updateBrandingData(updateData);
+      console.log('[handleSave] updateBrandingData result:', result);
 
       if (result) {
         setSuccess(true);
@@ -80,9 +87,11 @@ export function AdminBrandingSettingsPage() {
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(false), 3000);
       } else {
+        console.error('[handleSave] updateBrandingData returned falsy result');
         setError('Failed to update branding settings');
       }
     } catch (err) {
+      console.error('[handleSave] Catch error:', err);
       const errorMsg = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMsg);
     } finally {
