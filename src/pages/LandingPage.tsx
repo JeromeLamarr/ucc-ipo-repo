@@ -113,8 +113,10 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <PublicNavigation />
-      {sections.map((section) => renderSection(section))}
-      <Footer settings={settings} />
+      <div className="pt-16">
+        {sections.map((section) => renderSection(section))}
+        <Footer settings={settings} />
+      </div>
     </div>
   );
 }
@@ -530,9 +532,9 @@ function DefaultLandingPage({ navigate, settings }: { navigate: any; settings: S
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <PublicNavigation />
-
-      {/* Hero Section */}
-      <div className="relative min-h-[70vh] flex items-center justify-center overflow-hidden py-20">
+      <div className="pt-16">
+        {/* Hero Section */}
+        <div className="relative min-h-[70vh] flex items-center justify-center overflow-hidden py-20">
         {/* Decorative Elements */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
         <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
@@ -597,6 +599,7 @@ function DefaultLandingPage({ navigate, settings }: { navigate: any; settings: S
       </div>
 
       <Footer settings={settings} />
+      </div>
     </div>
   );
 }
