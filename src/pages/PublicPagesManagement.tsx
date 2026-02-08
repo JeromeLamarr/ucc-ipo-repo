@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useBranding } from '../hooks/useBranding';
 import { Plus, Edit, Trash2, Search, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { PAGE_TEMPLATES, getTemplate } from '../lib/pageTemplates';
 import { canPublishPage } from '../lib/sectionValidation';
@@ -15,6 +16,7 @@ interface CMSPage {
 
 export function PublicPagesManagement() {
   const navigate = useNavigate();
+  const { primaryColor } = useBranding();
   const [pages, setPages] = useState<CMSPage[]>([]);
   const [filteredPages, setFilteredPages] = useState<CMSPage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -273,7 +275,7 @@ export function PublicPagesManagement() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+      <div className="rounded-xl shadow-lg p-6 mb-6" style={{ background: 'white' }}>
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -282,12 +284,14 @@ export function PublicPagesManagement() {
               placeholder="Search pages by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+              style={{ '--tw-ring-color': primaryColor } as any}
             />
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium"
+            style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)` }}
           >
             <Plus className="h-5 w-5" />
             Create Page
