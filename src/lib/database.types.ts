@@ -468,6 +468,29 @@ export interface Database {
           updated_at?: string;
         };
       };
+      site_settings: {
+        Row: {
+          id: number;
+          site_name: string;
+          logo_path: string | null;
+          primary_color: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          site_name: string;
+          logo_path?: string | null;
+          primary_color?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          site_name?: string;
+          logo_path?: string | null;
+          primary_color?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {};
     Functions: {};

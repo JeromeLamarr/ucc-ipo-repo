@@ -2,7 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Shield, FileText, TrendingUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useBranding } from '../hooks/useBranding';
 import { PublicNavigation } from '../components/PublicNavigation';
+import { Footer } from '../components/Footer';
 import DOMPurify from 'dompurify';
 
 interface SiteSettings {
@@ -25,26 +27,25 @@ const DEFAULT_SETTINGS: SiteSettings = {
 
 export function LandingPage() {
   const navigate = useNavigate();
+  const { siteName, primaryColor } = useBranding();
   const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SETTINGS);
   const [sections, setSections] = useState<CMSSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [cmsAvailable, setCmsAvailable] = useState(false);
 
+  // Update settings when branding changes
+  useEffect(() => {
+    setSettings(prev => ({
+      ...prev,
+      site_name: siteName,
+      primary_color: primaryColor,
+    }));
+  }, [siteName, primaryColor]);
+
   useEffect(() => {
     const fetchHomePage = async () => {
       try {
         setLoading(true);
-
-        // Fetch site settings
-        const { data: settingsData } = await supabase
-          .from('site_settings')
-          .select('*')
-          .eq('id', 1)
-          .single();
-
-        if (settingsData) {
-          setSettings(settingsData);
-        }
 
         // Fetch the home CMS page
         const { data: pageData, error: pageError } = await supabase
@@ -115,7 +116,7 @@ export function LandingPage() {
       <PublicNavigation />
       <div className="pt-16">
         {sections.map((section) => renderSection(section))}
-        <Footer settings={settings} />
+        <Footer />
       </div>
     </div>
   );
@@ -532,53 +533,6 @@ function GallerySection({ content }: { content: Record<string, any> }) {
   );
 }
 
-function Footer({ settings }: { settings: SiteSettings }) {
-  return (
-    <footer className="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-16 mt-20 border-t border-gray-700">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-          {/* About Section */}
-          <div>
-            <h3 className="text-lg font-bold mb-4 text-blue-400">{settings.site_name}</h3>
-            <p className="text-gray-300 text-sm leading-relaxed">Supporting innovation and intellectual property excellence at {settings.site_name}.</p>
-          </div>
-          
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-lg font-bold mb-4 text-blue-400">Quick Links</h3>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="text-gray-300 hover:text-blue-400 transition-colors">Home</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-blue-400 transition-colors">About Us</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-blue-400 transition-colors">Contact</a></li>
-            </ul>
-          </div>
-          
-          {/* Support */}
-          <div>
-            <h3 className="text-lg font-bold mb-4 text-blue-400">Support</h3>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#" className="text-gray-300 hover:text-blue-400 transition-colors">Help Center</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-blue-400 transition-colors">Documentation</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-blue-400 transition-colors">FAQ</a></li>
-            </ul>
-          </div>
-          
-          {/* Contact */}
-          <div>
-            <h3 className="text-lg font-bold mb-4 text-blue-400">Contact</h3>
-            <p className="text-gray-300 text-sm">Email: info@ucc.edu.ph</p>
-            <p className="text-gray-300 text-sm">Phone: +63 (2) 1234-5678</p>
-          </div>
-        </div>
-        
-        <div className="border-t border-gray-700 pt-8">
-          <p className="text-gray-400 text-center text-sm">© 2026 {settings.site_name}. All rights reserved.</p>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
 // ============================================================================
 // Default Landing Page (Fallback)
 // ============================================================================
@@ -725,7 +679,7 @@ function DefaultLandingPage({ navigate, settings }: { navigate: any; settings: S
         </div>
       </div>
 
-      <Footer settings={settings} />
+      <Footer />
       </div>
     </div>
   );

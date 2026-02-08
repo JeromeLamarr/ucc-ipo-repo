@@ -12,6 +12,7 @@ import { NewSubmissionPage } from '@pages/NewSubmissionPage';
 import { SupervisorDashboard } from '@pages/SupervisorDashboard';
 import { EvaluatorDashboard } from '@pages/EvaluatorDashboard';
 import { AdminDashboard } from '@pages/AdminDashboard';
+import { AdminBrandingSettingsPage } from '@pages/AdminBrandingSettingsPage';
 import { UserManagement } from '@pages/UserManagement';
 import { PublicPagesManagement } from '@pages/PublicPagesManagement';
 import { PageSectionsManagement } from '@pages/PageSectionsManagement';
@@ -54,6 +55,7 @@ function DashboardRouter() {
         <Route path="submissions" element={<ApplicantDashboard />} />
         <Route path="submissions/:id" element={<SubmissionDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="branding" element={<AdminBrandingSettingsPage />} />
         <Route path="review" element={<SupervisorDashboard />} />
         <Route path="evaluations" element={<EvaluatorDashboard />} />
         <Route path="users" element={<UserManagement />} />

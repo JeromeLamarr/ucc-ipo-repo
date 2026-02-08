@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useBranding } from '../hooks/useBranding';
 import { GraduationCap, Menu, X } from 'lucide-react';
 
 interface CMSPage {
@@ -8,23 +9,17 @@ interface CMSPage {
   title: string;
 }
 
-interface SiteSettings {
-  primary_color: string;
-}
-
-const DEFAULT_PRIMARY_COLOR = '#2563EB';
-
 export function PublicNavigation() {
   const navigate = useNavigate();
+  const { primaryColor, siteName, logoPath } = useBranding();
   const [pages, setPages] = useState<CMSPage[]>([]);
-  const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY_COLOR);
   const [loading, setLoading] = useState(true);
   const [navError, setNavError] = useState<string | null>(null);
   const [hasScroll, setHasScroll] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    fetchNavData();
+    fetchNavPages();
     
     // Add scroll listener for shadow effect
     const handleScroll = () => {
@@ -35,7 +30,7 @@ export function PublicNavigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const fetchNavData = async () => {
+  const fetchNavPages = async () => {
     try {
       setNavError(null);
 
@@ -52,20 +47,6 @@ export function PublicNavigation() {
         setNavError('Navigation unavailable');
       } else if (pagesData) {
         setPages(pagesData);
-      }
-
-      // Fetch site settings for branding
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('site_settings')
-        .select('primary_color')
-        .eq('id', 1)
-        .single();
-
-      if (settingsError) {
-        const msg = `Failed to load site settings: ${settingsError.message}`;
-        if (import.meta.env.DEV) console.warn(msg, settingsError);
-      } else if (settingsData && settingsData.primary_color) {
-        setPrimaryColor(settingsData.primary_color);
       }
     } catch (err) {
       const msg = 'Unexpected error loading navigation';
@@ -90,8 +71,18 @@ export function PublicNavigation() {
             }}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0"
           >
-            <GraduationCap className="h-8 w-8" style={{ color: primaryColor }} />
-            <span className="text-lg font-bold text-gray-900 hidden sm:inline">UCC IP Office</span>
+            {logoPath ? (
+              <img 
+                src={logoPath} 
+                alt={siteName}
+                className="h-8 w-8 object-contain" 
+              />
+            ) : (
+              <GraduationCap className="h-8 w-8" style={{ color: primaryColor }} />
+            )}
+            <span className="text-lg font-bold text-gray-900 hidden sm:inline max-w-xs truncate">
+              {siteName}
+            </span>
           </button>
 
           {/* Center Navigation Links - Hidden on mobile */}
