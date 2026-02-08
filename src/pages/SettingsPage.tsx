@@ -86,18 +86,20 @@ export function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">Manage your account settings and preferences</p>
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-3">Settings</h1>
+        <p className="text-lg text-gray-600 font-medium">Manage your account settings and preferences</p>
       </div>
 
+      {/* Alert Messages */}
       {message && (
         <div
-          className={`p-4 rounded-lg flex items-start gap-3 ${
+          className={`p-4 rounded-2xl flex items-start gap-3 border backdrop-blur-sm transition-all duration-300 ${
             message.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-red-50 border border-red-200 text-red-800'
+              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-300/50 text-green-800'
+              : 'bg-gradient-to-r from-red-50 to-pink-50 border-red-300/50 text-red-800'
           }`}
         >
           {message.type === 'success' ? (
@@ -105,13 +107,15 @@ export function SettingsPage() {
           ) : (
             <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           )}
-          <span>{message.text}</span>
+          <span className="font-medium">{message.text}</span>
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="border-b border-gray-200">
-          <div className="flex gap-1 p-2">
+      {/* Settings Container */}
+      <div className="bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/20 rounded-2xl border border-blue-200/40 shadow-lg overflow-hidden">
+        {/* Tabs */}
+        <div className="border-b border-blue-200/40 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 backdrop-blur-sm">
+          <div className="flex gap-1 p-4 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -121,10 +125,10 @@ export function SettingsPage() {
                     setActiveTab(tab.id as any);
                     setMessage(null);
                   }}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-6 py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap ${
                     activeTab === tab.id
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-gray-600 hover:bg-gray-50'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/20 scale-105'
+                      : 'text-gray-700 hover:bg-white/50 hover:text-blue-600'
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -135,27 +139,28 @@ export function SettingsPage() {
           </div>
         </div>
 
-        <div className="p-6">
+        {/* Content */}
+        <div className="p-8">
           {activeTab === 'profile' && (
-            <form onSubmit={handleProfileUpdate} className="space-y-6 max-w-2xl">
+            <form onSubmit={handleProfileUpdate} className="space-y-8 max-w-2xl">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Information</h3>
-                <div className="space-y-4">
+                <h3 className="text-2xl font-bold text-gray-900 mb-6">Profile Information</h3>
+                <div className="space-y-6 bg-white/40 rounded-2xl p-6 border border-blue-200/30">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Email Address
                     </label>
                     <input
                       type="email"
                       value={profile?.email}
                       disabled
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed font-medium"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                    <p className="text-xs text-gray-500 mt-2 font-medium">Email cannot be changed</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Full Name
                     </label>
                     <input
@@ -163,16 +168,16 @@ export function SettingsPage() {
                       value={profileForm.fullName}
                       onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
                       required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-300 font-medium"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                    <div className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 capitalize">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
+                    <div className="px-4 py-3 border border-blue-300 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 text-gray-700 capitalize font-medium">
                       {profile?.role}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Role is assigned by administrators</p>
+                    <p className="text-xs text-gray-500 mt-2 font-medium">Role is assigned by administrators</p>
                   </div>
                 </div>
               </div>
@@ -180,7 +185,7 @@ export function SettingsPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
               >
                 <Save className="h-5 w-5" />
                 {loading ? 'Saving...' : 'Save Changes'}
@@ -189,48 +194,50 @@ export function SettingsPage() {
           )}
 
           {activeTab === 'password' && (
-            <form onSubmit={handlePasswordUpdate} className="space-y-6 max-w-2xl">
+            <form onSubmit={handlePasswordUpdate} className="space-y-8 max-w-2xl">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      New Password
-                    </label>
-                    <input
-                      type="password"
-                      value={passwordForm.newPassword}
-                      onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                      required
-                      minLength={6}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Minimum 6 characters"
-                    />
+                <h3 className="text-2xl font-bold text-gray-900 mb-6">Change Password</h3>
+                <div className="space-y-6">
+                  <div className="bg-white/40 rounded-2xl p-6 border border-blue-200/30 space-y-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        New Password
+                      </label>
+                      <input
+                        type="password"
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                        required
+                        minLength={6}
+                        className="w-full px-4 py-3 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-300 font-medium"
+                        placeholder="Minimum 6 characters"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Confirm New Password
+                      </label>
+                      <input
+                        type="password"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) =>
+                          setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                        }
+                        required
+                        minLength={6}
+                        className="w-full px-4 py-3 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-300 font-medium"
+                        placeholder="Re-enter new password"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Confirm New Password
-                    </label>
-                    <input
-                      type="password"
-                      value={passwordForm.confirmPassword}
-                      onChange={(e) =>
-                        setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
-                      }
-                      required
-                      minLength={6}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Re-enter new password"
-                    />
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start gap-2">
-                      <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm text-blue-800">
-                        <p className="font-medium mb-1">Password Requirements:</p>
-                        <ul className="list-disc list-inside space-y-1">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-300/50 rounded-2xl p-6">
+                    <div className="flex items-start gap-4">
+                      <Shield className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-blue-900">
+                        <p className="font-bold mb-3 text-base">Password Requirements:</p>
+                        <ul className="list-disc list-inside space-y-1.5 font-medium">
                           <li>Minimum 6 characters</li>
                           <li>Use a unique password</li>
                           <li>Don't share your password</li>
@@ -244,7 +251,7 @@ export function SettingsPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
               >
                 <Lock className="h-5 w-5" />
                 {loading ? 'Updating...' : 'Update Password'}
@@ -253,47 +260,54 @@ export function SettingsPage() {
           )}
 
           {activeTab === 'notifications' && (
-            <div className="space-y-6 max-w-2xl">
+            <div className="space-y-8 max-w-2xl">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Notification Preferences</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-6">Notification Preferences</h3>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">Email Notifications</p>
-                      <p className="text-sm text-gray-600">Receive email updates about your submissions</p>
+                  {/* Email Notifications Card */}
+                  <div className="flex items-center justify-between p-6 bg-white/40 rounded-2xl border border-blue-200/30 hover:shadow-lg transition-all duration-300 group">
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-900 text-lg">Email Notifications</p>
+                      <p className="text-sm text-gray-600 mt-1 font-medium">Receive email updates about your submissions</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer ml-4">
                       <input type="checkbox" className="sr-only peer" defaultChecked />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-12 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-blue-600 peer-checked:to-indigo-600 shadow-md"></div>
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">In-App Notifications</p>
-                      <p className="text-sm text-gray-600">Show notifications in the notification center</p>
+                  {/* In-App Notifications Card */}
+                  <div className="flex items-center justify-between p-6 bg-white/40 rounded-2xl border border-blue-200/30 hover:shadow-lg transition-all duration-300 group">
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-900 text-lg">In-App Notifications</p>
+                      <p className="text-sm text-gray-600 mt-1 font-medium">Show notifications in the notification center</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer ml-4">
                       <input type="checkbox" className="sr-only peer" defaultChecked />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-12 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-blue-600 peer-checked:to-indigo-600 shadow-md"></div>
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">Status Updates</p>
-                      <p className="text-sm text-gray-600">Get notified when submission status changes</p>
+                  {/* Status Updates Card */}
+                  <div className="flex items-center justify-between p-6 bg-white/40 rounded-2xl border border-blue-200/30 hover:shadow-lg transition-all duration-300 group">
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-900 text-lg">Status Updates</p>
+                      <p className="text-sm text-gray-600 mt-1 font-medium">Get notified when submission status changes</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer ml-4">
                       <input type="checkbox" className="sr-only peer" defaultChecked />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-12 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-blue-600 peer-checked:to-indigo-600 shadow-md"></div>
                     </label>
                   </div>
 
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                    <p className="text-sm text-yellow-800">
-                      Note: Notification preferences are currently view-only. Full implementation coming soon.
-                    </p>
+                  {/* Info Alert */}
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300/50 rounded-2xl p-6 mt-6">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-2 flex-shrink-0"></div>
+                      <p className="text-sm text-amber-900 font-medium">
+                        Note: Notification preferences are currently view-only. Full implementation coming soon.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -301,7 +315,7 @@ export function SettingsPage() {
           )}
 
           {activeTab === 'branding' && profile?.role === 'admin' && (
-            <div className="space-y-6">
+            <div className="space-y-8">
               <AdminBrandingSettingsPage />
             </div>
           )}
