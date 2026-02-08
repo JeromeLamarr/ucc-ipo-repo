@@ -218,13 +218,32 @@ function FeaturesSection({ content }: { content: Record<string, any> }) {
           {features.map((feature: any, index: number) => (
             <div 
               key={index} 
-              className="group bg-white rounded-xl shadow-md hover:shadow-2xl p-8 transition-all duration-300 hover:scale-105 border border-gray-100 hover:border-blue-200 focus-within:ring-2 focus-within:ring-blue-500"
+              className="group h-full flex flex-col bg-white rounded-2xl shadow-md hover:shadow-2xl p-8 transition-all duration-300 hover:-translate-y-2 border border-gray-100 hover:border-blue-300 focus-within:ring-2 focus-within:ring-blue-500"
             >
-              <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 ${feature.icon_bg_color || 'bg-gradient-to-br from-blue-100 to-indigo-100'}`}>
-                <div className={`text-3xl`}>{feature.icon || '📄'}</div>
+              {/* Icon Container with Colored Circle */}
+              <div className="mb-8 relative">
+                <div className={`w-20 h-20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 ${
+                  feature.icon_bg_color || 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                } shadow-lg group-hover:shadow-xl`}>
+                  <div className="text-4xl">{feature.icon || '📄'}</div>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">{feature.title}</h3>
-              <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+
+              {/* Content - Flex grow for equal heights */}
+              <div className="flex-grow">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-blue-600 transition-colors">{feature.title}</h3>
+                <p className="text-gray-600 leading-relaxed text-base">{feature.description}</p>
+              </div>
+
+              {/* Bottom accent line */}
+              <div className="mt-6 pt-6 border-t border-gray-100 group-hover:border-blue-300 transition-colors">
+                <div className="flex items-center text-blue-600 font-semibold text-sm group-hover:gap-2 transition-all duration-300 gap-1">
+                  <span>Learn more</span>
+                  <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -645,26 +664,62 @@ function DefaultLandingPage({ navigate, settings }: { navigate: any; settings: S
       <div className="w-full bg-gradient-to-b from-white via-blue-50 to-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="group bg-white rounded-xl shadow-md hover:shadow-2xl p-8 transition-all duration-300 hover:scale-105 border border-gray-100 hover:border-blue-200 focus-within:ring-2 focus-within:ring-blue-500">
-              <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-6 bg-gradient-to-br from-blue-100 to-indigo-100 group-hover:scale-110 transition-transform duration-300">
-                <div className="text-3xl">📄</div>
+            <div className="group h-full flex flex-col bg-white rounded-2xl shadow-md hover:shadow-2xl p-8 transition-all duration-300 hover:-translate-y-2 border border-gray-100 hover:border-blue-300 focus-within:ring-2 focus-within:ring-blue-500">
+              <div className="mb-8 relative">
+                <div className="w-20 h-20 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-transform duration-300">
+                  <div className="text-4xl">📄</div>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">Easy Submissions</h3>
-              <p className="text-gray-600 leading-relaxed">Submit with streamlined forms and document uploads.</p>
+              <div className="flex-grow">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-blue-600 transition-colors">Easy Submissions</h3>
+                <p className="text-gray-600 leading-relaxed text-base">Submit with streamlined forms and document uploads.</p>
+              </div>
+              <div className="mt-6 pt-6 border-t border-gray-100 group-hover:border-blue-300 transition-colors">
+                <div className="flex items-center text-blue-600 font-semibold text-sm group-hover:gap-2 transition-all duration-300 gap-1">
+                  <span>Learn more</span>
+                  <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
             </div>
-            <div className="group bg-white rounded-xl shadow-md hover:shadow-2xl p-8 transition-all duration-300 hover:scale-105 border border-gray-100 hover:border-blue-200 focus-within:ring-2 focus-within:ring-blue-500">
-              <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-6 bg-gradient-to-br from-blue-100 to-indigo-100 group-hover:scale-110 transition-transform duration-300">
-                <div className="text-3xl">🛡️</div>
+            <div className="group h-full flex flex-col bg-white rounded-2xl shadow-md hover:shadow-2xl p-8 transition-all duration-300 hover:-translate-y-2 border border-gray-100 hover:border-blue-300 focus-within:ring-2 focus-within:ring-blue-500">
+              <div className="mb-8 relative">
+                <div className="w-20 h-20 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-transform duration-300">
+                  <div className="text-4xl">🛡️</div>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">Secure Workflow</h3>
-              <p className="text-gray-600 leading-relaxed">Multi-level review process ensures quality.</p>
+              <div className="flex-grow">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-blue-600 transition-colors">Secure Workflow</h3>
+                <p className="text-gray-600 leading-relaxed text-base">Multi-level review process ensures quality.</p>
+              </div>
+              <div className="mt-6 pt-6 border-t border-gray-100 group-hover:border-blue-300 transition-colors">
+                <div className="flex items-center text-blue-600 font-semibold text-sm group-hover:gap-2 transition-all duration-300 gap-1">
+                  <span>Learn more</span>
+                  <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
             </div>
-            <div className="group bg-white rounded-xl shadow-md hover:shadow-2xl p-8 transition-all duration-300 hover:scale-105 border border-gray-100 hover:border-blue-200 focus-within:ring-2 focus-within:ring-blue-500">
-              <div className="w-16 h-16 rounded-xl flex items-center justify-center mb-6 bg-gradient-to-br from-blue-100 to-indigo-100 group-hover:scale-110 transition-transform duration-300">
-                <div className="text-3xl">📈</div>
+            <div className="group h-full flex flex-col bg-white rounded-2xl shadow-md hover:shadow-2xl p-8 transition-all duration-300 hover:-translate-y-2 border border-gray-100 hover:border-blue-300 focus-within:ring-2 focus-within:ring-blue-500">
+              <div className="mb-8 relative">
+                <div className="w-20 h-20 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-transform duration-300">
+                  <div className="text-4xl">📈</div>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">Track Progress</h3>
-              <p className="text-gray-600 leading-relaxed">Monitor status and generate certificates.</p>
+              <div className="flex-grow">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-blue-600 transition-colors">Track Progress</h3>
+                <p className="text-gray-600 leading-relaxed text-base">Monitor status and generate certificates.</p>
+              </div>
+              <div className="mt-6 pt-6 border-t border-gray-100 group-hover:border-blue-300 transition-colors">
+                <div className="flex items-center text-blue-600 font-semibold text-sm group-hover:gap-2 transition-all duration-300 gap-1">
+                  <span>Learn more</span>
+                  <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>
