@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranding } from '../hooks/useBranding';
 import { Bell, X, Check, CheckCheck } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 
@@ -8,6 +9,7 @@ type Notification = Database['public']['Tables']['notifications']['Row'];
 
 export function NotificationCenter() {
   const { profile } = useAuth();
+  const { primaryColor } = useBranding();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -101,7 +103,7 @@ export function NotificationCenter() {
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 hover:bg-gray-100 rounded-lg relative"
       >
-        <Bell className="h-5 w-5 text-gray-600" />
+        <Bell className="h-5 w-5" style={{ color: primaryColor }} />
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -123,7 +125,8 @@ export function NotificationCenter() {
                   <button
                     onClick={markAllAsRead}
                     disabled={loading}
-                    className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                    className="text-xs font-medium flex items-center gap-1"
+                    style={{ color: primaryColor }}
                   >
                     <CheckCheck className="h-4 w-4" />
                     Mark all read
@@ -150,8 +153,9 @@ export function NotificationCenter() {
                     <div
                       key={notification.id}
                       className={`p-4 hover:bg-gray-50 cursor-pointer ${
-                        !notification.is_read ? 'bg-blue-50' : ''
+                        !notification.is_read ? 'border-l-4' : ''
                       }`}
+                      style={!notification.is_read ? { borderLeftColor: primaryColor, backgroundColor: `${primaryColor}08` } : {}}
                       onClick={() => {
                         if (!notification.is_read) {
                           markAsRead(notification.id);
@@ -168,7 +172,7 @@ export function NotificationCenter() {
                               {notification.title}
                             </p>
                             {!notification.is_read && (
-                              <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1.5" />
+                              <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ backgroundColor: primaryColor }} />
                             )}
                           </div>
                           {notification.message && (
