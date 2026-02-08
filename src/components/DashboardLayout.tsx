@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranding } from '../hooks/useBranding';
 import { NotificationCenter } from './NotificationCenter';
 import {
   GraduationCap,
@@ -115,6 +116,7 @@ const navItems: NavItem[] = [
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { profile, signOut } = useAuth();
+  const { siteName, logoPath, primaryColor } = useBranding();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -142,10 +144,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               {sidebarOpen ? <X className="h-6 w-6 text-gray-900" /> : <Menu className="h-6 w-6 text-gray-900" />}
             </button>
             <Link to="/dashboard" className="flex items-center gap-3 group">
-              <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg group-hover:shadow-lg transition-all duration-300">
-                <GraduationCap className="h-6 w-6 text-white" />
-              </div>
-              <span className="font-black text-lg hidden sm:block bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">UCC IP Office</span>
+              {logoPath ? (
+                <img 
+                  src={logoPath} 
+                  alt={siteName}
+                  className="h-8 w-8 object-contain"
+                />
+              ) : (
+                <div className="p-2 rounded-lg" style={{ background: `linear-gradient(135deg, ${primaryColor}, #6366f1)` }}>
+                  <GraduationCap className="h-6 w-6 text-white" />
+                </div>
+              )}
+              <span className="font-black text-lg hidden sm:block" style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{siteName}</span>
             </Link>
           </div>
 
@@ -156,7 +166,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="text-sm font-bold text-gray-900">{profile?.full_name}</div>
                 <div className="text-xs text-gray-500 capitalize font-medium">{profile?.role}</div>
               </div>
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg">
+              <div className="h-10 w-10 rounded-full text-white font-bold flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, ${primaryColor}, #6366f1)` }}>
                 {profile?.full_name.charAt(0).toUpperCase()}
               </div>
             </div>
@@ -181,9 +191,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
                     active
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-600/20'
+                      ? 'text-white font-semibold shadow-lg'
                       : 'text-gray-700 hover:bg-gradient-to-r hover:from-blue-100/50 hover:to-indigo-100/30 hover:text-blue-700'
                   }`}
+                  style={active ? { background: `linear-gradient(135deg, ${primaryColor}, #6366f1)`, boxShadow: `0 8px 16px ${primaryColor}33` } : {}}
                 >
                   <Icon className={`h-5 w-5 transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />
                   <span>{item.label}</span>
