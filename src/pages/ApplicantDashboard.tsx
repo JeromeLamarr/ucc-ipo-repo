@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { FileText, Clock, CheckCircle, XCircle, Plus, Edit, AlertCircle, Trash2 } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
+import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'];
@@ -21,6 +22,14 @@ export function ApplicantDashboard() {
     rejected: 0,
     drafts: 0,
   });
+
+  // Pagination states for submitted records
+  const [recordsCurrentPage, setRecordsCurrentPage] = useState(1);
+  const [recordsItemsPerPage, setRecordsItemsPerPage] = useState(10);
+
+  // Pagination states for drafts
+  const [draftsCurrentPage, setDraftsCurrentPage] = useState(1);
+  const [draftsItemsPerPage, setDraftsItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchRecords();
@@ -139,6 +148,18 @@ export function ApplicantDashboard() {
     });
   };
 
+  // Pagination calculations for records
+  const recordsStartIndex = (recordsCurrentPage - 1) * recordsItemsPerPage;
+  const recordsEndIndex = recordsStartIndex + recordsItemsPerPage;
+  const paginatedRecords = records.slice(recordsStartIndex, recordsEndIndex);
+  const recordsTotalPages = Math.ceil(records.length / recordsItemsPerPage);
+
+  // Pagination calculations for drafts
+  const draftsStartIndex = (draftsCurrentPage - 1) * draftsItemsPerPage;
+  const draftsEndIndex = draftsStartIndex + draftsItemsPerPage;
+  const paginatedDrafts = drafts.slice(draftsStartIndex, draftsEndIndex);
+  const draftsTotalPages = Math.ceil(drafts.length / draftsItemsPerPage);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -224,7 +245,7 @@ export function ApplicantDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {drafts.map((draft) => (
+                {paginatedDrafts.map((draft) => (
                   <tr key={draft.id} className="hover:bg-amber-50">
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">
@@ -279,6 +300,20 @@ export function ApplicantDashboard() {
               </tbody>
             </table>
           </div>
+
+          {draftsTotalPages > 1 && (
+            <Pagination
+              currentPage={draftsCurrentPage}
+              totalPages={draftsTotalPages}
+              onPageChange={setDraftsCurrentPage}
+              itemsPerPage={draftsItemsPerPage}
+              onItemsPerPageChange={(count) => {
+                setDraftsItemsPerPage(count);
+                setDraftsCurrentPage(1);
+              }}
+              totalItems={drafts.length}
+            />
+          )}
         </div>
       )}
 
@@ -324,7 +359,7 @@ export function ApplicantDashboard() {
                   </td>
                 </tr>
               ) : (
-                records.map((record) => (
+                paginatedRecords.map((record) => (
                   <tr key={record.id} className={`hover:bg-gray-50 ${needsRevision(record.status) ? 'bg-orange-50 border-l-4 border-orange-500' : ''}`}>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -382,6 +417,20 @@ export function ApplicantDashboard() {
             </tbody>
           </table>
         </div>
+
+        {recordsTotalPages > 1 && (
+          <Pagination
+            currentPage={recordsCurrentPage}
+            totalPages={recordsTotalPages}
+            onPageChange={setRecordsCurrentPage}
+            itemsPerPage={recordsItemsPerPage}
+            onItemsPerPageChange={(count) => {
+              setRecordsItemsPerPage(count);
+              setRecordsCurrentPage(1);
+            }}
+            totalItems={records.length}
+          />
+        )}
       </div>
     </div>
   );

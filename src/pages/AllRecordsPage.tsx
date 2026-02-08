@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { FileText, Search, Filter, Eye, Download, Plus, Award } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
+import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -24,6 +25,14 @@ export function AllRecordsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<IpStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<IpCategory | 'all'>('all');
+
+  // Pagination states for workflow records
+  const [workflowCurrentPage, setWorkflowCurrentPage] = useState(1);
+  const [workflowItemsPerPage, setWorkflowItemsPerPage] = useState(10);
+
+  // Pagination states for drafts
+  const [draftsCurrentPage, setDraftsCurrentPage] = useState(1);
+  const [draftsItemsPerPage, setDraftsItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchRecords();
@@ -117,6 +126,18 @@ export function AllRecordsPage() {
     });
   };
 
+  // Calculate paginated workflow records
+  const workflowStartIndex = (workflowCurrentPage - 1) * workflowItemsPerPage;
+  const workflowEndIndex = workflowStartIndex + workflowItemsPerPage;
+  const paginatedWorkflowRecords = filteredRecords.slice(workflowStartIndex, workflowEndIndex);
+  const workflowTotalPages = Math.ceil(filteredRecords.length / workflowItemsPerPage);
+
+  // Calculate paginated draft records
+  const draftsStartIndex = (draftsCurrentPage - 1) * draftsItemsPerPage;
+  const draftsEndIndex = draftsStartIndex + draftsItemsPerPage;
+  const paginatedDrafts = filteredDrafts.slice(draftsStartIndex, draftsEndIndex);
+  const draftsTotalPages = Math.ceil(filteredDrafts.length / draftsItemsPerPage);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -173,7 +194,7 @@ export function AllRecordsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredDrafts.map((record) => (
+                {paginatedDrafts.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">{record.title}</div>
@@ -202,6 +223,20 @@ export function AllRecordsPage() {
               </tbody>
             </table>
           </div>
+
+          {draftsTotalPages > 1 && (
+            <Pagination
+              currentPage={draftsCurrentPage}
+              totalPages={draftsTotalPages}
+              onPageChange={setDraftsCurrentPage}
+              itemsPerPage={draftsItemsPerPage}
+              onItemsPerPageChange={(count) => {
+                setDraftsItemsPerPage(count);
+                setDraftsCurrentPage(1);
+              }}
+              totalItems={filteredDrafts.length}
+            />
+          )}
         </div>
       )}
 
@@ -299,7 +334,7 @@ export function AllRecordsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredRecords.map((record) => (
+                paginatedWorkflowRecords.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">{record.title}</div>
@@ -344,6 +379,20 @@ export function AllRecordsPage() {
             </tbody>
           </table>
         </div>
+
+        {workflowTotalPages > 1 && (
+          <Pagination
+            currentPage={workflowCurrentPage}
+            totalPages={workflowTotalPages}
+            onPageChange={setWorkflowCurrentPage}
+            itemsPerPage={workflowItemsPerPage}
+            onItemsPerPageChange={(count) => {
+              setWorkflowItemsPerPage(count);
+              setWorkflowCurrentPage(1);
+            }}
+            totalItems={filteredRecords.length}
+          />
+        )}
       </div>
 
       {/* Information about Legacy Records */}

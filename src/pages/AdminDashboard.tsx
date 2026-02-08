@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, FileText, TrendingUp, Activity } from 'lucide-react';
+import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
 
 type User = Database['public']['Tables']['users']['Row'];
@@ -20,6 +21,10 @@ export function AdminDashboard() {
   const [categoryStats, setCategoryStats] = useState<{ category: string; count: number }[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination state for recent activity
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchStats();
@@ -96,6 +101,12 @@ export function AdminDashboard() {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   };
+
+  // Pagination calculation for recent activity
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedActivity = recentActivity.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(recentActivity.length / itemsPerPage);
 
   if (loading) {
     return (
@@ -239,7 +250,7 @@ export function AdminDashboard() {
           {recentActivity.length === 0 ? (
             <div className="p-8 text-center text-gray-500">No recent activity</div>
           ) : (
-            recentActivity.map((activity) => (
+            paginatedActivity.map((activity) => (
               <div key={activity.id} className="p-4 hover:bg-gray-50">
                 <div className="flex items-start gap-3">
                   <div className="bg-blue-100 p-2 rounded-lg">
@@ -259,6 +270,20 @@ export function AdminDashboard() {
             ))
           )}
         </div>
+
+        {totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={(count) => {
+              setItemsPerPage(count);
+              setCurrentPage(1);
+            }}
+            totalItems={recentActivity.length}
+          />
+        )}
       </div>
     </div>
   );

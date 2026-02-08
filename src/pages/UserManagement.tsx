@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, Plus, Edit, Trash2, Search, Filter, Lock } from 'lucide-react';
+import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
 
 type User = Database['public']['Tables']['users']['Row'];
@@ -32,6 +33,11 @@ export function UserManagement() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const [formData, setFormData] = useState({
     email: '',
     fullName: '',
@@ -245,6 +251,12 @@ export function UserManagement() {
     });
   };
 
+  // Pagination calculation
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -327,7 +339,7 @@ export function UserManagement() {
                   </td>
                 </tr>
               ) : (
-                filteredUsers.map((user) => (
+                paginatedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
@@ -373,6 +385,20 @@ export function UserManagement() {
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={(count) => {
+              setItemsPerPage(count);
+              setCurrentPage(1);
+            }}
+            totalItems={filteredUsers.length}
+          />
+        )}
       </div>
 
       {showCreateModal && (

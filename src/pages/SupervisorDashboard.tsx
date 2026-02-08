@@ -17,6 +17,7 @@ import {
   ListChecks
 } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
+import { Pagination } from '../components/Pagination';
 import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
 import type { Database } from '../lib/database.types';
 
@@ -40,6 +41,14 @@ export function SupervisorDashboard() {
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [departments, setDepartments] = useState<{ [key: string]: string }>({});
+
+  // Pagination states for queue
+  const [queueCurrentPage, setQueueCurrentPage] = useState(1);
+  const [queueItemsPerPage, setQueueItemsPerPage] = useState(5);
+
+  // Pagination states for history
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const [historyItemsPerPage, setHistoryItemsPerPage] = useState(5);
 
   useEffect(() => {
     fetchDepartments();
@@ -494,6 +503,18 @@ export function SupervisorDashboard() {
     return labels[type] || type;
   };
 
+  // Pagination calculations for queue
+  const queueStartIndex = (queueCurrentPage - 1) * queueItemsPerPage;
+  const queueEndIndex = queueStartIndex + queueItemsPerPage;
+  const paginatedQueueRecords = records.slice(queueStartIndex, queueEndIndex);
+  const queueTotalPages = Math.ceil(records.length / queueItemsPerPage);
+
+  // Pagination calculations for history
+  const historyStartIndex = (historyCurrentPage - 1) * historyItemsPerPage;
+  const historyEndIndex = historyStartIndex + historyItemsPerPage;
+  const paginatedHistoryRecords = historyRecords.slice(historyStartIndex, historyEndIndex);
+  const historyTotalPages = Math.ceil(historyRecords.length / historyItemsPerPage);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -583,53 +604,69 @@ export function SupervisorDashboard() {
             <p className="text-gray-600">You don't have any IP submissions assigned for review at the moment.</p>
           </div>
         ) : (
-          records.map((record) => (
-            <div key={record.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{record.title}</h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      {record.applicant?.full_name}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Tag className="h-4 w-4" />
-                      <span className="capitalize">{record.category}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {formatDate(record.created_at)}
-                    </span>
+          <>
+            {paginatedQueueRecords.map((record) => (
+              <div key={record.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{record.title}</h3>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        {record.applicant?.full_name}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Tag className="h-4 w-4" />
+                        <span className="capitalize">{record.category}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {formatDate(record.created_at)}
+                      </span>
+                    </div>
                   </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      record.status === 'waiting_supervisor'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-orange-100 text-orange-800'
+                    }`}
+                  >
+                    {record.status === 'waiting_supervisor' ? 'Pending Review' : 'Needs Revision'}
+                  </span>
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    record.status === 'waiting_supervisor'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-orange-100 text-orange-800'
-                  }`}
-                >
-                  {record.status === 'waiting_supervisor' ? 'Pending Review' : 'Needs Revision'}
-                </span>
-              </div>
 
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Abstract</h4>
-                <p className="text-sm text-gray-600 line-clamp-2">{record.abstract || 'No abstract provided'}</p>
-              </div>
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Abstract</h4>
+                  <p className="text-sm text-gray-600 line-clamp-2">{record.abstract || 'No abstract provided'}</p>
+                </div>
 
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => openDetailModal(record)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                >
-                  <Eye className="h-4 w-4" />
-                  View Full Details
-                </button>
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => openDetailModal(record)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View Full Details
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+
+            {queueTotalPages > 1 && (
+              <Pagination
+                currentPage={queueCurrentPage}
+                totalPages={queueTotalPages}
+                onPageChange={setQueueCurrentPage}
+                itemsPerPage={queueItemsPerPage}
+                onItemsPerPageChange={(count) => {
+                  setQueueItemsPerPage(count);
+                  setQueueCurrentPage(1);
+                }}
+                totalItems={records.length}
+              />
+            )}
+          </>
         )}
             </div>
           )}
@@ -643,55 +680,71 @@ export function SupervisorDashboard() {
                   <p className="text-gray-600">You haven't reviewed any submissions yet.</p>
                 </div>
               ) : (
-                historyRecords.map((record) => (
-                  <div key={record.id} className="border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">{record.title}</h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-4 w-4" />
-                            {record.applicant?.full_name || 'Unknown Applicant'}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Tag className="h-4 w-4" />
-                            <span className="capitalize">{record.category}</span>
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            Reviewed: {formatDate(record.updated_at)}
-                          </span>
+                <>
+                  {paginatedHistoryRecords.map((record) => (
+                    <div key={record.id} className="border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition-colors">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">{record.title}</h3>
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <span className="flex items-center gap-1">
+                              <Users className="h-4 w-4" />
+                              {record.applicant?.full_name || 'Unknown Applicant'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Tag className="h-4 w-4" />
+                              <span className="capitalize">{record.category}</span>
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              Reviewed: {formatDate(record.updated_at)}
+                            </span>
+                          </div>
                         </div>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            getStatusColor(record.status)
+                          }`}
+                        >
+                          {record.status === 'waiting_evaluation'
+                            ? 'Approved - In Evaluation'
+                            : record.status === 'rejected'
+                            ? 'Rejected'
+                            : getStatusLabel(record.status)}
+                        </span>
                       </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          getStatusColor(record.status)
-                        }`}
-                      >
-                        {record.status === 'waiting_evaluation'
-                          ? 'Approved - In Evaluation'
-                          : record.status === 'rejected'
-                          ? 'Rejected'
-                          : getStatusLabel(record.status)}
-                      </span>
-                    </div>
 
-                    <div className="mb-4">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Abstract</h4>
-                      <p className="text-sm text-gray-600 line-clamp-2">{record.abstract || 'No abstract provided'}</p>
-                    </div>
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Abstract</h4>
+                        <p className="text-sm text-gray-600 line-clamp-2">{record.abstract || 'No abstract provided'}</p>
+                      </div>
 
-                    <div className="flex gap-3 pt-4 border-t border-gray-200">
-                      <button
-                        onClick={() => openDetailModal(record)}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View Details
-                      </button>
+                      <div className="flex gap-3 pt-4 border-t border-gray-200">
+                        <button
+                          onClick={() => openDetailModal(record)}
+                          className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View Details
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+
+                  {historyTotalPages > 1 && (
+                    <Pagination
+                      currentPage={historyCurrentPage}
+                      totalPages={historyTotalPages}
+                      onPageChange={setHistoryCurrentPage}
+                      itemsPerPage={historyItemsPerPage}
+                      onItemsPerPageChange={(count) => {
+                        setHistoryItemsPerPage(count);
+                        setHistoryCurrentPage(1);
+                      }}
+                      totalItems={historyRecords.length}
+                    />
+                  )}
+                </>
               )}
             </div>
           )}
