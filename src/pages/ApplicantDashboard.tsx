@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranding } from '../hooks/useBranding';
 import { FileText, Clock, CheckCircle, XCircle, Plus, Edit, AlertCircle, Trash2 } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { Pagination } from '../components/Pagination';
@@ -11,6 +12,7 @@ type IpRecord = Database['public']['Tables']['ip_records']['Row'];
 
 export function ApplicantDashboard() {
   const { profile } = useAuth();
+  const { primaryColor } = useBranding();
   const [records, setRecords] = useState<IpRecord[]>([]);
   const [drafts, setDrafts] = useState<IpRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,7 +165,7 @@ export function ApplicantDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
       </div>
     );
   }
@@ -178,7 +180,8 @@ export function ApplicantDashboard() {
         </div>
         <Link
           to="/dashboard/submit"
-          className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 w-fit"
+          className="flex items-center gap-2 px-8 py-4 text-white rounded-xl hover:font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 w-fit"
+          style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)` }}
         >
           <Plus className="h-6 w-6" />
           New Submission
@@ -187,61 +190,61 @@ export function ApplicantDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="group bg-gradient-to-br from-white to-blue-50/30 p-6 rounded-2xl border border-blue-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}, #6366f1)` }}>
               <FileText className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xs font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">Total</span>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: primaryColor, backgroundColor: `${primaryColor}20` }}>Total</span>
           </div>
           <p className="text-sm text-gray-600 font-medium">Submissions</p>
           <p className="text-4xl font-black text-gray-900 mt-2">{stats.total}</p>
         </div>
 
-        <div className="group bg-gradient-to-br from-white to-amber-50/30 p-6 rounded-2xl border border-amber-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #f59918, #d97706)' }}>
               <FileText className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xs font-bold text-amber-600 bg-amber-100 px-3 py-1 rounded-full">Drafts</span>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#f59918', backgroundColor: '#f5991820' }}>Drafts</span>
           </div>
           <p className="text-sm text-gray-600 font-medium">Draft Saves</p>
-          <p className="text-4xl font-black text-amber-600 mt-2">{stats.drafts}</p>
+          <p className="text-4xl font-black mt-2" style={{ color: '#f59918' }}>{stats.drafts}</p>
         </div>
 
-        <div className="group bg-gradient-to-br from-white to-yellow-50/30 p-6 rounded-2xl border border-yellow-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: 'linear-gradient(135deg, #fbbf2408, #fcd34d08)', borderColor: '#fbbf2440' }}>
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #fbbf24, #fcd34d)' }}>
               <Clock className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xs font-bold text-yellow-600 bg-yellow-100 px-3 py-1 rounded-full">In Review</span>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#fbbf24', backgroundColor: '#fbbf2420' }}>In Review</span>
           </div>
           <p className="text-sm text-gray-600 font-medium">Pending</p>
-          <p className="text-4xl font-black text-yellow-600 mt-2">{stats.pending}</p>
+          <p className="text-4xl font-black mt-2" style={{ color: '#fbbf24' }}>{stats.pending}</p>
         </div>
 
-        <div className="group bg-gradient-to-br from-white to-green-50/30 p-6 rounded-2xl border border-green-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: 'linear-gradient(135deg, #22c55e08, #16a34a08)', borderColor: '#22c55e40' }}>
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}>
               <CheckCircle className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xs font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full">Approved</span>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#22c55e', backgroundColor: '#22c55e20' }}>Approved</span>
           </div>
           <p className="text-sm text-gray-600 font-medium">Approved</p>
-          <p className="text-4xl font-black text-green-600 mt-2">{stats.approved}</p>
+          <p className="text-4xl font-black mt-2" style={{ color: '#22c55e' }}>{stats.approved}</p>
         </div>
       </div>
 
       {/* Draft Submissions Section */}
       {drafts.length > 0 && (
-        <div className="bg-gradient-to-br from-white to-amber-50/30 rounded-2xl border border-amber-200/40 shadow-lg overflow-hidden">
-          <div className="p-6 border-b border-amber-200/40 bg-gradient-to-r from-amber-50/50 to-orange-50/30">
+        <div className="rounded-2xl border shadow-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
+          <div className="p-6 border-b" style={{ borderBottomColor: '#f5991840', background: 'linear-gradient(to right, #f5991808, #d97706108)' }}>
             <h2 className="text-2xl font-bold text-gray-900">Draft Submissions ({drafts.length})</h2>
             <p className="text-sm text-gray-600 mt-2 font-medium">Auto-saved drafts waiting to be completed and submitted</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gradient-to-r from-amber-100/30 to-orange-100/30 border-b border-amber-200/40">
+              <thead style={{ background: 'linear-gradient(to right, #f5991820, #d97706120)', borderBottomColor: '#f5991840' }} className="border-b">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Title</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Category</th>
