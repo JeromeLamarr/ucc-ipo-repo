@@ -117,70 +117,83 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-600 mt-1">System overview and analytics</p>
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-3">Admin Dashboard</h1>
+        <p className="text-lg text-gray-600 font-medium">System overview and real-time analytics</p>
       </div>
 
+      {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Users</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalUsers}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {stats.applicants} applicants, {stats.supervisors} supervisors, {stats.evaluators} evaluators
-              </p>
+        <div className="group bg-gradient-to-br from-white to-blue-50/30 p-6 rounded-2xl border border-blue-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+              <Users className="h-6 w-6 text-white" />
             </div>
-            <Users className="h-12 w-12 text-blue-600 opacity-20" />
+            <span className="text-xs font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">Active</span>
           </div>
+          <p className="text-sm text-gray-600 font-medium">Total Users</p>
+          <p className="text-4xl font-black text-gray-900 mt-2">{stats.totalUsers}</p>
+          <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+            {stats.applicants} applicants, {stats.supervisors} supervisors, {stats.evaluators} evaluators
+          </p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Submissions</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalSubmissions}</p>
+        <div className="group bg-gradient-to-br from-white to-emerald-50/30 p-6 rounded-2xl border border-emerald-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+              <FileText className="h-6 w-6 text-white" />
             </div>
-            <FileText className="h-12 w-12 text-green-600 opacity-20" />
+            <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full">Submitted</span>
           </div>
+          <p className="text-sm text-gray-600 font-medium">Total Submissions</p>
+          <p className="text-4xl font-black text-gray-900 mt-2">{stats.totalSubmissions}</p>
+          <p className="text-xs text-gray-500 mt-2">All categories combined</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pending Review</p>
-              <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.pending}</p>
+        <div className="group bg-gradient-to-br from-white to-amber-50/30 p-6 rounded-2xl border border-amber-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+              <Activity className="h-6 w-6 text-white" />
             </div>
-            <Activity className="h-12 w-12 text-yellow-600 opacity-20" />
+            <span className="text-xs font-bold text-amber-600 bg-amber-100 px-3 py-1 rounded-full">In Review</span>
           </div>
+          <p className="text-sm text-gray-600 font-medium">Pending Review</p>
+          <p className="text-4xl font-black text-amber-600 mt-2">{stats.pending}</p>
+          <p className="text-xs text-gray-500 mt-2">Awaiting approval</p>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Approved</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{stats.approved}</p>
+        <div className="group bg-gradient-to-br from-white to-green-50/30 p-6 rounded-2xl border border-green-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+              <TrendingUp className="h-6 w-6 text-white" />
             </div>
-            <TrendingUp className="h-12 w-12 text-green-600 opacity-20" />
+            <span className="text-xs font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full">Approved</span>
           </div>
+          <p className="text-sm text-gray-600 font-medium">Approved</p>
+          <p className="text-4xl font-black text-green-600 mt-2">{stats.approved}</p>
+          <p className="text-xs text-gray-500 mt-2">Ready for filing</p>
         </div>
       </div>
 
+      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Submissions by Category</h2>
-          <div className="space-y-4">
+        <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl border border-blue-200/40 shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Submissions by Category</h2>
+            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+          </div>
+          <div className="space-y-5">
             {categoryStats.map(({ category, count }) => (
               <div key={category}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700 capitalize">{category}</span>
-                  <span className="text-sm font-bold text-gray-900">{count}</span>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-semibold text-gray-700 capitalize">{category}</span>
+                  <span className="text-sm font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-lg">{count}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gradient-to-r from-gray-200/50 to-gray-200 rounded-full h-2.5 overflow-hidden shadow-sm">
                   <div
-                    className="bg-blue-600 h-2 rounded-full"
+                    className="h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md"
                     style={{
                       width: `${(count / stats.totalSubmissions) * 100}%`,
                     }}
@@ -191,17 +204,20 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Status Distribution</h2>
-          <div className="space-y-4">
+        <div className="bg-gradient-to-br from-white to-indigo-50/30 rounded-2xl border border-indigo-200/40 shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Status Distribution</h2>
+            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+          </div>
+          <div className="space-y-5">
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Pending</span>
-                <span className="text-sm font-bold text-gray-900">{stats.pending}</span>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-semibold text-gray-700">Pending</span>
+                <span className="text-sm font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded-lg">{stats.pending}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gradient-to-r from-gray-200/50 to-gray-200 rounded-full h-2.5 overflow-hidden shadow-sm">
                 <div
-                  className="bg-yellow-500 h-2 rounded-full"
+                  className="h-2.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-600 shadow-md"
                   style={{
                     width: `${(stats.pending / stats.totalSubmissions) * 100}%`,
                   }}
@@ -210,13 +226,13 @@ export function AdminDashboard() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Approved</span>
-                <span className="text-sm font-bold text-gray-900">{stats.approved}</span>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-semibold text-gray-700">Approved</span>
+                <span className="text-sm font-bold text-green-600 bg-green-100 px-2 py-1 rounded-lg">{stats.approved}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gradient-to-r from-gray-200/50 to-gray-200 rounded-full h-2.5 overflow-hidden shadow-sm">
                 <div
-                  className="bg-green-500 h-2 rounded-full"
+                  className="h-2.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 shadow-md"
                   style={{
                     width: `${(stats.approved / stats.totalSubmissions) * 100}%`,
                   }}
@@ -225,13 +241,13 @@ export function AdminDashboard() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Rejected</span>
-                <span className="text-sm font-bold text-gray-900">{stats.rejected}</span>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-semibold text-gray-700">Rejected</span>
+                <span className="text-sm font-bold text-red-600 bg-red-100 px-2 py-1 rounded-lg">{stats.rejected}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gradient-to-r from-gray-200/50 to-gray-200 rounded-full h-2.5 overflow-hidden shadow-sm">
                 <div
-                  className="bg-red-500 h-2 rounded-full"
+                  className="h-2.5 rounded-full bg-gradient-to-r from-red-500 to-pink-600 shadow-md"
                   style={{
                     width: `${(stats.rejected / stats.totalSubmissions) * 100}%`,
                   }}
@@ -242,28 +258,35 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
+      {/* Recent Activity */}
+      <div className="bg-gradient-to-br from-white to-purple-50/30 rounded-2xl border border-purple-200/40 shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+        <div className="p-6 border-b border-purple-200/40 bg-gradient-to-r from-purple-50/50 to-indigo-50/50">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
+            {recentActivity.length > 0 && <div className="w-3 h-3 rounded-full bg-purple-500 animate-pulse"></div>}
+          </div>
         </div>
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-purple-200/30">
           {recentActivity.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No recent activity</div>
+            <div className="p-12 text-center">
+              <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No recent activity</p>
+            </div>
           ) : (
             paginatedActivity.map((activity) => (
-              <div key={activity.id} className="p-4 hover:bg-gray-50">
-                <div className="flex items-start gap-3">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <Activity className="h-4 w-4 text-blue-600" />
+              <div key={activity.id} className="p-5 hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-indigo-50/30 transition-colors duration-200 group">
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 p-2.5 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+                    <Activity className="h-5 w-5 text-white" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-900">
-                      <span className="font-medium">
+                    <p className="text-sm text-gray-900 font-medium">
+                      <span className="text-blue-600 font-bold">
                         {activity.user?.full_name || 'System'}
                       </span>{' '}
-                      {formatAction(activity.action)}
+                      <span className="text-gray-700">{formatAction(activity.action)}</span>
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">{formatDate(activity.created_at)}</p>
+                    <p className="text-xs text-gray-500 mt-1.5 font-medium">{formatDate(activity.created_at)}</p>
                   </div>
                 </div>
               </div>

@@ -131,30 +131,32 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-30">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-blue-200/30 z-30 shadow-sm">
         <div className="flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+              className="lg:hidden p-2 hover:bg-blue-100/50 rounded-lg transition-colors duration-200"
             >
-              {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {sidebarOpen ? <X className="h-6 w-6 text-gray-900" /> : <Menu className="h-6 w-6 text-gray-900" />}
             </button>
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <GraduationCap className="h-8 w-8 text-blue-600" />
-              <span className="font-bold text-xl hidden sm:block">UCC IP Office</span>
+            <Link to="/dashboard" className="flex items-center gap-3 group">
+              <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg group-hover:shadow-lg transition-all duration-300">
+                <GraduationCap className="h-6 w-6 text-white" />
+              </div>
+              <span className="font-black text-lg hidden sm:block bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">UCC IP Office</span>
             </Link>
           </div>
 
           <div className="flex items-center gap-4">
             <NotificationCenter />
-            <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+            <div className="flex items-center gap-3 pl-4 border-l border-blue-200/30">
               <div className="text-right hidden sm:block">
-                <div className="text-sm font-medium text-gray-900">{profile?.full_name}</div>
-                <div className="text-xs text-gray-500 capitalize">{profile?.role}</div>
+                <div className="text-sm font-bold text-gray-900">{profile?.full_name}</div>
+                <div className="text-xs text-gray-500 capitalize font-medium">{profile?.role}</div>
               </div>
-              <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg">
                 {profile?.full_name.charAt(0).toUpperCase()}
               </div>
             </div>
@@ -163,11 +165,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       <div
-        className={`fixed inset-y-0 left-0 z-20 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-20 w-64 bg-gradient-to-b from-white via-blue-50/30 to-indigo-50/20 border-r border-blue-200/30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } mt-16`}
+        } mt-16 shadow-xl lg:shadow-none`}
       >
-        <nav className="h-full flex flex-col p-4">
+        <nav className="h-full flex flex-col p-4 space-y-2">
           <div className="flex-1 space-y-1">
             {filteredNavItems.map((item) => {
               const Icon = item.icon;
@@ -177,13 +179,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   key={item.path}
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
                     active
-                      ? 'bg-blue-50 text-blue-600 font-medium'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-600/20'
+                      : 'text-gray-700 hover:bg-gradient-to-r hover:from-blue-100/50 hover:to-indigo-100/30 hover:text-blue-700'
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className={`h-5 w-5 transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -192,9 +194,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors w-full"
+            className="flex items-center gap-3 px-4 py-3 text-red-700 hover:bg-gradient-to-r hover:from-red-100/50 hover:to-red-100/30 rounded-xl transition-all duration-200 w-full font-medium group"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-5 w-5 transition-transform duration-200 group-hover:scale-110" />
             <span>Sign Out</span>
           </button>
         </nav>
@@ -202,7 +204,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-10 lg:hidden mt-16"
+          className="fixed inset-0 bg-black/30 z-10 lg:hidden mt-16 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
       )}
