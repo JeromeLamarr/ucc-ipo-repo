@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranding } from '../hooks/useBranding';
 import { supabase } from '../lib/supabase';
 import { User, Lock, Bell, Shield, Save, AlertCircle, CheckCircle, Palette } from 'lucide-react';
 import { AdminBrandingSettingsPage } from './AdminBrandingSettingsPage';
 
 export function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
+  const { primaryColor } = useBranding();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'branding'>('profile');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -112,9 +114,9 @@ export function SettingsPage() {
       )}
 
       {/* Settings Container */}
-      <div className="bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/20 rounded-2xl border border-blue-200/40 shadow-lg overflow-hidden">
+      <div className="rounded-2xl border shadow-lg overflow-hidden" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f120)`, borderColor: `${primaryColor}40` }}>
         {/* Tabs */}
-        <div className="border-b border-blue-200/40 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 backdrop-blur-sm">
+        <div className="border-b" style={{ borderBottomColor: `${primaryColor}40`, background: `linear-gradient(to right, ${primaryColor}08, #6366f108)` }}>
           <div className="flex gap-1 p-4 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -127,9 +129,10 @@ export function SettingsPage() {
                   }}
                   className={`flex items-center gap-3 px-6 py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/20 scale-105'
-                      : 'text-gray-700 hover:bg-white/50 hover:text-blue-600'
+                      ? 'text-white shadow-lg scale-105'
+                      : 'text-gray-700 hover:bg-white/50'
                   }`}
+                  style={activeTab === tab.id ? { background: `linear-gradient(to right, ${primaryColor}, #6366f1)`, boxShadow: `0 8px 16px ${primaryColor}33` } : {}}
                 >
                   <Icon className="h-5 w-5" />
                   {tab.label}
@@ -145,7 +148,7 @@ export function SettingsPage() {
             <form onSubmit={handleProfileUpdate} className="space-y-8 max-w-2xl">
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-6">Profile Information</h3>
-                <div className="space-y-6 bg-white/40 rounded-2xl p-6 border border-blue-200/30">
+                <div className="space-y-6 rounded-2xl p-6 border" style={{ background: 'white/40', borderColor: `${primaryColor}30` }}>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Email Address
@@ -168,13 +171,14 @@ export function SettingsPage() {
                       value={profileForm.fullName}
                       onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
                       required
-                      className="w-full px-4 py-3 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-300 font-medium"
+                      className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:outline-none transition-all duration-300 font-medium"
+                      style={{ borderColor: `${primaryColor}40`, '--tw-ring-color': primaryColor } as any}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
-                    <div className="px-4 py-3 border border-blue-300 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 text-gray-700 capitalize font-medium">
+                    <div className="px-4 py-3 border rounded-xl text-gray-700 capitalize font-medium" style={{ background: `linear-gradient(to right, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
                       {profile?.role}
                     </div>
                     <p className="text-xs text-gray-500 mt-2 font-medium">Role is assigned by administrators</p>
@@ -185,7 +189,8 @@ export function SettingsPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                className="flex items-center gap-2 px-8 py-4 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)` }}
               >
                 <Save className="h-5 w-5" />
                 {loading ? 'Saving...' : 'Save Changes'}
