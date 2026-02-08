@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranding } from '../hooks/useBranding';
 import {
   ClipboardList,
   CheckCircle,
@@ -28,6 +29,7 @@ type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
 type IpDocument = Database['public']['Tables']['ip_documents']['Row'];
 
 export function SupervisorDashboard() {
+  const { primaryColor } = useBranding();
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'queue' | 'history'>('queue');
   const [records, setRecords] = useState<IpRecord[]>([]);
@@ -518,7 +520,7 @@ export function SupervisorDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
       </div>
     );
   }
@@ -531,51 +533,53 @@ export function SupervisorDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: 'linear-gradient(135deg, #fbbf2408, #fcd34d08)', borderColor: '#fbbf2440' }}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Pending Review</p>
-              <p className="text-3xl font-bold text-yellow-600 mt-1">
+              <p className="text-3xl font-bold mt-1" style={{ color: '#fbbf24' }}>
                 {records.filter((r) => r.status === 'waiting_supervisor').length}
               </p>
             </div>
-            <ClipboardList className="h-12 w-12 text-yellow-600 opacity-20" />
+            <ClipboardList className="h-12 w-12 opacity-20" style={{ color: '#fbbf24' }} />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Needs Revision</p>
-              <p className="text-3xl font-bold text-orange-600 mt-1">
+              <p className="text-3xl font-bold mt-1" style={{ color: '#f59918' }}>
                 {records.filter((r) => r.status === 'supervisor_revision').length}
               </p>
             </div>
-            <AlertCircle className="h-12 w-12 text-orange-600 opacity-20" />
+            <AlertCircle className="h-12 w-12 opacity-20" style={{ color: '#f59918' }} />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Reviewed Total</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{historyRecords.length}</p>
+              <p className="text-3xl font-bold mt-1" style={{ color: primaryColor }}>{historyRecords.length}</p>
             </div>
-            <History className="h-12 w-12 text-green-600 opacity-20" />
+            <History className="h-12 w-12 opacity-20" style={{ color: primaryColor }} />
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="border-b border-gray-200">
+      <div className="rounded-xl shadow-sm border border-gray-200" style={{ background: 'white' }}>
+        <div style={{ borderBottomColor: '#e5e7eb' }} className="border-b">
           <div className="flex">
             <button
               onClick={() => setActiveTab('queue')}
               className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
                 activeTab === 'queue'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  ? 'border-b-2'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
+              style={activeTab === 'queue' ? { color: primaryColor, borderBottomColor: primaryColor } : {}}
+>
             >
               <ListChecks className="h-5 w-5" />
               Review Queue ({records.length})
