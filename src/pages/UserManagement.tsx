@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useBranding } from '../hooks/useBranding';
 import { Users, Plus, Edit, Trash2, Search, Filter, Lock } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
@@ -13,6 +14,7 @@ interface Department {
 }
 
 export function UserManagement() {
+  const { primaryColor } = useBranding();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -260,7 +262,7 @@ export function UserManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
       </div>
     );
   }
@@ -274,14 +276,15 @@ export function UserManagement() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+          className="flex items-center gap-2 px-6 py-3 text-white rounded-lg font-medium"
+          style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)` }}
         >
           <Plus className="h-5 w-5" />
           Create User
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="rounded-xl shadow-sm border border-gray-200 p-6" style={{ background: 'white' }}>
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -290,7 +293,8 @@ export function UserManagement() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by name or email..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+              style={{ '--tw-ring-color': primaryColor } as any}
             />
           </div>
           <div className="relative">
@@ -298,7 +302,8 @@ export function UserManagement() {
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
-              className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+              className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none appearance-none"
+              style={{ '--tw-ring-color': primaryColor } as any}
             >
               <option value="all">All Roles</option>
               <option value="applicant">Applicants</option>
@@ -311,7 +316,7 @@ export function UserManagement() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead style={{ background: `linear-gradient(to right, ${primaryColor}08, #6366f108)` }}>
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
