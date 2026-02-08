@@ -221,6 +221,7 @@ export async function updateBrandingData(
  * Useful for keeping branding data in sync across the app
  */
 export function subscribeToBrandingChanges(callback: (branding: BrandingData) => void) {
+  console.log('[subscribeToBrandingChanges] Setting up subscription...');
   const subscription = (supabase as any)
     .on(
       'postgres_changes',
@@ -231,12 +232,15 @@ export function subscribeToBrandingChanges(callback: (branding: BrandingData) =>
         filter: 'id=eq.1',
       },
       (payload: any) => {
+        console.log('[subscribeToBrandingChanges] Event received:', payload.eventType, payload);
         if (payload.new) {
+          console.log('[subscribeToBrandingChanges] Calling callback with new data:', payload.new);
           callback(payload.new as BrandingData);
         }
       }
     )
     .subscribe();
 
+  console.log('[subscribeToBrandingChanges] Subscription created:', subscription);
   return subscription;
 }

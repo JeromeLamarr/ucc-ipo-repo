@@ -16,16 +16,22 @@ export function useBranding() {
 
     const loadBranding = async () => {
       try {
+        console.log('[useBranding] Loading branding data...');
         setError(null);
         const data = await fetchBrandingData();
+        console.log('[useBranding] Branding data loaded:', data);
         setBranding(data);
 
         // Subscribe to real-time changes
+        console.log('[useBranding] Setting up real-time subscription...');
         subscription = subscribeToBrandingChanges((updatedBranding) => {
+          console.log('[useBranding] Real-time update received:', updatedBranding);
           setBranding(updatedBranding);
         });
+        console.log('[useBranding] Real-time subscription active');
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load branding';
+        console.error('[useBranding] Error:', message);
         setError(message);
         setBranding(DEFAULT_BRANDING);
       } finally {
