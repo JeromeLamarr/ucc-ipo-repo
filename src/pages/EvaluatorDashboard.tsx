@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranding } from '../hooks/useBranding';
 import {
   Star,
   CheckCircle,
@@ -30,6 +31,7 @@ type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
 type IpDocument = Database['public']['Tables']['ip_documents']['Row'];
 
 export function EvaluatorDashboard() {
+  const { primaryColor } = useBranding();
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState<'queue' | 'history'>('queue');
   const [records, setRecords] = useState<IpRecord[]>([]);
@@ -480,7 +482,7 @@ export function EvaluatorDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
       </div>
     );
   }
@@ -496,35 +498,35 @@ export function EvaluatorDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Pending Evaluation</p>
-              <p className="text-3xl font-bold text-purple-600 mt-1">
+              <p className="text-3xl font-bold mt-1" style={{ color: primaryColor }}>
                 {records.filter((r) => r.status === 'waiting_evaluation').length}
               </p>
             </div>
-            <Star className="h-12 w-12 text-purple-600 opacity-20" />
+            <Star className="h-12 w-12 opacity-20" style={{ color: primaryColor }} />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Needs Revision</p>
-              <p className="text-3xl font-bold text-orange-600 mt-1">
+              <p className="text-3xl font-bold mt-1" style={{ color: '#f59918' }}>
                 {records.filter((r) => r.status === 'evaluator_revision').length}
               </p>
             </div>
-            <AlertCircle className="h-12 w-12 text-orange-600 opacity-20" />
+            <AlertCircle className="h-12 w-12 opacity-20" style={{ color: '#f59918' }} />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: 'linear-gradient(135deg, #22c55e08, #16a34a08)', borderColor: '#22c55e40' }}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Evaluated Total</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{historyRecords.length}</p>
+              <p className="text-3xl font-bold mt-1" style={{ color: '#22c55e' }}>{historyRecords.length}</p>
             </div>
             <History className="h-12 w-12 text-green-600 opacity-20" />
           </div>
