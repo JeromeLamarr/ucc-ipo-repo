@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useBranding } from '../hooks/useBranding';
 import { Users, FileText, TrendingUp, Activity } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
@@ -8,6 +9,7 @@ type User = Database['public']['Tables']['users']['Row'];
 type IpRecord = Database['public']['Tables']['ip_records']['Row'];
 
 export function AdminDashboard() {
+  const { primaryColor } = useBranding();
   const [stats, setStats] = useState({
     totalUsers: 0,
     applicants: 0,
@@ -111,7 +113,7 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
       </div>
     );
   }
@@ -126,12 +128,12 @@ export function AdminDashboard() {
 
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="group bg-gradient-to-br from-white to-blue-50/30 p-6 rounded-2xl border border-blue-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}, #6366f1)` }}>
               <Users className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xs font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">Active</span>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: primaryColor, backgroundColor: `${primaryColor}20` }}>Active</span>
           </div>
           <p className="text-sm text-gray-600 font-medium">Total Users</p>
           <p className="text-4xl font-black text-gray-900 mt-2">{stats.totalUsers}</p>
@@ -140,62 +142,63 @@ export function AdminDashboard() {
           </p>
         </div>
 
-        <div className="group bg-gradient-to-br from-white to-emerald-50/30 p-6 rounded-2xl border border-emerald-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: `linear-gradient(135deg, #10b98108, #34d39908)`, borderColor: '#10b98140' }}>
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #10b981, #34d399)' }}>
               <FileText className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-3 py-1 rounded-full">Submitted</span>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#10b981', backgroundColor: '#10b98120' }}>Submitted</span>
           </div>
           <p className="text-sm text-gray-600 font-medium">Total Submissions</p>
           <p className="text-4xl font-black text-gray-900 mt-2">{stats.totalSubmissions}</p>
           <p className="text-xs text-gray-500 mt-2">All categories combined</p>
         </div>
 
-        <div className="group bg-gradient-to-br from-white to-amber-50/30 p-6 rounded-2xl border border-amber-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #f59918, #d97706)' }}>
               <Activity className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xs font-bold text-amber-600 bg-amber-100 px-3 py-1 rounded-full">In Review</span>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#f59918', backgroundColor: '#f5991820' }}>In Review</span>
           </div>
           <p className="text-sm text-gray-600 font-medium">Pending Review</p>
-          <p className="text-4xl font-black text-amber-600 mt-2">{stats.pending}</p>
+          <p className="text-4xl font-black mt-2" style={{ color: '#f59918' }}>{stats.pending}</p>
           <p className="text-xs text-gray-500 mt-2">Awaiting approval</p>
         </div>
 
-        <div className="group bg-gradient-to-br from-white to-green-50/30 p-6 rounded-2xl border border-green-200/40 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: 'linear-gradient(135deg, #22c55e08, #16a34a08)', borderColor: '#22c55e40' }}>
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}>
               <TrendingUp className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xs font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full">Approved</span>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#22c55e', backgroundColor: '#22c55e20' }}>Approved</span>
           </div>
           <p className="text-sm text-gray-600 font-medium">Approved</p>
-          <p className="text-4xl font-black text-green-600 mt-2">{stats.approved}</p>
+          <p className="text-4xl font-black mt-2" style={{ color: '#22c55e' }}>{stats.approved}</p>
           <p className="text-xs text-gray-500 mt-2">Ready for filing</p>
         </div>
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl border border-blue-200/40 shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+        <div className="rounded-2xl border shadow-lg p-6 hover:shadow-xl transition-shadow duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Submissions by Category</h2>
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }}></div>
           </div>
           <div className="space-y-5">
             {categoryStats.map(({ category, count }) => (
               <div key={category}>
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-sm font-semibold text-gray-700 capitalize">{category}</span>
-                  <span className="text-sm font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-lg">{count}</span>
+                  <span className="text-sm font-bold px-2 py-1 rounded-lg" style={{ color: primaryColor, backgroundColor: `${primaryColor}20` }}>{count}</span>
                 </div>
                 <div className="w-full bg-gradient-to-r from-gray-200/50 to-gray-200 rounded-full h-2.5 overflow-hidden shadow-sm">
                   <div
-                    className="h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-md"
+                    className="h-2.5 rounded-full shadow-md"
                     style={{
                       width: `${(count / stats.totalSubmissions) * 100}%`,
+                      background: `linear-gradient(to right, ${primaryColor}, #6366f1)`
                     }}
                   />
                 </div>
@@ -259,14 +262,14 @@ export function AdminDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-gradient-to-br from-white to-purple-50/30 rounded-2xl border border-purple-200/40 shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-        <div className="p-6 border-b border-purple-200/40 bg-gradient-to-r from-purple-50/50 to-indigo-50/50">
+      <div className="rounded-2xl border shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #9333ea08)`, borderColor: `${primaryColor}40` }}>
+        <div className="p-6 border-b" style={{ borderBottomColor: `${primaryColor}40`, background: `linear-gradient(to right, ${primaryColor}08, #9333ea08)` }}>
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
-            {recentActivity.length > 0 && <div className="w-3 h-3 rounded-full bg-purple-500 animate-pulse"></div>}
+            {recentActivity.length > 0 && <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }}></div>}
           </div>
         </div>
-        <div className="divide-y divide-purple-200/30">
+        <div style={{ borderColor: `${primaryColor}30` }} className="divide-y">
           {recentActivity.length === 0 ? (
             <div className="p-12 text-center">
               <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
@@ -274,7 +277,7 @@ export function AdminDashboard() {
             </div>
           ) : (
             paginatedActivity.map((activity) => (
-              <div key={activity.id} className="p-5 hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-indigo-50/30 transition-colors duration-200 group">
+              <div key={activity.id} className="p-5 hover:transition-colors duration-200 group" style={{ _hover: { background: `linear-gradient(to right, ${primaryColor}08, #9333ea08)` } }}>
                 <div className="flex items-start gap-4">
                   <div className="mt-1 p-2.5 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
                     <Activity className="h-5 w-5 text-white" />
