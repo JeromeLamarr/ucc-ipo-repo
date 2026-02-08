@@ -133,38 +133,74 @@ function HeroSection({ content, navigate, settings }: { content: Record<string, 
   const ctaLink = content.cta_link || '/register';
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center overflow-hidden">
-      {/* Decorative Elements */}
+    <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center overflow-hidden pt-16">
+      {/* Animated Background Pattern */}
+      <div className="absolute inset-0 opacity-30">
+        <svg className="absolute top-0 left-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 1000 1000">
+          <defs>
+            <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+              <path d="M 50 0 L 0 0 0 50" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-blue-200" opacity="0.1"/>
+            </pattern>
+          </defs>
+          <rect width="1000" height="1000" fill="url(#grid)" />
+        </svg>
+      </div>
+
+      {/* Decorative Gradient Orbs */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
       <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+      <div className="absolute top-1/3 left-1/4 w-72 h-72 bg-blue-50 rounded-full mix-blend-multiply filter blur-2xl opacity-10 animate-pulse"></div>
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
         <div className="text-center">
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mb-6 leading-tight tracking-tight">
-            {headline}
-            {headlineHighlight && (
-              <>
-                <br />
-                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          {/* Main Headline with Strong Emphasis */}
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-gray-900 mb-8 leading-tight tracking-tighter">
+            <div className="flex flex-col gap-3 items-center justify-center">
+              <span className="block">{headline}</span>
+              {headlineHighlight && (
+                <span className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent drop-shadow-lg">
                   {headlineHighlight}
                 </span>
-              </>
-            )}
+              )}
+            </div>
           </h1>
-          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-12 leading-relaxed font-medium">{subheadline}</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          
+          {/* Subtitle with Enhanced Styling */}
+          <p className="text-lg md:text-2xl text-gray-700 max-w-3xl mx-auto mb-14 leading-relaxed font-light">
+            {subheadline}
+          </p>
+
+          {/* Enhanced CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
             <button
               onClick={() => navigate(ctaLink)}
-              className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 text-lg font-semibold shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="group relative px-10 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 text-lg font-bold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 overflow-hidden"
             >
-              {ctaText}
+              <span className="relative z-10 flex items-center gap-2">
+                {ctaText}
+                <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </button>
+            
             <button
               onClick={() => navigate('/login')}
-              className="px-8 py-4 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 text-lg font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="px-10 py-5 bg-white text-blue-600 border-2 border-blue-600 rounded-xl hover:bg-blue-50 text-lg font-bold transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Sign In
             </button>
+          </div>
+
+          {/* Trust Indicator */}
+          <div className="mt-16 pt-8 border-t border-gray-200">
+            <p className="text-sm text-gray-600 font-medium mb-6">Trusted by leading academic institutions</p>
+            <div className="flex justify-center items-center gap-8 flex-wrap opacity-70">
+              <span className="text-2xl font-bold text-gray-400">UCC</span>
+              <span className="text-2xl font-bold text-gray-400">•</span>
+              <span className="text-sm font-semibold text-gray-500">Secure & Reliable</span>
+            </div>
           </div>
         </div>
       </div>
@@ -534,40 +570,76 @@ function DefaultLandingPage({ navigate, settings }: { navigate: any; settings: S
       <PublicNavigation />
       <div className="pt-16">
         {/* Hero Section */}
-        <div className="relative min-h-[70vh] flex items-center justify-center overflow-hidden py-20">
-        {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center mb-16">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mb-8 leading-tight tracking-tight">
-              University Intellectual Property
-              <br />
-              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                Management System
-              </span>
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto mb-12 leading-relaxed font-medium">
-              Streamline your intellectual property submissions, evaluations, and approvals with our comprehensive management platform.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <button
-                onClick={() => navigate('/register')}
-                className="px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 text-lg font-semibold shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Get Started
-              </button>
-              <button
-                onClick={() => navigate('/login')}
-                className="px-10 py-4 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 text-lg font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Sign In
-              </button>
+        <div className="relative min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center overflow-hidden">
+          {/* Animated Background Pattern */}
+          <div className="absolute inset-0 opacity-30">
+            <svg className="absolute top-0 left-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 1000 1000">
+              <defs>
+                <pattern id="grid-default" width="50" height="50" patternUnits="userSpaceOnUse">
+                  <path d="M 50 0 L 0 0 0 50" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-blue-200" opacity="0.1"/>
+                </pattern>
+              </defs>
+              <rect width="1000" height="1000" fill="url(#grid-default)" />
+            </svg>
+          </div>
+
+          {/* Decorative Gradient Orbs */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+          <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+          <div className="absolute top-1/3 left-1/4 w-72 h-72 bg-blue-50 rounded-full mix-blend-multiply filter blur-2xl opacity-10 animate-pulse"></div>
+          
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
+            <div className="text-center">
+              {/* Main Headline with Strong Emphasis */}
+              <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-gray-900 mb-8 leading-tight tracking-tighter">
+                <div className="flex flex-col gap-3 items-center justify-center">
+                  <span className="block">University Intellectual<br/>Property</span>
+                  <span className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent drop-shadow-lg">
+                    Management System
+                  </span>
+                </div>
+              </h1>
+              
+              {/* Subtitle with Enhanced Styling */}
+              <p className="text-lg md:text-2xl text-gray-700 max-w-3xl mx-auto mb-14 leading-relaxed font-light">
+                Streamline your intellectual property submissions, evaluations, and approvals with our comprehensive management platform.
+              </p>
+
+              {/* Enhanced CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
+                <button
+                  onClick={() => navigate('/register')}
+                  className="group relative px-10 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 text-lg font-bold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 overflow-hidden"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    Get Started
+                    <svg className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </button>
+                
+                <button
+                  onClick={() => navigate('/login')}
+                  className="px-10 py-5 bg-white text-blue-600 border-2 border-blue-600 rounded-xl hover:bg-blue-50 text-lg font-bold transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Sign In
+                </button>
+              </div>
+
+              {/* Trust Indicator */}
+              <div className="mt-16 pt-8 border-t border-gray-200">
+                <p className="text-sm text-gray-600 font-medium mb-6">Trusted by leading academic institutions</p>
+                <div className="flex justify-center items-center gap-8 flex-wrap opacity-70">
+                  <span className="text-2xl font-bold text-gray-400">UCC</span>
+                  <span className="text-2xl font-bold text-gray-400">•</span>
+                  <span className="text-sm font-semibold text-gray-500">Secure & Reliable</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
       {/* Features Section */}
       <div className="w-full bg-gradient-to-b from-white via-blue-50 to-white py-20">
