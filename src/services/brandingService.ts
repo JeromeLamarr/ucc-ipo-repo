@@ -188,11 +188,16 @@ export async function updateBrandingData(
   updates: Database['public']['Tables']['site_settings']['Update']
 ): Promise<BrandingData | null> {
   try {
+    console.log('[updateBrandingData] Starting update with data:', updates);
+    
     // Always update the timestamp
     const updatePayload = {
       ...updates,
       updated_at: new Date().toISOString(),
     };
+
+    console.log('[updateBrandingData] Update payload:', updatePayload);
+    console.log('[updateBrandingData] Calling supabase.from()...');
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = await supabase
@@ -202,16 +207,19 @@ export async function updateBrandingData(
       .select()
       .single();
 
+    console.log('[updateBrandingData] Supabase response received:', result);
+
     const { data, error } = result;
 
     if (error) {
-      console.error('Failed to update branding data:', error.message);
+      console.error('[updateBrandingData] Error response:', error);
       return null;
     }
 
+    console.log('[updateBrandingData] Success! Updated data:', data);
     return data as BrandingData;
   } catch (err) {
-    console.error('Error updating branding data:', err);
+    console.error('[updateBrandingData] Catch error:', err);
     return null;
   }
 }
