@@ -579,7 +579,6 @@ export function SupervisorDashboard() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
               style={activeTab === 'queue' ? { color: primaryColor, borderBottomColor: primaryColor } : {}}
->
             >
               <ListChecks className="h-5 w-5" />
               Review Queue ({records.length})
