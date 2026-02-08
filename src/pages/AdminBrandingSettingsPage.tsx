@@ -23,10 +23,10 @@ export function AdminBrandingSettingsPage() {
     if (branding.site_name) {
       setSiteName(branding.site_name);
     }
-    if (branding.logo_path) {
-      setLogoPreview(branding.logo_path);
+    if (branding.logo_url) {
+      setLogoPreview(branding.logo_url);
     }
-  }, [branding.site_name, branding.logo_path]);
+  }, [branding.site_name, branding.logo_url]);
 
   // Track if there are changes
   useEffect(() => {
@@ -55,11 +55,11 @@ export function AdminBrandingSettingsPage() {
           console.log('[handleSave] Upload complete, URL:', newLogoUrl);
           if (newLogoUrl) {
             // Delete old logo if it exists
-            if (branding.logo_path) {
-              console.log('[handleSave] Deleting old logo:', branding.logo_path);
-              await deleteLogo(branding.logo_path);
+            if (branding.logo_url) {
+              console.log('[handleSave] Deleting old logo:', branding.logo_url);
+              await deleteLogo(branding.logo_url);
             }
-            updateData.logo_path = newLogoUrl;
+            updateData.logo_url = newLogoUrl;
             setLogoFile(null);
             console.log('[handleSave] updateData with logo_path:', updateData);
           }
@@ -130,7 +130,7 @@ export function AdminBrandingSettingsPage() {
   const handleReset = () => {
     setSiteName(branding.site_name);
     setLogoFile(null);
-    setLogoPreview(branding.logo_path);
+    setLogoPreview(branding.logo_url);
     setHasChanges(false);
     setError(null);
   };

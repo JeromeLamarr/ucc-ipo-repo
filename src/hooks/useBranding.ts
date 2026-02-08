@@ -48,7 +48,7 @@ export function useBranding() {
     loading,
     error,
     siteName: branding.site_name,
-    logoPath: branding.logo_path,
+    logoPath: branding.logo_url,
     primaryColor: branding.primary_color || '#2563EB',
   };
 }

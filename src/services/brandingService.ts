@@ -7,7 +7,7 @@ export type BrandingData = Database['public']['Tables']['site_settings']['Row'];
 export const DEFAULT_BRANDING: BrandingData = {
   id: 1,
   site_name: 'University of Caloocan City Intellectual Property Office',
-  logo_path: null,
+  logo_url: null,
   primary_color: '#2563EB',
   updated_at: new Date().toISOString(),
 };
