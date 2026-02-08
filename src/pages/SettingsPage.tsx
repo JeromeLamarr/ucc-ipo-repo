@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { User, Lock, Bell, Shield, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Lock, Bell, Shield, Save, AlertCircle, CheckCircle, Palette } from 'lucide-react';
+import { AdminBrandingSettingsPage } from './AdminBrandingSettingsPage';
 
 export function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'branding'>('profile');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -81,6 +82,7 @@ export function SettingsPage() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'password', label: 'Password', icon: Lock },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    ...(profile?.role === 'admin' ? [{ id: 'branding', label: 'Branding', icon: Palette }] : []),
   ];
 
   return (
@@ -295,6 +297,12 @@ export function SettingsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'branding' && profile?.role === 'admin' && (
+            <div className="space-y-6">
+              <AdminBrandingSettingsPage />
             </div>
           )}
         </div>
