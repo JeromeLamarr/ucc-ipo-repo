@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PublicNavigation } from '../components/PublicNavigation';
+import { Footer } from '../components/Footer';
 
 interface CMSPage {
   id: string;
@@ -461,12 +462,7 @@ export function CMSPageRenderer() {
       )}
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p>{settings?.site_name || 'Site'}</p>
-          <p className="text-gray-400 text-sm mt-2">{settings?.tagline || ''}</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

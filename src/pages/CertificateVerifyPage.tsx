@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { CheckCircle, AlertCircle, Loader, Lock } from 'lucide-react';
+import { Footer } from '../components/Footer';
 
 // Create a public Supabase client for certificate verification
 // This uses the anon key to allow public access to verified data
@@ -289,12 +290,10 @@ export function CertificateVerifyPage() {
           </div>
         )}
 
-        {/* Footer */}
-        <div className="mt-8 text-center text-gray-600 text-sm">
-          <p>This verification system is provided by UCC Intellectual Property Office</p>
-          <p className="mt-2">Verification URL: ucc-ipo.com/verify/{trackingId}</p>
-        </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

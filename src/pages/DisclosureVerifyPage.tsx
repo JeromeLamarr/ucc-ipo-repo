@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Footer } from '../components/Footer';
 
 // Create a public Supabase client for disclosure verification
 // Using hardcoded values for deployment compatibility
@@ -255,10 +256,7 @@ export function DisclosureVerifyPage() {
         )}
 
         {/* Footer */}
-        <div className="mt-8 text-center text-gray-600 text-sm">
-          <p>This verification system is provided by UCC Intellectual Property Office</p>
-          <p className="mt-2">Verification URL: ucc-ipo.com/verify-disclosure/{trackingId}</p>
-        </div>
+        <Footer />
       </div>
     </div>
   );

@@ -2,13 +2,13 @@
 -- Run this in your Supabase SQL Editor
 
 -- Create cms-images bucket if it doesn't exist
-INSERT INTO storage.buckets (id, name, public, avx_encryption, file_size_limit, allowed_mime_types)
-VALUES ('cms-images', 'cms-images', true, false, 104857600, ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('cms-images', 'cms-images', true, 104857600, ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 ON CONFLICT (id) DO NOTHING;
 
 -- Create cms-videos bucket if it doesn't exist
-INSERT INTO storage.buckets (id, name, public, avx_encryption, file_size_limit, allowed_mime_types)
-VALUES ('cms-videos', 'cms-videos', true, false, 104857600, ARRAY['video/mp4', 'video/webm', 'video/quicktime'])
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('cms-videos', 'cms-videos', true, 104857600, ARRAY['video/mp4', 'video/webm', 'video/quicktime'])
 ON CONFLICT (id) DO NOTHING;
 
 -- Allow authenticated users to upload to cms-images
