@@ -20,6 +20,7 @@ const SECTION_TYPES = [
   { value: 'features', label: 'Features Grid', icon: '✨', description: 'Showcase your key features' },
   { value: 'steps', label: 'Steps/Process', icon: '📋', description: 'Show a step-by-step process' },
   { value: 'categories', label: 'Categories', icon: '📂', description: 'Display categories or services' },
+  { value: 'gallery', label: 'Image Gallery', icon: '🖼️', description: 'Display multiple images' },
   { value: 'text', label: 'Text Block', icon: '📝', description: 'Rich text content' },
   { value: 'cta', label: 'Call to Action', icon: '🎯', description: 'Button or action section' },
 ];
@@ -186,6 +187,30 @@ export function CMSPageEditor() {
         };
       case 'text':
         return { text: '<p>Your text content here</p>' };
+      case 'gallery':
+        return {
+          title: 'Gallery',
+          images: [],
+        };
+      case 'steps':
+        return {
+          steps: [
+            { title: 'Step 1', description: 'Description' },
+          ],
+        };
+      case 'categories':
+        return {
+          categories: [
+            { name: 'Category 1', description: 'Description' },
+          ],
+        };
+      case 'cta':
+        return {
+          heading: 'Ready to get started?',
+          description: 'Take action now',
+          button_text: 'Click Here',
+          button_link: '/register',
+        };
       default:
         return {};
     }
@@ -331,6 +356,8 @@ function SectionEditor({
         return `${(content.steps || []).length} steps`;
       case 'categories':
         return `${(content.categories || []).length} categories`;
+      case 'gallery':
+        return `${(content.images || []).length} images`;
       case 'cta':
         return content.heading || 'Call to action';
       default:
@@ -745,12 +772,99 @@ function SectionContentEditor({
         </div>
       );
 
-    default:
+    case 'gallery':
       return (
-        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-700">
-            Section editor is loading...
-          </p>
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Gallery Title</label>
+            <input
+              type="text"
+              value={content.title || ''}
+              onChange={(e) => onChange({ ...content, title: e.target.value })}
+              placeholder="e.g., Photo Gallery"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Gallery Images</label>
+            <div className="space-y-4">
+              {(content.images || []).map((image: any, idx: number) => (
+                <div key={idx} className="p-4 border border-gray-200 rounded-lg space-y-3 bg-gray-50">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium text-gray-900">Image {idx + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newImages = content.images.filter((_: any, i: number) => i !== idx);
+                        onChange({ ...content, images: newImages });
+                      }}
+                      className="text-red-600 hover:text-red-700 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  {image.url && (
+                    <img 
+                      src={image.url} 
+                      alt={image.alt_text || 'Gallery image'} 
+                      className="w-full h-32 object-cover rounded"
+                    />
+                  )}
+
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1 block">Upload Image</label>
+                    <MediaPicker
+                      type="image"
+                      onSelect={(url) => {
+                        const newImages = [...content.images];
+                        newImages[idx].url = url;
+                        onChange({ ...content, images: newImages });
+                        setUploadError(null);
+                      }}
+                      pageSlug={pageSlug}
+                    />
+                  </div>
+
+                  <input
+                    type="text"
+                    value={image.alt_text || ''}
+                    onChange={(e) => {
+                      const newImages = [...content.images];
+                      newImages[idx].alt_text = e.target.value;
+                      onChange({ ...content, images: newImages });
+                    }}
+                    placeholder="Alt text (for accessibility)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                  />
+
+                  <input
+                    type="text"
+                    value={image.caption || ''}
+                    onChange={(e) => {
+                      const newImages = [...content.images];
+                      newImages[idx].caption = e.target.value;
+                      onChange({ ...content, images: newImages });
+                    }}
+                    placeholder="Image caption (optional)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const newImages = [...(content.images || []), { url: '', alt_text: '', caption: '' }];
+                onChange({ ...content, images: newImages });
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition"
+            >
+              + Add Image
+            </button>
+          </div>
         </div>
       );
   }
