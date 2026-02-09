@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, X, AlertCircle, CheckCircle, HelpCircle } from 'lucide-react';
 import { uploadFile } from '../lib/fileUpload';
 
 interface FileUploadProps {
@@ -21,18 +21,22 @@ export function FileUploadField({
 }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl || null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
+    setError(null);
     try {
       const result = await uploadFile(file, type, pageSlug);
       setPreviewUrl(result.url);
       onUploadComplete(result.url, result.path);
     } catch (error: any) {
-      onError(error.message);
+      const errorMsg = error.message || `Failed to upload ${type}`;
+      setError(errorMsg);
+      onError(errorMsg);
       setPreviewUrl(null);
     } finally {
       setUploading(false);
@@ -54,6 +58,36 @@ export function FileUploadField({
 
   return (
     <div className="space-y-3">
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex gap-3 mb-2">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-900">Upload Failed</p>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+              {error.includes('not properly configured') && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                  <p className="font-medium mb-1">To fix this:</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Go to your Supabase Dashboard</li>
+                    <li>Open the SQL Editor</li>
+                    <li>Create a new query and paste the contents of <code className="bg-yellow-100 px-1 rounded">setup_storage_rls.sql</code></li>
+                    <li>Run the query to set up file upload permissions</li>
+                    <li>Refresh this page and try uploading again</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-600 hover:text-red-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition">
         {previewUrl ? (
           <div className="space-y-3">

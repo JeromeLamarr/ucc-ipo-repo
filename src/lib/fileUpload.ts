@@ -39,6 +39,12 @@ export async function uploadFile(
   const filePath = `${pageSlug}/${filename}`;
 
   try {
+    // Check if user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('You must be logged in to upload files');
+    }
+
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
       .from(bucket)
@@ -48,7 +54,23 @@ export async function uploadFile(
       });
 
     if (error) {
-      throw error;
+      // Check for specific RLS policy error
+      if (error.message?.includes('row-level security') || error.message?.includes('policy')) {
+        throw new Error(
+          `Storage bucket "${bucket}" is not properly configured. ` +
+          `Please contact your administrator to set up file upload permissions. ` +
+          `(Technical: RLS policy error)`
+        );
+      }
+      
+      if (error.message?.includes('Bucket not found')) {
+        throw new Error(
+          `Storage bucket "${bucket}" does not exist. ` +
+          `Please run the setup_storage_rls.sql file in your Supabase SQL editor to create it.`
+        );
+      }
+
+      throw new Error(error.message || `Failed to upload ${type}`);
     }
 
     // Get public URL
@@ -63,54 +85,6 @@ export async function uploadFile(
     };
   } catch (error: any) {
     console.error(`Error uploading ${type}:`, error);
-    throw new Error(`Failed to upload ${type}: ${error.message}`);
-  }
-}
-
-/**
- * Delete a file from Supabase storage
- */
-export async function deleteFile(
-  path: string,
-  type: 'image' | 'video'
-): Promise<void> {
-  const bucket = type === 'image' ? 'cms-images' : 'cms-videos';
-
-  try {
-    const { error } = await supabase.storage
-      .from(bucket)
-      .remove([path]);
-
-    if (error) {
-      throw error;
-    }
-  } catch (error: any) {
-    console.error(`Error deleting ${type}:`, error);
-    throw new Error(`Failed to delete ${type}: ${error.message}`);
-  }
-}
-
-/**
- * Get a list of all files in a page directory
- */
-export async function listFiles(
-  pageSlug: string,
-  type: 'image' | 'video'
-): Promise<string[]> {
-  const bucket = type === 'image' ? 'cms-images' : 'cms-videos';
-
-  try {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .list(pageSlug);
-
-    if (error) {
-      throw error;
-    }
-
-    return data?.map(f => f.name) || [];
-  } catch (error: any) {
-    console.error(`Error listing ${type}s:`, error);
-    return [];
+    throw error;
   }
 }
