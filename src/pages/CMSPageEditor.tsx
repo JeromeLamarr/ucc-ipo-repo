@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
-import { Plus, Trash2, ArrowUp, ArrowDown, Save, X } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, Save, X, Eye, Edit2 } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import type { Database } from '../lib/database.types';
+import { FileUploadField, MediaPicker } from '../components/FileUploadField';
+import { RichTextEditor } from '../components/RichTextEditor';
 
 type CMSPage = Database['public']['Tables']['cms_pages']['Row'];
 type CMSSection = Database['public']['Tables']['cms_sections']['Row'];
@@ -14,12 +16,12 @@ interface SectionWithContent extends CMSSection {
 }
 
 const SECTION_TYPES = [
-  { value: 'hero', label: 'Hero Section', icon: '🦸' },
-  { value: 'features', label: 'Features Grid', icon: '✨' },
-  { value: 'steps', label: 'Steps/Process', icon: '📋' },
-  { value: 'categories', label: 'Categories', icon: '📂' },
-  { value: 'text', label: 'Text Block', icon: '📝' },
-  { value: 'cta', label: 'Call to Action', icon: '🎯' },
+  { value: 'hero', label: 'Hero Section', icon: '🦸', description: 'Large banner with headline and CTA' },
+  { value: 'features', label: 'Features Grid', icon: '✨', description: 'Showcase your key features' },
+  { value: 'steps', label: 'Steps/Process', icon: '📋', description: 'Show a step-by-step process' },
+  { value: 'categories', label: 'Categories', icon: '📂', description: 'Display categories or services' },
+  { value: 'text', label: 'Text Block', icon: '📝', description: 'Rich text content' },
+  { value: 'cta', label: 'Call to Action', icon: '🎯', description: 'Button or action section' },
 ];
 
 export function CMSPageEditor() {
@@ -269,17 +271,18 @@ export function CMSPageEditor() {
       </div>
 
       {/* Add Section */}
-      <div className="rounded-lg border border-gray-300 p-6">
+      <div className="rounded-lg border border-gray-300 p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
         <h3 className="font-bold text-gray-900 mb-4">Add New Section</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {SECTION_TYPES.map(type => (
             <button
               key={type.value}
               onClick={() => handleAddSection(type.value)}
-              className="p-4 border border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition text-center"
+              className="p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition text-left"
             >
-              <div className="text-2xl mb-2">{type.icon}</div>
-              <div className="text-sm font-medium text-gray-900">{type.label}</div>
+              <div className="text-3xl mb-2">{type.icon}</div>
+              <div className="font-medium text-gray-900">{type.label}</div>
+              <div className="text-xs text-gray-600 mt-1">{type.description}</div>
             </button>
           ))}
         </div>
@@ -316,24 +319,48 @@ function SectionEditor({
     onEditToggle();
   };
 
+  const getPreview = () => {
+    switch (section.section_type) {
+      case 'hero':
+        return `${content.headline} ${content.headline_highlight}`;
+      case 'text':
+        return content.text?.substring(0, 50) || 'Text content...';
+      case 'features':
+        return `${(content.features || []).length} features`;
+      case 'steps':
+        return `${(content.steps || []).length} steps`;
+      case 'categories':
+        return `${(content.categories || []).length} categories`;
+      case 'cta':
+        return content.heading || 'Call to action';
+      default:
+        return 'Section content';
+    }
+  };
+
   return (
-    <div className="border border-gray-300 rounded-lg overflow-hidden">
+    <div className="border border-gray-300 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
       <div
         className="p-4 flex justify-between items-center cursor-pointer"
         style={{ background: `${primaryColor}10`, borderBottomColor: `${primaryColor}40` }}
         onClick={onEditToggle}
       >
-        <div className="flex items-center gap-4">
-          <div>
+        <div className="flex items-center gap-4 flex-1">
+          <div className="text-2xl">
+            {SECTION_TYPES.find(t => t.value === section.section_type)?.icon}
+          </div>
+          <div className="min-w-0">
             <p className="font-bold text-gray-900 capitalize">{section.section_type} Section</p>
-            <p className="text-sm text-gray-600">Position: {index + 1} of {total}</p>
+            <p className="text-sm text-gray-600 truncate">{getPreview()}</p>
+            <p className="text-xs text-gray-500 mt-1">Position: {index + 1} of {total}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1 ml-4 flex-shrink-0">
           {index > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); onMove(index, 'up'); }}
-              className="p-2 hover:bg-gray-200 rounded"
+              className="p-2 hover:bg-gray-200 rounded text-gray-600"
+              title="Move up"
             >
               <ArrowUp className="h-4 w-4" />
             </button>
@@ -341,39 +368,49 @@ function SectionEditor({
           {index < total - 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); onMove(index, 'down'); }}
-              className="p-2 hover:bg-gray-200 rounded"
+              className="p-2 hover:bg-gray-200 rounded text-gray-600"
+              title="Move down"
             >
               <ArrowDown className="h-4 w-4" />
             </button>
           )}
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(section.id); }}
-            className="p-2 hover:bg-red-100 rounded"
+            onClick={(e) => { e.stopPropagation(); onEditToggle(); }}
+            className="p-2 hover:bg-blue-100 rounded text-blue-600"
+            title="Edit"
           >
-            <Trash2 className="h-4 w-4 text-red-600" />
+            <Edit2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(section.id); }}
+            className="p-2 hover:bg-red-100 rounded text-red-600"
+            title="Delete"
+          >
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       {isEditing && (
-        <div className="p-6 border-t border-gray-300 space-y-4">
+        <div className="p-6 border-t border-gray-300 space-y-4 bg-white">
           <SectionContentEditor
             sectionType={section.section_type}
             content={content}
             onChange={setContent}
+            pageSlug="home"
           />
           <div className="flex gap-3 pt-4 border-t">
             <button
               onClick={handleSave}
-              className="px-4 py-2 text-white rounded-lg font-medium"
+              className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition"
               style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)` }}
             >
-              <Save className="h-4 w-4 inline mr-2" />
+              <Save className="h-4 w-4" />
               Save Changes
             </button>
             <button
               onClick={onEditToggle}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition"
             >
               Cancel
             </button>
@@ -388,88 +425,332 @@ function SectionContentEditor({
   sectionType,
   content,
   onChange,
+  pageSlug = 'home',
 }: {
   sectionType: string;
   content: Record<string, any>;
   onChange: (content: Record<string, any>) => void;
+  pageSlug?: string;
 }) {
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   switch (sectionType) {
     case 'hero':
       return (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Headline</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Main Headline</label>
             <input
               type="text"
               value={content.headline || ''}
               onChange={(e) => onChange({ ...content, headline: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+              placeholder="e.g., University Intellectual"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
             />
+            <p className="text-xs text-gray-500 mt-1">This is the first part of your headline</p>
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Highlight Text</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Highlighted Text</label>
             <input
               type="text"
               value={content.headline_highlight || ''}
               onChange={(e) => onChange({ ...content, headline_highlight: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+              placeholder="e.g., Property Management System"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
             />
+            <p className="text-xs text-gray-500 mt-1">This text will be highlighted in blue</p>
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Subheadline</label>
             <textarea
               value={content.subheadline || ''}
               onChange={(e) => onChange({ ...content, subheadline: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-              rows={3}
+              placeholder="Describe your service..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              rows={2}
             />
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Button Text</label>
+              <input
+                type="text"
+                value={content.cta_text || ''}
+                onChange={(e) => onChange({ ...content, cta_text: e.target.value })}
+                placeholder="e.g., Get Started"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Button Link</label>
+              <input
+                type="text"
+                value={content.cta_link || ''}
+                onChange={(e) => onChange({ ...content, cta_link: e.target.value })}
+                placeholder="e.g., /register"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">CTA Button Text</label>
-            <input
-              type="text"
-              value={content.cta_text || ''}
-              onChange={(e) => onChange({ ...content, cta_text: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+            <label className="block text-sm font-medium text-gray-700 mb-3">Background Image (Optional)</label>
+            {uploadError && (
+              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {uploadError}
+              </div>
+            )}
+            <MediaPicker
+              type="image"
+              onSelect={(url) => {
+                onChange({ ...content, background_image: url });
+                setUploadError(null);
+              }}
+              pageSlug={pageSlug}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">CTA Link</label>
-            <input
-              type="text"
-              value={content.cta_link || ''}
-              onChange={(e) => onChange({ ...content, cta_link: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-              placeholder="/register"
-            />
+        </div>
+      );
+
+    case 'features':
+      return (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            {(content.features || []).map((feature: any, idx: number) => (
+              <div key={idx} className="p-4 border border-gray-200 rounded-lg space-y-3 bg-gray-50">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-medium text-gray-900">Feature {idx + 1}</h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newFeatures = content.features.filter((_: any, i: number) => i !== idx);
+                      onChange({ ...content, features: newFeatures });
+                    }}
+                    className="text-red-600 hover:text-red-700 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={feature.title || ''}
+                  onChange={(e) => {
+                    const newFeatures = [...content.features];
+                    newFeatures[idx].title = e.target.value;
+                    onChange({ ...content, features: newFeatures });
+                  }}
+                  placeholder="Feature title"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                />
+                <textarea
+                  value={feature.description || ''}
+                  onChange={(e) => {
+                    const newFeatures = [...content.features];
+                    newFeatures[idx].description = e.target.value;
+                    onChange({ ...content, features: newFeatures });
+                  }}
+                  placeholder="Feature description"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                  rows={2}
+                />
+              </div>
+            ))}
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              const newFeatures = [...(content.features || []), { title: '', description: '' }];
+              onChange({ ...content, features: newFeatures });
+            }}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition"
+          >
+            + Add Feature
+          </button>
         </div>
       );
 
     case 'text':
       return (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">HTML Content</label>
-          <textarea
+        <div className="space-y-4">
+          <RichTextEditor
             value={content.text || ''}
-            onChange={(e) => onChange({ ...content, text: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none font-mono text-sm"
-            rows={6}
-            placeholder="<p>Your HTML content here</p>"
+            onChange={(text) => onChange({ ...content, text })}
+            placeholder="Enter your content here..."
           />
-          <p className="text-xs text-gray-500 mt-2">HTML tags supported: p, h1-h6, strong, em, a, ul, ol, li</p>
+        </div>
+      );
+
+    case 'cta':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Heading</label>
+            <input
+              type="text"
+              value={content.heading || ''}
+              onChange={(e) => onChange({ ...content, heading: e.target.value })}
+              placeholder="Ready to get started?"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              value={content.description || ''}
+              onChange={(e) => onChange({ ...content, description: e.target.value })}
+              placeholder="Add details about your CTA..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              rows={2}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Button Text</label>
+              <input
+                type="text"
+                value={content.button_text || ''}
+                onChange={(e) => onChange({ ...content, button_text: e.target.value })}
+                placeholder="Click here"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Button Link</label>
+              <input
+                type="text"
+                value={content.button_link || ''}
+                onChange={(e) => onChange({ ...content, button_link: e.target.value })}
+                placeholder="/register"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'steps':
+      return (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            {(content.steps || []).map((step: any, idx: number) => (
+              <div key={idx} className="p-4 border border-gray-200 rounded-lg space-y-3 bg-gray-50">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-medium text-gray-900">Step {idx + 1}</h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSteps = content.steps.filter((_: any, i: number) => i !== idx);
+                      onChange({ ...content, steps: newSteps });
+                    }}
+                    className="text-red-600 hover:text-red-700 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={step.title || ''}
+                  onChange={(e) => {
+                    const newSteps = [...content.steps];
+                    newSteps[idx].title = e.target.value;
+                    onChange({ ...content, steps: newSteps });
+                  }}
+                  placeholder="Step title"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                />
+                <textarea
+                  value={step.description || ''}
+                  onChange={(e) => {
+                    const newSteps = [...content.steps];
+                    newSteps[idx].description = e.target.value;
+                    onChange({ ...content, steps: newSteps });
+                  }}
+                  placeholder="Step description"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                  rows={2}
+                />
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const newSteps = [...(content.steps || []), { title: '', description: '' }];
+              onChange({ ...content, steps: newSteps });
+            }}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition"
+          >
+            + Add Step
+          </button>
+        </div>
+      );
+
+    case 'categories':
+      return (
+        <div className="space-y-6">
+          <div className="space-y-4">
+            {(content.categories || []).map((category: any, idx: number) => (
+              <div key={idx} className="p-4 border border-gray-200 rounded-lg space-y-3 bg-gray-50">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-medium text-gray-900">Category {idx + 1}</h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newCategories = content.categories.filter((_: any, i: number) => i !== idx);
+                      onChange({ ...content, categories: newCategories });
+                    }}
+                    className="text-red-600 hover:text-red-700 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={category.name || ''}
+                  onChange={(e) => {
+                    const newCategories = [...content.categories];
+                    newCategories[idx].name = e.target.value;
+                    onChange({ ...content, categories: newCategories });
+                  }}
+                  placeholder="Category name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                />
+                <textarea
+                  value={category.description || ''}
+                  onChange={(e) => {
+                    const newCategories = [...content.categories];
+                    newCategories[idx].description = e.target.value;
+                    onChange({ ...content, categories: newCategories });
+                  }}
+                  placeholder="Category description"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                  rows={2}
+                />
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const newCategories = [...(content.categories || []), { name: '', description: '' }];
+              onChange({ ...content, categories: newCategories });
+            }}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition"
+          >
+            + Add Category
+          </button>
         </div>
       );
 
     default:
       return (
-        <div className="p-4 bg-gray-50 rounded border border-gray-200">
-          <p className="text-sm text-gray-600">
-            Editor for {sectionType} sections coming soon. Raw content:
+        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-700">
+            Section editor is loading...
           </p>
-          <pre className="text-xs mt-2 bg-white p-2 rounded border overflow-auto">
-            {JSON.stringify(content, null, 2)}
-          </pre>
         </div>
       );
   }
