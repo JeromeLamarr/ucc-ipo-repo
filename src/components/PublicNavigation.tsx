@@ -34,11 +34,12 @@ export function PublicNavigation() {
     try {
       setNavError(null);
 
-      // Fetch published CMS pages
+      // Fetch published CMS pages (excluding home page)
       const { data: pagesData, error: pagesError } = await supabase
         .from('cms_pages')
         .select('slug, title')
         .eq('is_published', true)
+        .neq('slug', 'home')
         .order('created_at', { ascending: true });
 
       if (pagesError) {
