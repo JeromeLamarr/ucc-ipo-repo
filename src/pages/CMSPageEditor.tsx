@@ -829,6 +829,30 @@ function SectionContentEditor({
 
                   <input
                     type="text"
+                    value={image.caption || ''}
+                    onChange={(e) => {
+                      const newImages = [...content.images];
+                      newImages[idx].caption = e.target.value;
+                      onChange({ ...content, images: newImages });
+                    }}
+                    placeholder="Name or title (displayed above position)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                  />
+
+                  <input
+                    type="text"
+                    value={image.position || ''}
+                    onChange={(e) => {
+                      const newImages = [...content.images];
+                      newImages[idx].position = e.target.value;
+                      onChange({ ...content, images: newImages });
+                    }}
+                    placeholder="Position/Title (e.g., Full Stack Developer)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                  />
+
+                  <input
+                    type="text"
                     value={image.alt_text || ''}
                     onChange={(e) => {
                       const newImages = [...content.images];
@@ -838,18 +862,6 @@ function SectionContentEditor({
                     placeholder="Alt text (for accessibility)"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
                   />
-
-                  <input
-                    type="text"
-                    value={image.caption || ''}
-                    onChange={(e) => {
-                      const newImages = [...content.images];
-                      newImages[idx].caption = e.target.value;
-                      onChange({ ...content, images: newImages });
-                    }}
-                    placeholder="Image caption (optional)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                  />
                 </div>
               ))}
             </div>
@@ -857,7 +869,7 @@ function SectionContentEditor({
             <button
               type="button"
               onClick={() => {
-                const newImages = [...(content.images || []), { url: '', alt_text: '', caption: '' }];
+                const newImages = [...(content.images || []), { url: '', caption: '', position: '', alt_text: '' }];
                 onChange({ ...content, images: newImages });
               }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition"

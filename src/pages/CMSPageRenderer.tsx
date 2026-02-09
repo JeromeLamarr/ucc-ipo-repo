@@ -1428,6 +1428,7 @@ function GallerySection({ content }: { content: Record<string, any> }) {
     const imageUrl = image.url || null;
     const imageAlt = image.alt_text || image.caption || `Gallery image ${idx + 1}`;
     const imageCaption = image.caption || '';
+    const imagePosition = image.position || '';
     const offsetX = image.offset_x || 50;
     const offsetY = image.offset_y || 50;
 
@@ -1456,9 +1457,14 @@ function GallerySection({ content }: { content: Record<string, any> }) {
             }}
           />
         </div>
-        {imageCaption && (
-          <p className="p-4 text-gray-700 text-center text-sm">{imageCaption}</p>
-        )}
+        <div className="p-4 bg-white">
+          {imageCaption && (
+            <p className="text-gray-900 font-semibold text-center text-sm">{imageCaption}</p>
+          )}
+          {imagePosition && (
+            <p className="text-gray-600 text-center text-xs mt-1">{imagePosition}</p>
+          )}
+        </div>
       </div>
     );
   };
