@@ -7,6 +7,7 @@ import { LoginPage } from '@pages/LoginPage';
 import { RegisterPage } from '@pages/RegisterPage';
 import { AuthCallbackPage } from '@pages/AuthCallbackPage';
 import { CMSPageRenderer } from '@pages/CMSPageRenderer';
+import { CMSPageEditor } from '@pages/CMSPageEditor';
 import { ApplicantDashboard } from '@pages/ApplicantDashboard';
 import { NewSubmissionPage } from '@pages/NewSubmissionPage';
 import { SupervisorDashboard } from '@pages/SupervisorDashboard';
@@ -26,6 +27,8 @@ import { DepartmentManagementPage } from '@pages/DepartmentManagementPage';
 import { SettingsPage } from '@pages/SettingsPage';
 import { CertificateVerifyPage } from '@pages/CertificateVerifyPage';
 import { DisclosureVerifyPage } from '@pages/DisclosureVerifyPage';
+import { useEffect } from 'react';
+import { ensureHomeCMSPageExists } from '@lib/cmsSetup';
 
 function DashboardRouter() {
   const { profile } = useAuth();
@@ -60,6 +63,7 @@ function DashboardRouter() {
         <Route path="evaluations" element={<EvaluatorDashboard />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="public-pages" element={<PublicPagesManagement />} />
+        <Route path="public-pages/:slug/edit" element={<CMSPageEditor />} />
         <Route path="public-pages/:pageId" element={<PageSectionsManagement />} />
         <Route path="records" element={<AllRecordsPage />} />
         <Route path="legacy-records" element={<LegacyRecordsPage />} />
@@ -74,6 +78,11 @@ function DashboardRouter() {
 }
 
 function App() {
+  useEffect(() => {
+    // Initialize CMS home page on app startup
+    ensureHomeCMSPageExists();
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>

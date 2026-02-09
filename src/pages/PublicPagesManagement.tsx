@@ -355,9 +355,9 @@ export function PublicPagesManagement() {
                     <td className="py-3 px-4 text-right">
                       <div className="flex gap-2 justify-end">
                         <button
-                          onClick={() => navigate(`/dashboard/public-pages/${page.id}`)}
-                          className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition-colors"
-                          title="Edit sections"
+                          onClick={() => navigate(`/dashboard/public-pages/${page.slug}/edit`)}
+                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                          title="Edit page content"
                         >
                           <Edit className="h-5 w-5" />
                         </button>
@@ -367,7 +367,7 @@ export function PublicPagesManagement() {
                           className={`p-2 rounded-lg transition-colors ${
                             !page.is_published && pageValidationErrors[page.id]?.length
                               ? 'text-gray-400 hover:bg-gray-50 cursor-not-allowed'
-                              : 'text-blue-600 hover:bg-blue-50 disabled:opacity-50'
+                              : 'text-green-600 hover:bg-green-50 disabled:opacity-50'
                           }`}
                           title={
                             !page.is_published && pageValidationErrors[page.id]?.length
