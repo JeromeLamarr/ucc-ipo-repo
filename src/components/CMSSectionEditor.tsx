@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import { BACKGROUND_PRESETS, ICON_COLOR_PRESETS, findPresetName } from '../lib/stylePresets';
 import { validateSection, formatFieldName } from '../lib/sectionValidation';
+import { TextBlockFormEnhanced } from './TextBlockFormEnhanced';
 
 interface CMSSection {
   id: string;
@@ -139,7 +140,7 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
       )}
 
       {section.section_type === 'text' && (
-        <TextBlockForm formData={formData} updateField={updateField} />
+        <TextBlockFormEnhanced formData={formData} updateField={updateField} />
       )}
 
       {section.section_type === 'categories' && (
