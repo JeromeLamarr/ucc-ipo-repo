@@ -32,7 +32,7 @@ const DEFAULT_TEMPLATES: TextBlockTemplate[] = [
     icon: '👋',
     content: {
       title: 'Welcome to Our Platform',
-      body: 'We're thrilled to have you here. This section introduces your content and sets the tone for what visitors can expect. Customize this text to match your brand voice and message.',
+      body: 'We\'re thrilled to have you here. This section introduces your content and sets the tone for what visitors can expect. Customize this text to match your brand voice and message.',
       text_style: 'intro',
       fontSize: 'lg',
       lineHeight: '1.8',
@@ -91,7 +91,7 @@ const DEFAULT_TEMPLATES: TextBlockTemplate[] = [
     icon: '✅',
     content: {
       title: 'Ready to Get Started?',
-      body: 'We've covered everything you need to know. Now it's time to take action. Whether you have questions or are ready to move forward, we're here to help every step of the way.',
+      body: 'We have covered everything you need to know. Now it is time to take action. Whether you have questions or are ready to move forward, we are here to help every step of the way.',
       text_style: 'default',
     },
     preview: 'Call-to-action conclusion',
