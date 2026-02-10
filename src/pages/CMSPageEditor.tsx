@@ -21,7 +21,6 @@ const SECTION_TYPES = [
   { value: 'steps', label: 'Steps/Process', icon: '📋', description: 'Show a step-by-step process' },
   { value: 'categories', label: 'Categories', icon: '📂', description: 'Display categories or services' },
   { value: 'gallery', label: 'Image Gallery', icon: '🖼️', description: 'Display multiple images' },
-  { value: 'text', label: 'Text Block', icon: '📝', description: 'Rich text content' },
   { value: 'cta', label: 'Call to Action', icon: '🎯', description: 'Button or action section' },
 ];
 
@@ -185,8 +184,6 @@ export function CMSPageEditor() {
             { title: 'Feature 1', description: 'Description', icon_bg_color: 'bg-blue-100', icon_color: 'text-blue-600' },
           ],
         };
-      case 'text':
-        return { text: '<p>Your text content here</p>' };
       case 'gallery':
         return {
           title: 'Gallery',
@@ -348,8 +345,6 @@ function SectionEditor({
     switch (section.section_type) {
       case 'hero':
         return `${content.headline} ${content.headline_highlight}`;
-      case 'text':
-        return content.text?.substring(0, 50) || 'Text content...';
       case 'features':
         return `${(content.features || []).length} features`;
       case 'steps':
@@ -599,16 +594,6 @@ function SectionContentEditor({
         </div>
       );
 
-    case 'text':
-      return (
-        <div className="space-y-4">
-          <RichTextEditor
-            value={content.text || ''}
-            onChange={(text) => onChange({ ...content, text })}
-            placeholder="Enter your content here..."
-          />
-        </div>
-      );
 
     case 'cta':
       return (

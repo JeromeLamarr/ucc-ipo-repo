@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
-import { TextSectionNew } from './TextSectionNew';
 
 interface CMSSection {
   id: string;
@@ -43,8 +42,6 @@ export function PagePreviewRenderer({ sections, settings = DEFAULT_SETTINGS }: P
         return <StepsSection key={section.id} content={content} />;
       case 'categories':
         return <CategoriesSection key={section.id} content={content} />;
-      case 'text':
-        return <TextSection key={section.id} content={content} />;
       case 'cta':
         return <CTASection key={section.id} content={content} navigate={navigate} />;
       case 'gallery':
@@ -196,10 +193,6 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
       </div>
     </div>
   );
-}
-
-function TextSection({ content }: { content: Record<string, any> }) {
-  return <TextSectionNew content={content} />;
 }
 
 function CTASection({ content, navigate }: { content: Record<string, any>; navigate: any }) {

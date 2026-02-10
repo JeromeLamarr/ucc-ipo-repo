@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import { BACKGROUND_PRESETS, ICON_COLOR_PRESETS, findPresetName } from '../lib/stylePresets';
 import { validateSection, formatFieldName } from '../lib/sectionValidation';
-import { TextBlockFormNew } from './TextBlockFormNew';
 
 interface CMSSection {
   id: string;
@@ -136,15 +135,6 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
           addArrayItem={addArrayItem}
           removeArrayItem={removeArrayItem}
           updateArrayItem={updateArrayItem}
-        />
-      )}
-
-      {section.section_type === 'text' && (
-        <TextBlockFormNew
-          formData={formData}
-          updateField={updateField}
-          errors={validation.errors.map(e => e.message)}
-          warnings={validation.warnings.map(w => w.message)}
         />
       )}
 
@@ -494,66 +484,6 @@ function StepsBlockForm({ formData, updateField, addArrayItem, removeArrayItem, 
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-// ============================================================================
-// Text Block Form
-// ============================================================================
-
-function TextBlockForm({ formData, updateField }: any) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Title (optional)
-        </label>
-        <input
-          type="text"
-          value={formData.title || ''}
-          onChange={(e) => updateField('title', e.target.value)}
-          placeholder="Section title"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Text Style
-        </label>
-        <select
-          value={formData.text_style || 'default'}
-          onChange={(e) => updateField('text_style', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="default">Default - Regular body text</option>
-          <option value="intro">Intro - Large introductory text</option>
-          <option value="highlight">Highlight - Callout with blue background</option>
-          <option value="quote">Quote - Emphasized quote or testimonial</option>
-          <option value="subtitle">Subtitle - Secondary heading text</option>
-          <option value="muted">Muted - Subtle secondary text</option>
-        </select>
-        <p className="text-xs text-gray-500 mt-2">
-          Choose a style to automatically format your text appropriately.
-        </p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Content *
-        </label>
-        <textarea
-          value={formData.body || ''}
-          onChange={(e) => updateField('body', e.target.value)}
-          placeholder='Enter your text content. Format with line breaks and spacing as needed.'
-          rows={8}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-        />
-        <p className="text-xs text-gray-500 mt-2">
-          Write plain text only. Use line breaks to separate paragraphs. No HTML tags needed.
-        </p>
-      </div>
     </div>
   );
 }

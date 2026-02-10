@@ -20,7 +20,7 @@ interface CMSSection {
   order_index: number;
 }
 
-const SECTION_TYPES = ['hero', 'text', 'features', 'showcase', 'steps', 'categories', 'cta', 'gallery'];
+const SECTION_TYPES = ['hero', 'features', 'showcase', 'steps', 'categories', 'cta', 'gallery'];
 
 const SECTION_TYPE_TEMPLATES: Record<string, Record<string, any>> = {
   hero: {
@@ -29,11 +29,6 @@ const SECTION_TYPE_TEMPLATES: Record<string, Record<string, any>> = {
     subheadline: 'Your subheadline here',
     cta_text: 'Get Started',
     cta_link: '/register',
-  },
-  text: {
-    title: 'Section Title',
-    body: 'Text content here',
-    alignment: 'left',
   },
   features: {
     features: [

@@ -20,7 +20,6 @@ import {
 import { supabase } from '../lib/supabase';
 import { PublicNavigation } from '../components/PublicNavigation';
 import { Footer } from '../components/Footer';
-import { TextSectionNew } from '../components/TextSectionNew';
 
 interface CMSPage {
   id: string;
@@ -699,12 +698,6 @@ function SectionRenderer({ section, settings }: SectionRendererProps) {
           <CategoriesSection content={content} />
         </SectionWrapper>
       );
-    case 'text':
-      return (
-        <SectionWrapper layout={sectionLayout}>
-          <TextSection content={content} />
-        </SectionWrapper>
-      );
     case 'showcase':
       return (
         <SectionWrapper layout={sectionLayout}>
@@ -1013,10 +1006,6 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
       )}
     </div>
   );
-}
-
-function TextSection({ content }: { content: Record<string, any> }) {
-  return <TextSectionNew content={content} />;
 }
 
 function ShowcaseSection({ content, settings }: { content: Record<string, any>; settings?: SiteSettings }) {

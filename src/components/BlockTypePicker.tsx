@@ -35,14 +35,6 @@ const BLOCK_TYPES = [
     bgColor: 'bg-purple-50 hover:bg-purple-100',
   },
   {
-    id: 'text',
-    name: 'Text Content',
-    description: 'Rich text with HTML support',
-    icon: Type,
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-50 hover:bg-gray-100',
-  },
-  {
     id: 'categories',
     name: 'Categories',
     description: 'Grid of category tags',

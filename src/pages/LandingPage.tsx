@@ -96,8 +96,6 @@ export function LandingPage() {
         return <StepsSection key={section.id} content={content} />;
       case 'categories':
         return <CategoriesSection key={section.id} content={content} />;
-      case 'text':
-        return <TextSection key={section.id} content={content} />;
       case 'cta':
         return <CTASection key={section.id} content={content} navigate={navigate} />;
       case 'gallery':
@@ -312,114 +310,6 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
               <p className="text-gray-900 font-semibold group-hover:text-blue-600 transition-colors">{category}</p>
             </div>
           ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TextSection({ content }: { content: Record<string, any> }) {
-  const title = content.title || '';
-  const body = content.body || '';
-  const textStyle = content.text_style || 'default';
-
-  // Detect whether content is already HTML or plain text
-  const isHtmlContent = (text: string): boolean => {
-    return /<[^>]+>/g.test(text);
-  };
-
-  // Convert plain text to paragraphs: split by line breaks
-  const convertPlainTextToHtml = (text: string): string => {
-    return text
-      .split('\n')
-      .filter((line) => line.trim() !== '')
-      .map((line) => `<p>${line.trim()}</p>`)
-      .join('');
-  };
-
-  // Process content: detect HTML vs plain text
-  const processTextContent = (text: string): string => {
-    if (isHtmlContent(text)) {
-      // Existing HTML content - use as-is (backward compatible)
-      return text;
-    } else {
-      // New plain text - convert to HTML paragraphs
-      return convertPlainTextToHtml(text);
-    }
-  };
-
-  const htmlBody = processTextContent(body);
-
-  const sanitizedBody = DOMPurify.sanitize(htmlBody, {
-    ALLOWED_TAGS: ['p', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'li', 'ol', 'strong', 'em', 'b', 'i', 'a'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-    KEEP_CONTENT: true,
-  });
-
-  // Apply intent-based styling
-  const getTextStyleClass = (style: string): string => {
-    switch (style) {
-      case 'intro':
-        return 'text-lg leading-relaxed text-gray-700 font-medium';
-      case 'highlight':
-        return 'text-base leading-relaxed bg-gradient-to-r from-blue-50 to-indigo-50 px-8 py-8 rounded-xl border-l-4 border-blue-500 text-gray-800 shadow-md';
-      case 'quote':
-        return 'text-lg leading-relaxed italic text-gray-700 border-l-4 border-blue-400 pl-6 py-2';
-      case 'subtitle':
-        return 'text-xl leading-relaxed text-gray-700 font-semibold';
-      case 'muted':
-        return 'text-base leading-relaxed text-gray-500 font-normal';
-      default:
-        return 'text-base leading-relaxed text-gray-700';
-    }
-  };
-
-  const styleClass = getTextStyleClass(textStyle);
-
-  return (
-    <div className="w-full bg-white py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`max-w-3xl mx-auto ${styleClass}`}>
-          {title && <h2 className="text-4xl md:text-5xl font-bold mb-10 text-gray-900 leading-tight">{title}</h2>}
-          <div
-            className="text-section prose prose-sm max-w-none"
-            style={{
-              lineHeight: '1.8',
-            }}
-            dangerouslySetInnerHTML={{ __html: sanitizedBody }}
-          />
-          <style>{`
-            .text-section p {
-              margin-bottom: 1.5rem;
-              text-align: left;
-              word-break: break-word;
-            }
-            .text-section p:first-child {
-              margin-top: 0;
-            }
-            .text-section p:last-child {
-              margin-bottom: 0;
-            }
-            .text-section a {
-              color: #2563eb;
-              text-decoration: underline;
-              transition: color 0.3s ease;
-            }
-            .text-section a:hover {
-              color: #1d4ed8;
-            }
-            .text-section strong {
-              font-weight: 700;
-              color: #1f2937;
-            }
-            .text-section ul, .text-section ol {
-              margin-left: 1.5rem;
-              margin-bottom: 1.5rem;
-            }
-            .text-section li {
-              margin-bottom: 0.5rem;
-            }
-          `}</style>
         </div>
       </div>
     </div>
