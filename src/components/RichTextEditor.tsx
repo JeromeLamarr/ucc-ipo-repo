@@ -219,6 +219,7 @@ export function RichTextEditor({
           {/* Editor */}
           <div
             ref={editorRef}
+            dir="ltr"
             contentEditable
             onBlur={syncContent}
             onKeyUp={handleKeyDown}

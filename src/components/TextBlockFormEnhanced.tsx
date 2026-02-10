@@ -153,6 +153,7 @@ export function TextBlockFormEnhanced({ formData, updateField }: TextBlockFormEn
               Title (optional)
             </label>
             <input
+              dir="ltr"
               type="text"
               value={formData.title || ''}
               onChange={(e) => updateField('title', e.target.value)}
@@ -200,6 +201,7 @@ export function TextBlockFormEnhanced({ formData, updateField }: TextBlockFormEn
               Content *
             </label>
             <textarea
+              dir="ltr"
               value={formData.body || ''}
               onChange={(e) => updateField('body', e.target.value)}
               placeholder="Enter your text content. You can use line breaks, lists, and emphasis (use *asterisks* for bold, _underscores_ for italic)."
