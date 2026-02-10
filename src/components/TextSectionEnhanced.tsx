@@ -24,6 +24,47 @@ interface TextSectionContentEnhanced {
   textColor?: string;       // hex or rgb color
   headingColor?: string;    // hex or rgb color
   backgroundColor?: string; // hex or rgb color
+
+  // Phase 2: Advanced Styling
+  textDecoration?: 'none' | 'underline' | 'overline' | 'line-through';
+  opacity?: string;
+  borderWidth?: string;
+  borderStyle?: 'solid' | 'dashed' | 'dotted' | 'double';
+  borderColor?: string;
+  borderRadius?: string;
+  boxShadow?: string;
+  backdropBlur?: string;
+  padding?: string;
+  margin?: string;
+  customCSS?: string;
+
+  // Phase 2: Responsive
+  responsive?: {
+    mobile: { fontSize: string; columns: string; padding: string; hidden?: boolean };
+    tablet: { fontSize: string; columns: string; padding: string; hidden?: boolean };
+    desktop: { fontSize: string; columns: string; padding: string; hidden?: boolean };
+  };
+
+  // Phase 3: Animations
+  animation?: {
+    type?: string;
+    duration?: number;
+    delay?: number;
+    trigger?: 'onView' | 'onLoad' | 'onClick' | 'onHover';
+  };
+  parallax?: string;
+  sticky?: boolean;
+  hoverEffect?: string;
+  easing?: string;
+
+  // Version history
+  versions?: Array<{
+    id: string;
+    timestamp: number;
+    content: any;
+    note?: string;
+    isManual: boolean;
+  }>;
 }
 
 export function TextSectionEnhanced({ content }: { content: TextSectionContentEnhanced }) {
@@ -89,6 +130,84 @@ export function TextSectionEnhanced({ content }: { content: TextSectionContentEn
       textAlign: content.textAlign as any || 'left',
       color: content.textColor || '#000000',
     };
+  };
+
+  // Enhanced styles with Phase 2 & 3 support
+  const getEnhancedStyles = (): React.CSSProperties => {
+    const baseStyles = getTypographyStyles();
+    
+    // Add Phase 2: Advanced Styling
+    if (content.textDecoration) {
+      baseStyles.textDecoration = content.textDecoration;
+    }
+    
+    if (content.opacity) {
+      baseStyles.opacity = parseInt(content.opacity) / 100;
+    }
+
+    // Border styling
+    if (content.borderWidth && parseInt(content.borderWidth) > 0) {
+      baseStyles.border = `${content.borderWidth}px ${content.borderStyle || 'solid'} ${content.borderColor || '#ccc'}`;
+      if (content.borderRadius) {
+        baseStyles.borderRadius = `${content.borderRadius}px`;
+      }
+    }
+
+    // Shadow
+    if (content.boxShadow) {
+      const shadowMap: Record<string, string> = {
+        'none': 'none',
+        'subtle': '0 1px 3px rgba(0,0,0,0.1)',
+        'light': '0 4px 6px rgba(0,0,0,0.1)',
+        'medium': '0 10px 15px rgba(0,0,0,0.1)',
+        'strong': '0 20px 25px rgba(0,0,0,0.15)',
+        'dramatic': '0 25px 50px rgba(0,0,0,0.25)',
+      };
+      baseStyles.boxShadow = shadowMap[content.boxShadow] || 'none';
+    }
+
+    // Padding/Margin
+    if (content.padding) {
+      const paddingMap: Record<string, string> = {
+        'tight': '8px',
+        'normal': '16px',
+        'comfortable': '24px',
+        'spacious': '32px',
+        'extra': '48px',
+      };
+      baseStyles.padding = paddingMap[content.padding] || content.padding;
+    }
+
+    if (content.margin) {
+      const marginMap: Record<string, string> = {
+        'tight': '8px',
+        'normal': '16px',
+        'comfortable': '24px',
+        'spacious': '32px',
+        'extra': '48px',
+      };
+      baseStyles.margin = marginMap[content.margin] || content.margin;
+    }
+
+    // Phase 3: Animation
+    if (content.animation?.type) {
+      const duration = (content.animation.duration || 600) / 1000;
+      const delay = (content.animation.delay || 0) / 1000;
+      baseStyles.animation = `fadeIn ${duration}s ease-out ${delay}s`;
+    }
+
+    // Phase 3: Parallax
+    if (content.parallax && content.parallax !== 'none') {
+      const parallaxMap: Record<string, number> = {
+        'subtle': 10,
+        'medium': 20,
+        'strong': 30,
+      };
+      const offset = parallaxMap[content.parallax] || 0;
+      baseStyles.transform = `translateY(${offset}px)`;
+    }
+
+    return baseStyles;
   };
 
   // Generate dynamic CSS with proper escaping for special characters
@@ -223,11 +342,56 @@ export function TextSectionEnhanced({ content }: { content: TextSectionContentEn
 
   const containerClass = getContainerClass();
   const columnClass = getColumnClass();
-  const typographyStyles = getTypographyStyles();
+  const enhancedStyles = getEnhancedStyles();
+
+  // Generate responsive media queries (Phase 2)
+  const getResponsiveStyles = () => {
+    if (!content.responsive) return '';
+    
+    const fontSize = (size: string) => {
+      const sizeMap: Record<string, string> = {
+        'xs': '12px', 'sm': '14px', 'base': '16px', 'lg': '18px', 'xl': '20px', '2xl': '24px'
+      };
+      return sizeMap[size] || size;
+    };
+
+    const getPadding = (pad: string) => {
+      const padMap: Record<string, string> = {
+        'tight': '8px', 'normal': '16px', 'comfortable': '24px', 'spacious': '32px', 'extra': '48px'
+      };
+      return padMap[pad] || pad;
+    };
+
+    return `
+      @media (max-width: 640px) {
+        .text-section-responsive {
+          font-size: ${fontSize(content.responsive.mobile.fontSize)};
+          padding: ${getPadding(content.responsive.mobile.padding)};
+          ${content.responsive.mobile.hidden ? 'display: none;' : ''}
+        }
+      }
+      
+      @media (641px to 1024px) {
+        .text-section-responsive {
+          font-size: ${fontSize(content.responsive.tablet.fontSize)};
+          padding: ${getPadding(content.responsive.tablet.padding)};
+          ${content.responsive.tablet.hidden ? 'display: none;' : ''}
+        }
+      }
+
+      @media (min-width: 1025px) {
+        .text-section-responsive {
+          font-size: ${fontSize(content.responsive.desktop.fontSize)};
+          padding: ${getPadding(content.responsive.desktop.padding)};
+          ${content.responsive.desktop.hidden ? 'display: none;' : ''}
+        }
+      }
+    `;
+  };
 
   return (
     <div
-      className="w-full py-16"
+      className="w-full py-16 text-section-responsive"
       style={{
         backgroundColor: content.backgroundColor || '#ffffff',
       }}
@@ -247,10 +411,10 @@ export function TextSectionEnhanced({ content }: { content: TextSectionContentEn
             </h2>
           )}
 
-          {/* Body Content with Columns */}
+          {/* Body Content with Columns and Enhanced Styles */}
           <div
             className={`${columnClass} grid-responsive`}
-            style={typographyStyles}
+            style={enhancedStyles}
           >
             <div
               className="prose prose-sm max-w-none"
@@ -258,8 +422,22 @@ export function TextSectionEnhanced({ content }: { content: TextSectionContentEn
             />
           </div>
 
-          {/* Dynamic Styles */}
-          <style>{getStyleBlock()}</style>
+          {/* Dynamic Styles including Phase 2 & 3 */}
+          <style>
+            {getStyleBlock()}
+            {getResponsiveStyles()}
+            {content.customCSS ? content.customCSS : ''}
+            {content.animation?.type ? `
+              @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes slideInUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+              }
+            ` : ''}
+          </style>
         </div>
       </div>
     </div>

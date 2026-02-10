@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { TextBlockTemplateButton } from './TextBlockTemplates';
+import { AdvancedStylingPanel } from './AdvancedStylingPanel';
+import { ResponsiveDesignPanel } from './ResponsiveDesignPanel';
+import { ContentVersioningPanel } from './ContentVersioningPanel';
+import { AdvancedSEOValidation } from './AdvancedSEOValidation';
+import { AnimationEffectsPanel } from './AnimationEffectsPanel';
 
 interface TextBlockFormEnhancedProps {
   formData: Record<string, any>;
   updateField: (key: string, value: any) => void;
 }
 
-type TabType = 'content' | 'typography' | 'layout' | 'styling' | 'preview';
+type TabType = 'content' | 'typography' | 'layout' | 'styling' | 'advanced-styling' | 'responsive' | 'animations' | 'seo' | 'versioning' | 'preview';
 
 // Typography options
 const FONT_SIZE_OPTIONS = [
@@ -84,6 +90,11 @@ export function TextBlockFormEnhanced({ formData, updateField }: TextBlockFormEn
     { id: 'typography', label: 'Typography', icon: '🔤' },
     { id: 'layout', label: 'Layout', icon: '📐' },
     { id: 'styling', label: 'Styling', icon: '🎨' },
+    { id: 'advanced-styling', label: 'Advanced', icon: '✨' },
+    { id: 'responsive', label: 'Responsive', icon: '📱' },
+    { id: 'animations', label: 'Animation', icon: '🎬' },
+    { id: 'seo', label: 'SEO', icon: '📊' },
+    { id: 'versioning', label: 'History', icon: '⏱️' },
     { id: 'preview', label: 'Preview', icon: '👁️' },
   ];
 
@@ -151,9 +162,22 @@ export function TextBlockFormEnhanced({ formData, updateField }: TextBlockFormEn
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Text Style (preset styling)
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Text Style (preset styling)
+              </label>
+              <TextBlockTemplateButton
+                onSelect={(templateContent) => {
+                  // Merge template content with current form data
+                  updateField('title', templateContent.title || formData.title);
+                  updateField('body', templateContent.body || formData.body);
+                  if (templateContent.text_style) updateField('text_style', templateContent.text_style);
+                  if (templateContent.fontSize) updateField('fontSize', templateContent.fontSize);
+                  if (templateContent.lineHeight) updateField('lineHeight', templateContent.lineHeight);
+                  if (templateContent.textAlign) updateField('textAlign', templateContent.textAlign);
+                }}
+              />
+            </div>
             <select
               value={formData.text_style || 'default'}
               onChange={(e) => updateField('text_style', e.target.value)}
@@ -185,6 +209,9 @@ export function TextBlockFormEnhanced({ formData, updateField }: TextBlockFormEn
             <p className="text-xs text-gray-500 mt-2">
               Use line breaks for paragraphs. Supports Markdown-style formatting.
             </p>
+            
+            {/* Content Statistics */}
+            <ContentStatistics content={formData.body || ''} />
           </div>
         </div>
       )}
@@ -488,6 +515,47 @@ export function TextBlockFormEnhanced({ formData, updateField }: TextBlockFormEn
         </div>
       )}
 
+      {/* Advanced Styling Tab (Phase 2) */}
+      {activeTab === 'advanced-styling' && (
+        <AdvancedStylingPanel 
+          formData={formData} 
+          updateField={updateField} 
+        />
+      )}
+
+      {/* Responsive Design Tab (Phase 2) */}
+      {activeTab === 'responsive' && (
+        <ResponsiveDesignPanel 
+          formData={formData} 
+          updateField={updateField} 
+        />
+      )}
+
+      {/* Animations Tab (Phase 3) */}
+      {activeTab === 'animations' && (
+        <AnimationEffectsPanel 
+          formData={formData} 
+          updateField={updateField} 
+        />
+      )}
+
+      {/* SEO Validation Tab (Phase 3) */}
+      {activeTab === 'seo' && (
+        <AdvancedSEOValidation content={formData} />
+      )}
+
+      {/* Content Versioning Tab (Phase 3) */}
+      {activeTab === 'versioning' && (
+        <ContentVersioningPanel
+          currentContent={formData}
+          onRestore={async (restoredContent: any) => {
+            Object.entries(restoredContent).forEach(([key, value]) => {
+              updateField(key as any, value);
+            });
+          }}
+        />
+      )}
+
       {/* Preview Tab */}
       {activeTab === 'preview' && (
         <div className="space-y-4">
@@ -590,6 +658,77 @@ export function TextBlockFormEnhanced({ formData, updateField }: TextBlockFormEn
         <p className="text-sm text-blue-900">
           💡 <strong>Tip:</strong> Use the tabs above to customize every aspect of your text section. Check the Preview tab to see your changes in real-time!
         </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Content Statistics Component
+ * Shows word count, character count, reading time, and SEO recommendations
+ */
+function ContentStatistics({ content }: { content: string }) {
+  // Calculate statistics
+  const charCount = content.length;
+  const charCountNoSpaces = content.replace(/\s+/g, '').length;
+  const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
+  const readingTimeMinutes = Math.ceil(wordCount / 200); // Average reading speed: 200 words/min
+  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+  const avgWordLength = wordCount > 0 ? (charCountNoSpaces / wordCount).toFixed(1) : 0;
+
+  // SEO recommendations
+  const seoChecks = [
+    {
+      label: 'Word Count',
+      value: wordCount,
+      optimal: wordCount >= 100 && wordCount <= 2500,
+      recommendation: wordCount < 100 ? '📉 Too short (aim for 100+)' : wordCount > 2500 ? '📈 Very long (consider splitting)' : '✅ Good length',
+    },
+    {
+      label: 'Character Count',
+      value: charCount,
+      optimal: charCount >= 300,
+      recommendation: charCount < 300 ? '📉 Too short (aim for 300+)' : '✅ Good',
+    },
+  ];
+
+  return (
+    <div className="mt-4 p-4 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200 space-y-3">
+      <div className="grid grid-cols-4 gap-3 text-center">
+        <div className="bg-white rounded p-2">
+          <div className="text-2xl font-bold text-blue-600">{wordCount}</div>
+          <div className="text-xs text-gray-600 font-medium">Words</div>
+        </div>
+        <div className="bg-white rounded p-2">
+          <div className="text-2xl font-bold text-purple-600">{charCount}</div>
+          <div className="text-xs text-gray-600 font-medium">Characters</div>
+        </div>
+        <div className="bg-white rounded p-2">
+          <div className="text-2xl font-bold text-green-600">{readingTimeMinutes}</div>
+          <div className="text-xs text-gray-600 font-medium">Min Read</div>
+        </div>
+        <div className="bg-white rounded p-2">
+          <div className="text-2xl font-bold text-orange-600">{sentences}</div>
+          <div className="text-xs text-gray-600 font-medium">Sentences</div>
+        </div>
+      </div>
+
+      {/* SEO Recommendations */}
+      <div className="bg-white rounded p-3 border border-slate-200 space-y-2">
+        <div className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+          📊 Content Quality Guidelines
+        </div>
+        {seoChecks.map((check, idx) => (
+          <div key={idx} className="flex items-center justify-between text-xs">
+            <span className="text-slate-600">{check.label}:</span>
+            <div className="flex items-center gap-2">
+              <span className={`font-semibold ${check.optimal ? 'text-green-600' : 'text-orange-600'}`}>
+                {check.value}
+              </span>
+              <span className="text-slate-500">{check.recommendation}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
