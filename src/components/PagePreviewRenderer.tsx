@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
+import { TextSectionNew } from './TextSectionNew';
 
 interface CMSSection {
   id: string;
@@ -198,87 +199,7 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
 }
 
 function TextSection({ content }: { content: Record<string, any> }) {
-  const title = content.title || '';
-  const body = content.body || '';
-  const textStyle = content.text_style || 'default';
-
-  if (!title && !body) return null;
-
-  // Detect whether content is already HTML or plain text
-  const isHtmlContent = (text: string): boolean => {
-    return /<[^>]+>/g.test(text);
-  };
-
-  // Convert plain text to paragraphs: split by line breaks
-  const convertPlainTextToHtml = (text: string): string => {
-    return text
-      .split('\n')
-      .filter((line) => line.trim() !== '')
-      .map((line) => `<p>${line.trim()}</p>`)
-      .join('');
-  };
-
-  // Process content: detect HTML vs plain text
-  const processTextContent = (text: string): string => {
-    if (isHtmlContent(text)) {
-      // Existing HTML content - use as-is (backward compatible)
-      return text;
-    } else {
-      // New plain text - convert to HTML paragraphs
-      return convertPlainTextToHtml(text);
-    }
-  };
-
-  const htmlBody = processTextContent(body);
-
-  const sanitizedBody = DOMPurify.sanitize(htmlBody, {
-    ALLOWED_TAGS: ['p', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'li', 'ol', 'strong', 'em', 'b', 'i', 'a'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-    KEEP_CONTENT: true,
-  });
-
-  // Apply intent-based styling
-  const getTextStyleClass = (style: string): string => {
-    switch (style) {
-      case 'intro':
-        return 'text-lg leading-relaxed text-gray-700 font-medium';
-      case 'highlight':
-        return 'text-base leading-relaxed bg-blue-50 px-6 py-4 rounded-lg border-l-4 border-blue-500 text-gray-800';
-      case 'quote':
-        return 'text-base leading-relaxed italic text-gray-700 border-l-4 border-gray-300 pl-4';
-      case 'subtitle':
-        return 'text-base leading-relaxed text-gray-600 font-semibold';
-      case 'muted':
-        return 'text-sm leading-relaxed text-gray-500';
-      default:
-        return 'text-sm leading-relaxed text-gray-700';
-    }
-  };
-
-  const styleClass = getTextStyleClass(textStyle);
-
-  return (
-    <div className="w-full bg-white py-6">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`max-w-xl mx-auto text-section ${styleClass}`}>
-          {title && <h2 className="text-xl font-bold mb-4 text-gray-900">{title}</h2>}
-          <div
-            className="text-section text-sm"
-            style={{
-              lineHeight: '1.7',
-            }}
-            dangerouslySetInnerHTML={{ __html: sanitizedBody }}
-          />
-          <style>{`
-            .text-section p { margin-bottom: 1rem; }
-            .text-section p:first-child { margin-top: 0; }
-            .text-section a { color: #1e40af; text-decoration: underline; font-weight: 500; }
-            .text-section a:hover { color: #1e3a8a; }
-          `}</style>
-        </div>
-      </div>
-    </div>
-  );
+  return <TextSectionNew content={content} />;
 }
 
 function CTASection({ content, navigate }: { content: Record<string, any>; navigate: any }) {
