@@ -20,7 +20,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { PublicNavigation } from '../components/PublicNavigation';
 import { Footer } from '../components/Footer';
-import { TextSectionEnhanced } from '../components/TextSectionEnhanced';
+import { TextSectionNew } from '../components/TextSectionNew';
 
 interface CMSPage {
   id: string;
@@ -1016,7 +1016,7 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
 }
 
 function TextSection({ content }: { content: Record<string, any> }) {
-  return <TextSectionEnhanced content={content} />;
+  return <TextSectionNew content={content} />;
 }
 
 function ShowcaseSection({ content, settings }: { content: Record<string, any>; settings?: SiteSettings }) {
