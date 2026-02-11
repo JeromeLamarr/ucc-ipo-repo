@@ -1329,44 +1329,143 @@ function TextSectionRenderer({ content }: { content: Record<string, any> }) {
   const maxWidth = content.max_width || 'normal';
   const bgStyle = content.background_style || 'none';
   const showDivider = content.show_divider || false;
+  const textStylePreset = content.text_style_preset || 'default';
+  const titleStyle = content.title_style || 'normal';
+  const textSize = content.text_size || 'medium';
+  const visualTone = content.visual_tone || 'neutral';
+  const accentIcon = content.accent_icon || 'none';
+  const emphasizeSection = content.emphasize_section || false;
+  const verticalSpacing = content.vertical_spacing || 'normal';
 
-  // Map background style to classes
+  // Background style mapping
   const bgClasses: Record<string, string> = {
     none: 'bg-white',
     light_gray: 'bg-gray-50',
     soft_blue: 'bg-blue-50',
+    soft_yellow: 'bg-yellow-50',
   };
 
-  // Map max-width to classes
+  // Max width mapping
   const widthClasses: Record<string, string> = {
     narrow: 'max-w-2xl',
     normal: 'max-w-4xl',
     wide: 'max-w-6xl',
   };
 
-  // Map alignment to classes
+  // Text alignment mapping
   const alignClasses: Record<string, string> = {
     left: 'text-left',
     center: 'text-center',
   };
 
+  // Title style classes
+  const titleStyleClasses: Record<string, string> = {
+    normal: 'font-bold',
+    bold: 'font-black',
+    uppercase: 'font-bold uppercase tracking-tight',
+    underline: 'font-bold pb-2 border-b-2 border-blue-200',
+  };
+
+  // Text size classes
+  const textSizeClasses: Record<string, string> = {
+    small: 'text-sm',
+    medium: 'text-base',
+    large: 'text-lg',
+  };
+
+  // Text style preset classes (defines text color and styling)
+  const textPresetClasses: Record<string, string> = {
+    default: 'text-gray-700',
+    introduction: 'text-gray-800 font-medium',
+    highlight: 'text-blue-900 font-semibold',
+    policy: 'text-red-900 bg-red-50 p-4 rounded-lg',
+    callout: 'text-purple-900 italic border-l-4 border-purple-300 pl-4',
+  };
+
+  // Tone/mood classes (affects overall color subtly)
+  const toneClasses: Record<string, string> = {
+    neutral: '',
+    informative: 'prose-blue',
+    emphasis: 'font-medium',
+    formal: 'tracking-wide',
+  };
+
+  // Vertical spacing padding
+  const spacingClasses: Record<string, string> = {
+    compact: 'py-8',
+    normal: 'py-16',
+    spacious: 'py-24',
+  };
+
+  // Emphasis box styling
+  const emphasisBoxClass = emphasizeSection
+    ? 'border-2 border-blue-200 bg-blue-50 rounded-lg p-6'
+    : '';
+
+  // Accent icon display
+  const getAccentIcon = (iconType: string) => {
+    const icons: Record<string, string> = {
+      none: '',
+      info: 'ℹ️',
+      lightbulb: '💡',
+      shield: '🛡️',
+      document: '📄',
+    };
+    return icons[iconType] || '';
+  };
+
+  const accentDisplay = getAccentIcon(accentIcon);
+  const presetClass = textPresetClasses[textStylePreset] || textPresetClasses.default;
+
   return (
-    <div className={`w-full py-16 px-4 sm:px-6 lg:px-8 ${bgClasses[bgStyle]}`}>
+    <div className={`w-full px-4 sm:px-6 lg:px-8 ${spacingClasses[verticalSpacing]} ${bgClasses[bgStyle]}`}>
       {showDivider && <div className="mb-12 border-t border-gray-200"></div>}
-      
-      <div className={`mx-auto ${widthClasses[maxWidth]}`}>
+
+      <div className={`mx-auto ${widthClasses[maxWidth]} ${emphasisBoxClass}`}>
         {title && (
-          <h2 className={`text-3xl font-bold mb-8 text-gray-900 ${alignClasses[alignment]}`}>
-            {title}
-          </h2>
+          <div className="flex items-center gap-3 mb-6">
+            {accentDisplay && <span className="text-2xl">{accentDisplay}</span>}
+            <h2 className={`text-3xl ${titleStyleClasses[titleStyle]} text-gray-900 ${alignClasses[alignment]}`}>
+              {title}
+            </h2>
+          </div>
         )}
-        
-        <div className={`prose prose-lg max-w-none ${alignClasses[alignment]}`}>
-          {body.split('\n\n').map((paragraph: string, idx: number) => (
-            <p key={idx} className="text-gray-700 leading-relaxed mb-4 last:mb-0">
-              {paragraph}
-            </p>
-          ))}
+
+        <div className={`${textSizeClasses[textSize]} leading-relaxed ${alignClasses[alignment]} space-y-4`}>
+          {body.split('\n\n').map((paragraph: string, idx: number) => {
+            // Apply different styles based on preset
+            if (textStylePreset === 'policy') {
+              return (
+                <p key={idx} className={`${presetClass} last:mb-0`}>
+                  {paragraph}
+                </p>
+              );
+            } else if (textStylePreset === 'callout') {
+              return (
+                <p key={idx} className={`${presetClass} last:mb-0`}>
+                  {paragraph}
+                </p>
+              );
+            } else if (textStylePreset === 'highlight') {
+              return (
+                <p key={idx} className={`${presetClass} ${toneClasses[visualTone]} last:mb-0`}>
+                  {paragraph}
+                </p>
+              );
+            } else if (textStylePreset === 'introduction') {
+              return (
+                <p key={idx} className={`${presetClass} ${textSize === 'large' ? 'text-lg' : ''} ${toneClasses[visualTone]} last:mb-0`}>
+                  {paragraph}
+                </p>
+              );
+            } else {
+              return (
+                <p key={idx} className={`${presetClass} ${toneClasses[visualTone]} last:mb-0`}>
+                  {paragraph}
+                </p>
+              );
+            }
+          })}
         </div>
       </div>
 

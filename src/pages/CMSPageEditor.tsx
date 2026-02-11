@@ -217,6 +217,13 @@ export function CMSPageEditor() {
           max_width: 'normal',
           background_style: 'none',
           show_divider: false,
+          text_style_preset: 'default',
+          title_style: 'normal',
+          text_size: 'medium',
+          visual_tone: 'neutral',
+          accent_icon: 'none',
+          emphasize_section: false,
+          vertical_spacing: 'normal',
         };
       default:
         return {};
@@ -879,84 +886,262 @@ function SectionContentEditor({
 
     case 'text-section':
       return (
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Section Title (Optional)</label>
-            <input
-              type="text"
-              value={content.section_title || ''}
-              onChange={(e) => onChange({ ...content, section_title: e.target.value })}
-              placeholder="e.g., About Our Mission"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-            />
-            <p className="text-xs text-gray-500 mt-1">Leave empty if you don't want a title</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Body Content (Required)</label>
-            <textarea
-              value={content.body_content || ''}
-              onChange={(e) => onChange({ ...content, body_content: e.target.value })}
-              placeholder="Add your informational content here. Separate paragraphs with blank lines."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              rows={6}
-            />
-            <p className="text-xs text-gray-500 mt-1">Supports line breaks and paragraphs (separate with blank lines)</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Text Alignment</label>
-              <select
-                value={content.text_alignment || 'left'}
-                onChange={(e) => onChange({ ...content, text_alignment: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              >
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Width</label>
-              <select
-                value={content.max_width || 'normal'}
-                onChange={(e) => onChange({ ...content, max_width: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              >
-                <option value="narrow">Narrow</option>
-                <option value="normal">Normal (Default)</option>
-                <option value="wide">Wide</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Background Style</label>
-            <select
-              value={content.background_style || 'none'}
-              onChange={(e) => onChange({ ...content, background_style: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-            >
-              <option value="none">None (White)</option>
-              <option value="light_gray">Light Gray</option>
-              <option value="soft_blue">Soft Blue</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <input
-              type="checkbox"
-              id="showDivider"
-              checked={content.show_divider || false}
-              onChange={(e) => onChange({ ...content, show_divider: e.target.checked })}
-              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:outline-none"
-            />
-            <label htmlFor="showDivider" className="text-sm font-medium text-gray-700">
-              Show subtle dividers above and below this section
-            </label>
-          </div>
-        </div>
+        <TextSectionEditor content={content} onChange={onChange} />
       );
   }
+}
+
+function TextSectionEditor({ content, onChange }: { content: Record<string, any>; onChange: (content: Record<string, any>) => void }) {
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    content: true,
+    style: false,
+    layout: false,
+  });
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
+  const getAccentIconDisplay = (iconType: string) => {
+    const icons: Record<string, string> = {
+      none: '—',
+      info: 'ℹ️',
+      lightbulb: '💡',
+      shield: '🛡️',
+      document: '📄',
+    };
+    return icons[iconType] || '—';
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* CONTENT SECTION */}
+      <div className="border border-gray-300 rounded-lg overflow-hidden">
+        <button
+          onClick={() => toggleSection('content')}
+          className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 flex justify-between items-center font-medium text-left transition"
+        >
+          <span className="text-gray-900">Content</span>
+          <span className="text-gray-600">{expandedSections.content ? '▼' : '▶'}</span>
+        </button>
+        {expandedSections.content && (
+          <div className="p-4 space-y-4 bg-white">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Section Title (Optional)</label>
+              <input
+                type="text"
+                value={content.section_title || ''}
+                onChange={(e) => onChange({ ...content, section_title: e.target.value })}
+                placeholder="e.g., About Our Mission"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Leave empty if you don't want a title</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Body Content (Required)</label>
+              <textarea
+                value={content.body_content || ''}
+                onChange={(e) => onChange({ ...content, body_content: e.target.value })}
+                placeholder="Add your informational content here. Separate paragraphs with blank lines."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+                rows={6}
+              />
+              <p className="text-xs text-gray-500 mt-1">Supports line breaks and paragraphs (separate with blank lines)</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* STYLE SECTION */}
+      <div className="border border-gray-300 rounded-lg overflow-hidden">
+        <button
+          onClick={() => toggleSection('style')}
+          className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 flex justify-between items-center font-medium text-left transition"
+        >
+          <span className="text-gray-900">Style</span>
+          <span className="text-gray-600">{expandedSections.style ? '▼' : '▶'}</span>
+        </button>
+        {expandedSections.style && (
+          <div className="p-4 space-y-4 bg-white">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Text Style Preset</label>
+              <select
+                value={content.text_style_preset || 'default'}
+                onChange={(e) => onChange({ ...content, text_style_preset: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              >
+                <option value="default">Default (Body Text)</option>
+                <option value="introduction">Section Introduction</option>
+                <option value="highlight">Highlight Statement</option>
+                <option value="policy">Policy / Notice</option>
+                <option value="callout">Callout Text</option>
+              </select>
+            </div>
+
+            {content.section_title && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title Style</label>
+                <select
+                  value={content.title_style || 'normal'}
+                  onChange={(e) => onChange({ ...content, title_style: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="bold">Bold</option>
+                  <option value="uppercase">Uppercase</option>
+                  <option value="underline">Subtle Underline</option>
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Text Size</label>
+              <select
+                value={content.text_size || 'medium'}
+                onChange={(e) => onChange({ ...content, text_size: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              >
+                <option value="small">Small</option>
+                <option value="medium">Medium (Default)</option>
+                <option value="large">Large</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tone / Mood</label>
+              <select
+                value={content.visual_tone || 'neutral'}
+                onChange={(e) => onChange({ ...content, visual_tone: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              >
+                <option value="neutral">Neutral</option>
+                <option value="informative">Informative</option>
+                <option value="emphasis">Emphasis</option>
+                <option value="formal">Formal</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Accent Icon (Optional)</label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={content.accent_icon || 'none'}
+                  onChange={(e) => onChange({ ...content, accent_icon: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="none">None</option>
+                  <option value="info">ℹ️ Info</option>
+                  <option value="lightbulb">💡 Lightbulb</option>
+                  <option value="shield">🛡️ Shield</option>
+                  <option value="document">📄 Document</option>
+                </select>
+                <div className="text-2xl px-3 py-2 bg-gray-100 rounded-lg min-w-12 flex items-center justify-center">
+                  {getAccentIconDisplay(content.accent_icon || 'none')}
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Displays near section title if provided</p>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <input
+                type="checkbox"
+                id="emphasizeSection"
+                checked={content.emphasize_section || false}
+                onChange={(e) => onChange({ ...content, emphasize_section: e.target.checked })}
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:outline-none"
+              />
+              <label htmlFor="emphasizeSection" className="text-sm font-medium text-gray-700">
+                Emphasize Section (adds border and background accent)
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* LAYOUT SECTION */}
+      <div className="border border-gray-300 rounded-lg overflow-hidden">
+        <button
+          onClick={() => toggleSection('layout')}
+          className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 flex justify-between items-center font-medium text-left transition"
+        >
+          <span className="text-gray-900">Layout</span>
+          <span className="text-gray-600">{expandedSections.layout ? '▼' : '▶'}</span>
+        </button>
+        {expandedSections.layout && (
+          <div className="p-4 space-y-4 bg-white">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Text Alignment</label>
+                <select
+                  value={content.text_alignment || 'left'}
+                  onChange={(e) => onChange({ ...content, text_alignment: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Width</label>
+                <select
+                  value={content.max_width || 'normal'}
+                  onChange={(e) => onChange({ ...content, max_width: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="narrow">Narrow</option>
+                  <option value="normal">Normal (Default)</option>
+                  <option value="wide">Wide</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Background Style</label>
+              <select
+                value={content.background_style || 'none'}
+                onChange={(e) => onChange({ ...content, background_style: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              >
+                <option value="none">None (White)</option>
+                <option value="light_gray">Soft Gray</option>
+                <option value="soft_blue">Soft Blue</option>
+                <option value="soft_yellow">Soft Yellow (Notice-style)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vertical Spacing</label>
+              <select
+                value={content.vertical_spacing || 'normal'}
+                onChange={(e) => onChange({ ...content, vertical_spacing: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              >
+                <option value="compact">Compact</option>
+                <option value="normal">Normal (Default)</option>
+                <option value="spacious">Spacious</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <input
+                type="checkbox"
+                id="showDivider"
+                checked={content.show_divider || false}
+                onChange={(e) => onChange({ ...content, show_divider: e.target.checked })}
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:outline-none"
+              />
+              <label htmlFor="showDivider" className="text-sm font-medium text-gray-700">
+                Show subtle dividers above and below
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
