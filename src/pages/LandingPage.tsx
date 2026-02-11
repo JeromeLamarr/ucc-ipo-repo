@@ -96,6 +96,8 @@ export function LandingPage() {
         return <StepsSection key={section.id} content={content} />;
       case 'categories':
         return <CategoriesSection key={section.id} content={content} />;
+      case 'text-section':
+        return <TextSectionRenderer key={section.id} content={content} />;
       case 'cta':
         return <CTASection key={section.id} content={content} navigate={navigate} />;
       case 'gallery':
@@ -419,6 +421,61 @@ function GallerySection({ content }: { content: Record<string, any> }) {
           {images.map((image: any, index: number) => renderImage(image, index))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function TextSectionRenderer({ content }: { content: Record<string, any> }) {
+  if (!content) {
+    console.warn('TextSectionRenderer: Missing content prop');
+    return null;
+  }
+
+  const title = content.section_title || '';
+  const body = content.body_content || '';
+  const alignment = content.text_alignment || 'left';
+  const maxWidth = content.max_width || 'normal';
+  const bgStyle = content.background_style || 'none';
+  const showDivider = content.show_divider || false;
+
+  const bgClasses: Record<string, string> = {
+    none: 'bg-white',
+    light_gray: 'bg-gray-50',
+    soft_blue: 'bg-blue-50',
+  };
+
+  const widthClasses: Record<string, string> = {
+    narrow: 'max-w-2xl',
+    normal: 'max-w-4xl',
+    wide: 'max-w-6xl',
+  };
+
+  const alignClasses: Record<string, string> = {
+    left: 'text-left',
+    center: 'text-center',
+  };
+
+  return (
+    <div className={`w-full py-16 px-4 sm:px-6 lg:px-8 ${bgClasses[bgStyle]}`}>
+      {showDivider && <div className="mb-12 border-t border-gray-200"></div>}
+      
+      <div className={`mx-auto ${widthClasses[maxWidth]}`}>
+        {title && (
+          <h2 className={`text-3xl font-bold mb-8 text-gray-900 ${alignClasses[alignment]}`}>
+            {title}
+          </h2>
+        )}
+        
+        <div className={`prose prose-lg max-w-none ${alignClasses[alignment]}`}>
+          {body.split('\n\n').map((paragraph: string, idx: number) => (
+            <p key={idx} className="text-gray-700 leading-relaxed mb-4 last:mb-0">
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      </div>
+
+      {showDivider && <div className="mt-12 border-b border-gray-200"></div>}
     </div>
   );
 }

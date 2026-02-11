@@ -147,6 +147,10 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
         />
       )}
 
+      {section.section_type === 'text-section' && (
+        <TextSectionForm formData={formData} updateField={updateField} />
+      )}
+
       {section.section_type === 'cta' && (
         <CTABlockForm formData={formData} updateField={updateField} />
       )}
@@ -1010,6 +1014,107 @@ function ShowcaseBlockForm({ formData, updateField, addArrayItem, removeArrayIte
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// Text Section Form
+// ============================================================================
+
+function TextSectionForm({ formData, updateField }: any) {
+  return (
+    <div className="space-y-4">
+      {/* Section Title - Optional */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Section Title (optional)
+        </label>
+        <input
+          type="text"
+          value={formData.section_title || ''}
+          onChange={(e) => updateField('section_title', e.target.value)}
+          placeholder="e.g., About Our Services"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <p className="text-xs text-gray-500 mt-1">Leave empty to hide the title</p>
+      </div>
+
+      {/* Body Content - Required */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Body Content <span className="text-red-600 font-bold">*</span>
+        </label>
+        <textarea
+          value={formData.body_content || ''}
+          onChange={(e) => updateField('body_content', e.target.value)}
+          placeholder="Enter your text content here. Support for paragraphs and line breaks."
+          rows={6}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <p className="text-xs text-gray-500 mt-1">Use line breaks to create paragraphs</p>
+      </div>
+
+      {/* Text Alignment */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Text Alignment
+        </label>
+        <select
+          value={formData.text_alignment || 'left'}
+          onChange={(e) => updateField('text_alignment', e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="left">Left</option>
+          <option value="center">Center</option>
+        </select>
+      </div>
+
+      {/* Max Width */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Content Width
+        </label>
+        <select
+          value={formData.max_width || 'normal'}
+          onChange={(e) => updateField('max_width', e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="narrow">Narrow (max 600px)</option>
+          <option value="normal">Normal (max 800px)</option>
+          <option value="wide">Wide (max 1200px)</option>
+        </select>
+      </div>
+
+      {/* Background Style */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Background Style
+        </label>
+        <select
+          value={formData.background_style || 'none'}
+          onChange={(e) => updateField('background_style', e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="none">None (White)</option>
+          <option value="light_gray">Light Gray</option>
+          <option value="soft_blue">Soft Blue</option>
+        </select>
+      </div>
+
+      {/* Show Divider */}
+      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+        <input
+          type="checkbox"
+          id="show_divider"
+          checked={formData.show_divider || false}
+          onChange={(e) => updateField('show_divider', e.target.checked)}
+          className="h-4 w-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+        />
+        <label htmlFor="show_divider" className="text-sm font-medium text-gray-700 cursor-pointer">
+          Show dividers above and below section
+        </label>
+      </div>
     </div>
   );
 }

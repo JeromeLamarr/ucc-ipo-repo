@@ -42,6 +42,8 @@ export function PagePreviewRenderer({ sections, settings = DEFAULT_SETTINGS }: P
         return <StepsSection key={section.id} content={content} />;
       case 'categories':
         return <CategoriesSection key={section.id} content={content} />;
+      case 'text-section':
+        return <TextSectionPreview key={section.id} content={content} />;
       case 'cta':
         return <CTASection key={section.id} content={content} navigate={navigate} />;
       case 'gallery':
@@ -335,6 +337,50 @@ function ShowcaseSection({ content }: { content: Record<string, any> }) {
             {items.map((item: any, index: number) => renderItem(item, index))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function TextSectionPreview({ content }: { content: Record<string, any> }) {
+  if (!content) return null;
+
+  const title = content.section_title || '';
+  const body = content.body_content || '';
+  const alignment = content.text_alignment || 'left';
+  const maxWidth = content.max_width || 'normal';
+  const bgStyle = content.background_style || 'none';
+
+  const bgClasses: Record<string, string> = {
+    none: 'bg-white',
+    light_gray: 'bg-gray-50',
+    soft_blue: 'bg-blue-50',
+  };
+
+  const widthClasses: Record<string, string> = {
+    narrow: 'max-w-2xl',
+    normal: 'max-w-4xl',
+    wide: 'max-w-6xl',
+  };
+
+  const alignClasses: Record<string, string> = {
+    left: 'text-left',
+    center: 'text-center',
+  };
+
+  return (
+    <div className={`w-full py-12 px-4 sm:px-6 lg:px-8 ${bgClasses[bgStyle]}`}>
+      <div className={`mx-auto ${widthClasses[maxWidth]}`}>
+        {title && (
+          <h2 className={`text-2xl font-bold mb-6 text-gray-900 ${alignClasses[alignment]}`}>
+            {title}
+          </h2>
+        )}
+        <div className={`${alignClasses[alignment]} text-gray-700`}>
+          {body.split('\n').map((line: string, idx: number) => (
+            <p key={idx} className="mb-2 leading-relaxed">{line}</p>
+          ))}
+        </div>
       </div>
     </div>
   );

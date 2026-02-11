@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS cms_sections (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   
   CONSTRAINT valid_section_type CHECK (
-    section_type IN ('hero', 'features', 'steps', 'categories', 'text', 'showcase', 'cta', 'gallery')
+    section_type IN ('hero', 'features', 'steps', 'categories', 'text-section', 'showcase', 'cta', 'gallery')
   ),
   CONSTRAINT order_index_positive CHECK (order_index >= 0)
 );
@@ -118,7 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_cms_sections_type ON cms_sections(section_type);
 -- Add comments
 COMMENT ON TABLE cms_sections IS 'Content sections within CMS pages (hero, features, steps, etc.)';
 COMMENT ON COLUMN cms_sections.page_id IS 'Foreign key reference to parent CMS page';
-COMMENT ON COLUMN cms_sections.section_type IS 'Type of section: hero, features, steps, categories, text, showcase, cta, gallery';
+COMMENT ON COLUMN cms_sections.section_type IS 'Type of section: hero, features, steps, categories, text-section, showcase, cta, gallery';
 COMMENT ON COLUMN cms_sections.content IS 'Flexible JSONB content structure per section type';
 COMMENT ON COLUMN cms_sections.order_index IS 'Display order within the page (0-indexed)';
 

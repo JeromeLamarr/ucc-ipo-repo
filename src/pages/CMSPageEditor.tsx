@@ -20,6 +20,7 @@ const SECTION_TYPES = [
   { value: 'features', label: 'Features Grid', icon: '✨', description: 'Showcase your key features' },
   { value: 'steps', label: 'Steps/Process', icon: '📋', description: 'Show a step-by-step process' },
   { value: 'categories', label: 'Categories', icon: '📂', description: 'Display categories or services' },
+  { value: 'text-section', label: 'Text Section', icon: '📄', description: 'Display informational text content' },
   { value: 'gallery', label: 'Image Gallery', icon: '🖼️', description: 'Display multiple images' },
   { value: 'cta', label: 'Call to Action', icon: '🎯', description: 'Button or action section' },
 ];
@@ -208,6 +209,15 @@ export function CMSPageEditor() {
           button_text: 'Click Here',
           button_link: '/register',
         };
+      case 'text-section':
+        return {
+          section_title: 'Section Title',
+          body_content: 'Add your informational content here.',
+          text_alignment: 'left',
+          max_width: 'normal',
+          background_style: 'none',
+          show_divider: false,
+        };
       default:
         return {};
     }
@@ -355,6 +365,8 @@ function SectionEditor({
         return `${(content.images || []).length} images`;
       case 'cta':
         return content.heading || 'Call to action';
+      case 'text-section':
+        return content.section_title || content.body_content?.substring(0, 40) + '...' || 'Text Section';
       default:
         return 'Section content';
     }
@@ -861,6 +873,88 @@ function SectionContentEditor({
             >
               + Add Image
             </button>
+          </div>
+        </div>
+      );
+
+    case 'text-section':
+      return (
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Section Title (Optional)</label>
+            <input
+              type="text"
+              value={content.section_title || ''}
+              onChange={(e) => onChange({ ...content, section_title: e.target.value })}
+              placeholder="e.g., About Our Mission"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">Leave empty if you don't want a title</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Body Content (Required)</label>
+            <textarea
+              value={content.body_content || ''}
+              onChange={(e) => onChange({ ...content, body_content: e.target.value })}
+              placeholder="Add your informational content here. Separate paragraphs with blank lines."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              rows={6}
+            />
+            <p className="text-xs text-gray-500 mt-1">Supports line breaks and paragraphs (separate with blank lines)</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Text Alignment</label>
+              <select
+                value={content.text_alignment || 'left'}
+                onChange={(e) => onChange({ ...content, text_alignment: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              >
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Width</label>
+              <select
+                value={content.max_width || 'normal'}
+                onChange={(e) => onChange({ ...content, max_width: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+              >
+                <option value="narrow">Narrow</option>
+                <option value="normal">Normal (Default)</option>
+                <option value="wide">Wide</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Background Style</label>
+            <select
+              value={content.background_style || 'none'}
+              onChange={(e) => onChange({ ...content, background_style: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+            >
+              <option value="none">None (White)</option>
+              <option value="light_gray">Light Gray</option>
+              <option value="soft_blue">Soft Blue</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <input
+              type="checkbox"
+              id="showDivider"
+              checked={content.show_divider || false}
+              onChange={(e) => onChange({ ...content, show_divider: e.target.checked })}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:outline-none"
+            />
+            <label htmlFor="showDivider" className="text-sm font-medium text-gray-700">
+              Show subtle dividers above and below this section
+            </label>
           </div>
         </div>
       );

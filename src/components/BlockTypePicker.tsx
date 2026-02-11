@@ -7,6 +7,7 @@ import {
   Zap,
   Image,
   Sparkles,
+  FileText,
 } from 'lucide-react';
 
 const BLOCK_TYPES = [
@@ -41,6 +42,14 @@ const BLOCK_TYPES = [
     icon: Tags,
     color: 'text-orange-600',
     bgColor: 'bg-orange-50 hover:bg-orange-100',
+  },
+  {
+    id: 'text-section',
+    name: 'Text Section',
+    description: 'Informational text content',
+    icon: FileText,
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50 hover:bg-gray-100',
   },
   {
     id: 'cta',
