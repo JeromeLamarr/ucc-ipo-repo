@@ -18,6 +18,7 @@ interface SectionWithContent extends CMSSection {
 const SECTION_TYPES = [
   { value: 'hero', label: 'Hero Section', icon: '🦸', description: 'Large banner with headline and CTA' },
   { value: 'features', label: 'Features Grid', icon: '✨', description: 'Showcase your key features' },
+  { value: 'showcase', label: 'Showcase', icon: '🎪', description: 'Display items in a showcase format' },
   { value: 'steps', label: 'Steps/Process', icon: '📋', description: 'Show a step-by-step process' },
   { value: 'categories', label: 'Categories', icon: '📂', description: 'Display categories or services' },
   { value: 'text-section', label: 'Text Section', icon: '📄', description: 'Display informational text content' },
@@ -183,6 +184,13 @@ export function CMSPageEditor() {
         return {
           features: [
             { title: 'Feature 1', description: 'Description', icon_bg_color: 'bg-blue-100', icon_color: 'text-blue-600' },
+          ],
+        };
+      case 'showcase':
+        return {
+          title: 'Showcase',
+          items: [
+            { title: 'Item 1', description: 'Description', image_url: '', image_width: 300, image_height: 300, image_position: 'center' },
           ],
         };
       case 'gallery':

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import { BACKGROUND_PRESETS, ICON_COLOR_PRESETS, findPresetName } from '../lib/stylePresets';
 import { validateSection, formatFieldName } from '../lib/sectionValidation';
+import { FileUploadField, MediaPicker } from './FileUploadField';
 
 interface CMSSection {
   id: string;
@@ -14,9 +15,10 @@ interface CMSSectionEditorProps {
   onSave: (content: Record<string, any>) => Promise<void>;
   onCancel: () => void;
   saving: boolean;
+  pageSlug?: string;
 }
 
-export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSectionEditorProps) {
+export function CMSSectionEditor({ section, onSave, onCancel, saving, pageSlug = 'home' }: CMSSectionEditorProps) {
   const [formData, setFormData] = useState(section.content);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,7 +117,7 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
       )}
 
       {section.section_type === 'hero' && (
-        <HeroBlockForm formData={formData} updateField={updateField} />
+        <HeroBlockForm formData={formData} updateField={updateField} pageSlug={pageSlug} />
       )}
 
       {section.section_type === 'features' && (
@@ -162,6 +164,7 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
           addArrayItem={addArrayItem}
           removeArrayItem={removeArrayItem}
           updateArrayItem={updateArrayItem}
+          pageSlug={pageSlug}
         />
       )}
 
@@ -172,6 +175,7 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
           addArrayItem={addArrayItem}
           removeArrayItem={removeArrayItem}
           updateArrayItem={updateArrayItem}
+          pageSlug={pageSlug}
         />
       )}
 
@@ -200,7 +204,7 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving }: CMSSecti
 // Hero Block Form
 // ============================================================================
 
-function HeroBlockForm({ formData, updateField }: any) {
+function HeroBlockForm({ formData, updateField, pageSlug }: any) {
   const validation = useMemo(() => {
     return validateSection('hero', formData);
   }, [formData]);
@@ -330,6 +334,28 @@ function HeroBlockForm({ formData, updateField }: any) {
         )}
         {!validation.errors.find(e => e.field === 'cta_link') && (
           <p className="text-xs text-gray-500 mt-1">Use "/" for internal links (/register) or full URL (https://...)</p>
+        )}
+      </div>
+
+      {/* Background Image - Optional */}
+      <div className="border-t pt-4 mt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Background Image (optional)
+        </label>
+        <MediaPicker
+          type="image"
+          pageSlug={pageSlug}
+          onSelect={(url) => updateField('background_image', url)}
+        />
+        {formData.background_image && (
+          <div className="mt-3 p-2 bg-gray-100 rounded border border-gray-300">
+            <p className="text-xs text-gray-600 mb-2">Current image:</p>
+            <img 
+              src={formData.background_image} 
+              alt="Hero background" 
+              className="w-full h-32 object-cover rounded"
+            />
+          </div>
         )}
       </div>
     </div>
@@ -719,7 +745,7 @@ function CTABlockForm({ formData, updateField }: any) {
 // Gallery Block Form
 // ============================================================================
 
-function GalleryBlockForm({ formData, updateField, addArrayItem, removeArrayItem, updateArrayItem }: any) {
+function GalleryBlockForm({ formData, updateField, addArrayItem, removeArrayItem, updateArrayItem, pageSlug }: any) {
   const images = Array.isArray(formData.images) ? formData.images : [];
   const [draggedImageIdx, setDraggedImageIdx] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -789,15 +815,15 @@ function GalleryBlockForm({ formData, updateField, addArrayItem, removeArrayItem
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Image URL *</label>
-            <input
-              type="text"
-              value={image.url || ''}
-              onChange={(e) => updateArrayItem('images', idx, 'url', e.target.value)}
-              placeholder="https://bucket.supabase.co/image.jpg"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            <label className="block text-xs font-medium text-gray-700 mb-2">Upload Image</label>
+            <MediaPicker
+              type="image"
+              pageSlug={pageSlug}
+              onSelect={(url) => updateArrayItem('images', idx, 'url', url)}
             />
           </div>
+
+          <div>
 
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Alt Text *</label>
@@ -865,7 +891,7 @@ function GalleryBlockForm({ formData, updateField, addArrayItem, removeArrayItem
 // Showcase Block Form
 // ============================================================================
 
-function ShowcaseBlockForm({ formData, updateField, addArrayItem, removeArrayItem, updateArrayItem }: any) {
+function ShowcaseBlockForm({ formData, updateField, addArrayItem, removeArrayItem, updateArrayItem, pageSlug }: any) {
   const items = Array.isArray(formData.items) ? formData.items : [];
 
   return (
@@ -942,15 +968,13 @@ function ShowcaseBlockForm({ formData, updateField, addArrayItem, removeArrayIte
           <div className="bg-white p-3 rounded border border-blue-200">
             <h5 className="text-xs font-semibold text-gray-900 mb-3">Image Settings</h5>
 
-            {/* Image URL */}
+            {/* Image Upload */}
             <div className="mb-3">
-              <label className="block text-xs font-medium text-gray-700 mb-1">Image URL</label>
-              <input
-                type="text"
-                value={item.image_url || ''}
-                onChange={(e) => updateArrayItem('items', idx, 'image_url', e.target.value)}
-                placeholder="https://bucket.supabase.co/image.jpg"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              <label className="block text-xs font-medium text-gray-700 mb-2">Upload Image</label>
+              <MediaPicker
+                type="image"
+                pageSlug={pageSlug}
+                onSelect={(url) => updateArrayItem('items', idx, 'image_url', url)}
               />
             </div>
 

@@ -602,6 +602,7 @@ export function PageSectionsManagement() {
                 setEditingSection(null);
               }}
               saving={saving}
+              pageSlug={page?.slug || 'home'}
             />
           </div>
         </div>
