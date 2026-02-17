@@ -1343,6 +1343,11 @@ function TextSectionRenderer({ content }: { content: Record<string, any> }) {
   const emphasizeSection = content.emphasize_section || false;
   const verticalSpacing = content.vertical_spacing || 'normal';
 
+  // Grid layout support
+  const internalGrid = content.internal_grid as Record<string, any> | undefined;
+  const blocks = Array.isArray(content.blocks) ? content.blocks : [];
+  const hasGridLayout = internalGrid?.enabled === true && blocks.length > 0;
+
   // Background style mapping
   const bgClasses: Record<string, string> = {
     none: 'bg-white',
@@ -1420,6 +1425,27 @@ function TextSectionRenderer({ content }: { content: Record<string, any> }) {
     return icons[iconType] || '';
   };
 
+  // Build grid classes for internal grid layout
+  const getGridClasses = (): string => {
+    if (!internalGrid) return '';
+    
+    let classes = 'grid';
+    
+    // Apply columns
+    const columns = internalGrid.columns || 2;
+    if (columns && typeof columns === 'number' && columns > 0 && columns <= 12) {
+      classes += ` grid-cols-${columns}`;
+    }
+    
+    // Apply gap
+    const gap = internalGrid.gap || 'gap-6';
+    if (gap) {
+      classes += ` ${gap}`;
+    }
+    
+    return classes;
+  };
+
   const accentDisplay = getAccentIcon(accentIcon);
   const presetClass = textPresetClasses[textStylePreset] || textPresetClasses.default;
 
@@ -1437,42 +1463,65 @@ function TextSectionRenderer({ content }: { content: Record<string, any> }) {
           </div>
         )}
 
-        <div className={`${textSizeClasses[textSize]} leading-relaxed ${alignClasses[alignment]} space-y-4`}>
-          {body.split('\n\n').map((paragraph: string, idx: number) => {
-            // Apply different styles based on preset
-            if (textStylePreset === 'policy') {
-              return (
-                <p key={idx} className={`${presetClass} last:mb-0`}>
-                  {paragraph}
-                </p>
-              );
-            } else if (textStylePreset === 'callout') {
-              return (
-                <p key={idx} className={`${presetClass} last:mb-0`}>
-                  {paragraph}
-                </p>
-              );
-            } else if (textStylePreset === 'highlight') {
-              return (
-                <p key={idx} className={`${presetClass} ${toneClasses[visualTone]} last:mb-0`}>
-                  {paragraph}
-                </p>
-              );
-            } else if (textStylePreset === 'introduction') {
-              return (
-                <p key={idx} className={`${presetClass} ${textSize === 'large' ? 'text-lg' : ''} ${toneClasses[visualTone]} last:mb-0`}>
-                  {paragraph}
-                </p>
-              );
-            } else {
-              return (
-                <p key={idx} className={`${presetClass} ${toneClasses[visualTone]} last:mb-0`}>
-                  {paragraph}
-                </p>
-              );
-            }
-          })}
-        </div>
+        {/* Grid layout for multiple blocks */}
+        {hasGridLayout ? (
+          <div className={getGridClasses()}>
+            {blocks.map((block: any, blockIdx: number) => (
+              <div key={blockIdx} className="flex flex-col">
+                {block.title && (
+                  <h3 className={`text-2xl ${titleStyleClasses[titleStyle]} text-gray-900 mb-4`}>
+                    {block.title}
+                  </h3>
+                )}
+                <div className={`${textSizeClasses[textSize]} leading-relaxed space-y-4`}>
+                  {(block.content || '').split('\n\n').map((paragraph: string, idx: number) => (
+                    <p key={idx} className={`${presetClass} ${toneClasses[visualTone]} last:mb-0`}>
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Default single block layout */
+          <div className={`${textSizeClasses[textSize]} leading-relaxed ${alignClasses[alignment]} space-y-4`}>
+            {body.split('\n\n').map((paragraph: string, idx: number) => {
+              // Apply different styles based on preset
+              if (textStylePreset === 'policy') {
+                return (
+                  <p key={idx} className={`${presetClass} last:mb-0`}>
+                    {paragraph}
+                  </p>
+                );
+              } else if (textStylePreset === 'callout') {
+                return (
+                  <p key={idx} className={`${presetClass} last:mb-0`}>
+                    {paragraph}
+                  </p>
+                );
+              } else if (textStylePreset === 'highlight') {
+                return (
+                  <p key={idx} className={`${presetClass} ${toneClasses[visualTone]} last:mb-0`}>
+                    {paragraph}
+                  </p>
+                );
+              } else if (textStylePreset === 'introduction') {
+                return (
+                  <p key={idx} className={`${presetClass} ${textSize === 'large' ? 'text-lg' : ''} ${toneClasses[visualTone]} last:mb-0`}>
+                    {paragraph}
+                  </p>
+                );
+              } else {
+                return (
+                  <p key={idx} className={`${presetClass} ${toneClasses[visualTone]} last:mb-0`}>
+                    {paragraph}
+                  </p>
+                );
+              }
+            })}
+          </div>
+        )}
       </div>
 
       {showDivider && <div className="mt-12 border-b border-gray-200"></div>}
