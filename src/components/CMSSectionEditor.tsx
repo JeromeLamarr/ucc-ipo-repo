@@ -824,8 +824,6 @@ function GalleryBlockForm({ formData, updateField, addArrayItem, removeArrayItem
           </div>
 
           <div>
-
-          <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Alt Text *</label>
             <input
               type="text"
