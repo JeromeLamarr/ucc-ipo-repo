@@ -20,7 +20,7 @@ interface CMSSection {
   order_index: number;
 }
 
-const SECTION_TYPES = ['hero', 'features', 'showcase', 'steps', 'categories', 'text-section', 'cta', 'gallery'];
+const SECTION_TYPES = ['hero', 'features', 'showcase', 'steps', 'categories', 'text-section', 'cta', 'gallery', 'tabs'];
 
 const SECTION_TYPE_TEMPLATES: Record<string, Record<string, any>> = {
   hero: {
@@ -91,6 +91,19 @@ const SECTION_TYPE_TEMPLATES: Record<string, Record<string, any>> = {
       },
     ],
     columns: 3,
+  },
+  tabs: {
+    title: 'Section Title',
+    tabs: [
+      {
+        title: 'Tab 1',
+        content: 'Tab content goes here. Use line breaks for paragraphs.',
+      },
+      {
+        title: 'Tab 2',
+        content: 'Another tab with content.',
+      },
+    ],
   },
 };
 
