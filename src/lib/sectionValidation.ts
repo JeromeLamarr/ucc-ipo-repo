@@ -215,6 +215,30 @@ const VALIDATION_RULES: Record<string, any> = {
       },
     ],
   },
+
+  tabs: {
+    required: [],
+    validations: [
+      {
+        field: 'tabs',
+        test: (value: any[]) => {
+          if (!Array.isArray(value) || value.length === 0) return false;
+          return value.every((tab: any) => tab.title && tab.content);
+        },
+        message: 'Each tab must have a title and content',
+        severity: 'error',
+      },
+      {
+        field: 'tabs',
+        test: (value: any[]) => {
+          if (!Array.isArray(value)) return true;
+          return value.length > 0;
+        },
+        message: 'Add at least one tab',
+        severity: 'warning',
+      },
+    ],
+  },
 };
 
 // ============================================================================

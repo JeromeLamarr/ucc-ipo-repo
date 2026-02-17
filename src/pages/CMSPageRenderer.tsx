@@ -722,6 +722,12 @@ function SectionRenderer({ section, settings }: SectionRendererProps) {
           <GallerySection content={content} />
         </SectionWrapper>
       );
+    case 'tabs':
+      return (
+        <SectionWrapper layout={sectionLayout}>
+          <TabsSection content={content} settings={settings} />
+        </SectionWrapper>
+      );
     default:
       console.warn(`SectionRenderer: Unknown section type "${sectionType}"`);
       return null;
@@ -1470,6 +1476,95 @@ function TextSectionRenderer({ content }: { content: Record<string, any> }) {
       </div>
 
       {showDivider && <div className="mt-12 border-b border-gray-200"></div>}
+    </div>
+  );
+}
+// ============================================================================
+// Tabs Section
+// ============================================================================
+
+function TabsSection({ content, settings }: { content: Record<string, any>; settings?: SiteSettings }) {
+  const [activeTab, setActiveTab] = useState<number>(0);
+
+  // Defensive checks
+  if (!content) {
+    console.warn('TabsSection: Missing content prop');
+    return null;
+  }
+
+  const tabs = Array.isArray(content.tabs) ? content.tabs : [];
+  const title = content.title || '';
+
+  if (tabs.length === 0) {
+    console.warn('TabsSection: No tabs provided');
+    return null;
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {/* Optional Section Title */}
+      {title && (
+        <h2 className="text-3xl font-bold text-center mb-12">{title}</h2>
+      )}
+
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200 mb-8">
+        <div className="flex flex-wrap gap-0 sm:gap-1">
+          {tabs.map((tab: any, idx: number) => (
+            <button
+              key={idx}
+              onClick={() => setActiveTab(idx)}
+              className={`px-4 sm:px-6 py-3 font-medium text-sm sm:text-base border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === idx
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {tab.title || `Tab ${idx + 1}`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="bg-white rounded-lg">
+        {tabs.map((tab: any, idx: number) => (
+          <div
+            key={idx}
+            className={`${activeTab === idx ? 'block' : 'hidden'}`}
+          >
+            {/* Content can be plain text or formatted with line breaks */}
+            <div className="prose prose-sm max-w-none">
+              {tab.content.split('\n').map((line: string, lineIdx: number) => {
+                // Skip empty lines for better spacing
+                if (!line.trim()) {
+                  return <div key={lineIdx} className="h-2" />;
+                }
+
+                // Check if line starts with a bullet character
+                const isBullet = line.trim().startsWith('•') || line.trim().startsWith('-');
+                
+                if (isBullet) {
+                  // Remove bullet character and render as list item
+                  const text = line.trim().replace(/^[•-]\s*/, '');
+                  return (
+                    <ul key={lineIdx} className="list-disc list-inside mb-3 text-gray-700">
+                      <li>{text}</li>
+                    </ul>
+                  );
+                } else {
+                  // Render as paragraph
+                  return (
+                    <p key={lineIdx} className="mb-3 text-gray-700 leading-relaxed">
+                      {line}
+                    </p>
+                  );
+                }
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

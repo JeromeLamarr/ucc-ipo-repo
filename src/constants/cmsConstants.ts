@@ -47,6 +47,7 @@ export const CMS_SECTION_TYPES = {
   SHOWCASE: 'showcase',
   CTA: 'cta',
   GALLERY: 'gallery',
+  TABS: 'tabs',
 } as const;
 
 // ============================================================================

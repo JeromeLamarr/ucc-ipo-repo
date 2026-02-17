@@ -179,6 +179,16 @@ export function CMSSectionEditor({ section, onSave, onCancel, saving, pageSlug =
         />
       )}
 
+      {section.section_type === 'tabs' && (
+        <TabsBlockForm 
+          formData={formData} 
+          updateField={updateField}
+          addArrayItem={addArrayItem}
+          removeArrayItem={removeArrayItem}
+          updateArrayItem={updateArrayItem}
+        />
+      )}
+
       <div className="flex gap-2 pt-4 border-t border-gray-200">
         <button
           onClick={handleSave}
@@ -1137,6 +1147,89 @@ function TextSectionForm({ formData, updateField }: any) {
           Show dividers above and below section
         </label>
       </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Tabs Block Form
+// ============================================================================
+
+function TabsBlockForm({ formData, updateField, addArrayItem, removeArrayItem, updateArrayItem }: any) {
+  const tabs = Array.isArray(formData.tabs) ? formData.tabs : [];
+
+  return (
+    <div className="space-y-4">
+      {/* Section Title - Optional */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Section Title (optional)
+        </label>
+        <input
+          type="text"
+          value={formData.title || ''}
+          onChange={(e) => updateField('title', e.target.value)}
+          placeholder="e.g., Our Services"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <p className="text-xs text-gray-500 mt-1">Leave empty to hide the title</p>
+      </div>
+
+      {/* Tabs List */}
+      <div className="flex items-center justify-between mb-4">
+        <label className="block text-sm font-medium text-gray-700">
+          Tabs ({tabs.length})
+        </label>
+        <button
+          onClick={() => addArrayItem('tabs', { title: 'New Tab', content: '' })}
+          className="text-sm px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+        >
+          + Add Tab
+        </button>
+      </div>
+
+      {tabs.length === 0 && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">No tabs yet. Click "Add Tab" to get started.</p>
+        </div>
+      )}
+
+      {tabs.map((tab: any, idx: number) => (
+        <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold text-gray-900">Tab {idx + 1}</h4>
+            <button
+              onClick={() => removeArrayItem('tabs', idx)}
+              className="text-red-600 hover:text-red-700 text-sm"
+            >
+              Remove
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Tab Title *</label>
+            <input
+              type="text"
+              value={tab.title || ''}
+              onChange={(e) => updateArrayItem('tabs', idx, 'title', e.target.value)}
+              placeholder="e.g., Development-Oriented"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Tab Content *</label>
+            <textarea
+              value={tab.content || ''}
+              onChange={(e) => updateArrayItem('tabs', idx, 'content', e.target.value)}
+              placeholder="Enter content for this tab. Use line breaks for bullet points."
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            />
+            <p className="text-xs text-gray-500 mt-1">Use line breaks for paragraphs or bullet points</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

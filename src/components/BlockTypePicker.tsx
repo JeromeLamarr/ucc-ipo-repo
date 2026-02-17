@@ -8,6 +8,7 @@ import {
   Image,
   Sparkles,
   FileText,
+  Tabs,
 } from 'lucide-react';
 
 const BLOCK_TYPES = [
@@ -74,6 +75,14 @@ const BLOCK_TYPES = [
     icon: Sparkles,
     color: 'text-pink-600',
     bgColor: 'bg-pink-50 hover:bg-pink-100',
+  },
+  {
+    id: 'tabs',
+    name: 'Tabbed Content',
+    description: 'Tabbed navigation with content sections',
+    icon: Tabs,
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50 hover:bg-cyan-100',
   },
 ];
 
