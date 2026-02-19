@@ -1055,6 +1055,40 @@ function ShowcaseBlockForm({ formData, updateField, addArrayItem, removeArrayIte
 // ============================================================================
 
 function TextSectionForm({ formData, updateField }: any) {
+  const hasGridEnabled = formData.internal_grid?.enabled === true;
+  const blocks = Array.isArray(formData.blocks) ? formData.blocks : [];
+
+  const addBlock = () => {
+    const currentBlocks = Array.isArray(formData.blocks) ? formData.blocks : [];
+    updateField('blocks', [...currentBlocks, { title: '', content: '' }]);
+  };
+
+  const removeBlock = (index: number) => {
+    const currentBlocks = Array.isArray(formData.blocks) ? formData.blocks : [];
+    updateField('blocks', currentBlocks.filter((_, i) => i !== index));
+  };
+
+  const updateBlock = (index: number, field: string, value: string) => {
+    const currentBlocks = Array.isArray(formData.blocks) ? formData.blocks : [];
+    currentBlocks[index] = { ...currentBlocks[index], [field]: value };
+    updateField('blocks', [...currentBlocks]);
+  };
+
+  const toggleGrid = (enabled: boolean) => {
+    if (enabled) {
+      // Enable grid, initialize with current body_content if exists
+      updateField('internal_grid', { enabled: true, columns: 2, gap: 'gap-6' });
+      if (!formData.blocks || formData.blocks.length === 0) {
+        updateField('blocks', [
+          { title: '', content: formData.body_content || '' }
+        ]);
+      }
+    } else {
+      // Disable grid
+      updateField('internal_grid', { enabled: false, columns: 2, gap: 'gap-6' });
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Section Title - Optional */}
@@ -1072,20 +1106,148 @@ function TextSectionForm({ formData, updateField }: any) {
         <p className="text-xs text-gray-500 mt-1">Leave empty to hide the title</p>
       </div>
 
-      {/* Body Content - Required */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Body Content <span className="text-red-600 font-bold">*</span>
-        </label>
-        <textarea
-          value={formData.body_content || ''}
-          onChange={(e) => updateField('body_content', e.target.value)}
-          placeholder="Enter your text content here. Support for paragraphs and line breaks."
-          rows={6}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-        <p className="text-xs text-gray-500 mt-1">Use line breaks to create paragraphs</p>
+      {/* Grid Layout Toggle */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900">Grid Layout</h4>
+            <p className="text-xs text-gray-600 mt-1">Display content in columns (e.g., Mission & Vision side-by-side)</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={hasGridEnabled}
+            onChange={(e) => toggleGrid(e.target.checked)}
+            className="h-5 w-5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          />
+        </div>
+
+        {/* Grid Options - Only show when enabled */}
+        {hasGridEnabled && (
+          <div className="space-y-3 mt-3 pt-3 border-t border-blue-200">
+            {/* Number of Columns */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Number of Columns
+              </label>
+              <select
+                value={formData.internal_grid?.columns || 2}
+                onChange={(e) => updateField('internal_grid', {
+                  ...formData.internal_grid,
+                  columns: parseInt(e.target.value)
+                })}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value={2}>2 Columns</option>
+                <option value={3}>3 Columns</option>
+                <option value={4}>4 Columns</option>
+              </select>
+            </div>
+
+            {/* Gap/Spacing */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Column Spacing
+              </label>
+              <select
+                value={formData.internal_grid?.gap || 'gap-6'}
+                onChange={(e) => updateField('internal_grid', {
+                  ...formData.internal_grid,
+                  gap: e.target.value
+                })}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="gap-4">Small (16px)</option>
+                <option value="gap-6">Medium (24px)</option>
+                <option value="gap-8">Large (32px)</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Content Mode Selector */}
+      {hasGridEnabled ? (
+        <>
+          {/* Grid Blocks Mode */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-sm font-medium text-gray-700">
+                Content Blocks ({blocks.length})
+              </label>
+              <button
+                onClick={addBlock}
+                className="text-sm px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 font-medium"
+              >
+                + Add Block
+              </button>
+            </div>
+
+            {blocks.length === 0 && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">No blocks yet. Click "Add Block" to create content.</p>
+              </div>
+            )}
+
+            {blocks.map((block: any, idx: number) => (
+              <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3 mb-3">
+                <div className="flex items-center justify-between">
+                  <h5 className="text-sm font-semibold text-gray-900">Block {idx + 1}</h5>
+                  <button
+                    onClick={() => removeBlock(idx)}
+                    className="text-red-600 hover:text-red-700 text-xs font-medium"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Block Title
+                  </label>
+                  <input
+                    type="text"
+                    value={block.title || ''}
+                    onChange={(e) => updateBlock(idx, 'title', e.target.value)}
+                    placeholder="e.g., Our Mission"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Block Content <span className="text-red-600">*</span>
+                  </label>
+                  <textarea
+                    value={block.content || ''}
+                    onChange={(e) => updateBlock(idx, 'content', e.target.value)}
+                    placeholder="Enter content for this block..."
+                    rows={4}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Use line breaks to create paragraphs</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Single Content Mode */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Body Content <span className="text-red-600 font-bold">*</span>
+            </label>
+            <textarea
+              value={formData.body_content || ''}
+              onChange={(e) => updateField('body_content', e.target.value)}
+              placeholder="Enter your text content here. Support for paragraphs and line breaks."
+              rows={6}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <p className="text-xs text-gray-500 mt-1">Use line breaks to create paragraphs</p>
+          </div>
+        </>
+      )}
 
       {/* Text Alignment */}
       <div>
@@ -1131,6 +1293,7 @@ function TextSectionForm({ formData, updateField }: any) {
           <option value="none">None (White)</option>
           <option value="light_gray">Light Gray</option>
           <option value="soft_blue">Soft Blue</option>
+          <option value="soft_yellow">Soft Yellow</option>
         </select>
       </div>
 
