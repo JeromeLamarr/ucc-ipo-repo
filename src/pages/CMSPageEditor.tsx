@@ -545,21 +545,165 @@ function SectionContentEditor({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Background Image (Optional)</label>
-            {uploadError && (
-              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                {uploadError}
+          {/* Background Image Control */}
+          <div className="border border-gray-300 rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => {
+                const newImageExpanded = !content.image_settings_expanded;
+                onChange({ ...content, image_settings_expanded: newImageExpanded });
+              }}
+              className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 flex justify-between items-center font-medium text-left transition"
+            >
+              <span className="text-gray-900">Background Image Settings</span>
+              <span className="text-gray-600">{content.image_settings_expanded ? '▼' : '▶'}</span>
+            </button>
+
+            {content.image_settings_expanded && (
+              <div className="p-4 space-y-4 bg-white">
+                {/* Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Upload Image</label>
+                  {uploadError && (
+                    <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                      {uploadError}
+                    </div>
+                  )}
+                  <MediaPicker
+                    type="image"
+                    onSelect={(url) => {
+                      onChange({ ...content, background_image: url });
+                      setUploadError(null);
+                    }}
+                    pageSlug={pageSlug}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Upload PNG, JPG, GIF or WebP (max 10MB)</p>
+                </div>
+
+                {/* Image Preview */}
+                {content.background_image && (
+                  <div className="p-4 bg-gray-100 rounded-lg border border-gray-300">
+                    <p className="text-xs font-medium text-gray-700 mb-2">Preview</p>
+                    <img
+                      src={content.background_image}
+                      alt="Hero background"
+                      className="w-full h-40 object-cover rounded"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onChange({ ...content, background_image: null })}
+                      className="mt-2 text-sm text-red-600 hover:text-red-700 font-medium"
+                    >
+                      Remove Image
+                    </button>
+                  </div>
+                )}
+
+                {content.background_image && (
+                  <>
+                    {/* Layout Mode */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Image Layout</label>
+                      <select
+                        value={content.image_layout || 'full-width'}
+                        onChange={(e) => onChange({
+                          ...content,
+                          image_layout: e.target.value,
+                          // Reset sizing if switching to full-width
+                          ...(e.target.value === 'full-width' ? {
+                            image_width: undefined,
+                            image_height: undefined
+                          } : {})
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="full-width">Full Width (Stretched)</option>
+                        <option value="contained">Contained (Fixed Size)</option>
+                        <option value="grid-left">Grid: Image Left (50% width)</option>
+                        <option value="grid-right">Grid: Image Right (50% width)</option>
+                        <option value="grid-center">Grid: Image Center (40% width)</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">Choose how the image should be displayed</p>
+                    </div>
+
+                    {/* Size Controls (if not full-width) */}
+                    {content.image_layout !== 'full-width' && (
+                      <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2">Width (px)</label>
+                          <input
+                            type="number"
+                            value={content.image_width || 400}
+                            onChange={(e) => onChange({
+                              ...content,
+                              image_width: parseInt(e.target.value) || 400
+                            })}
+                            placeholder="400"
+                            min="100"
+                            max="1200"
+                            step="50"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-2">Height (px)</label>
+                          <input
+                            type="number"
+                            value={content.image_height || 300}
+                            onChange={(e) => onChange({
+                              ...content,
+                              image_height: parseInt(e.target.value) || 300
+                            })}
+                            placeholder="300"
+                            min="100"
+                            max="1000"
+                            step="50"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Image Positioning */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Image Position</label>
+                      <select
+                        value={content.image_position || 'center'}
+                        onChange={(e) => onChange({
+                          ...content,
+                          image_position: e.target.value
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="top">Top</option>
+                        <option value="center">Center</option>
+                        <option value="bottom">Bottom</option>
+                      </select>
+                    </div>
+
+                    {/* Overlay Opacity */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Overlay Darkness ({content.image_overlay || 0}%)
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="70"
+                        step="5"
+                        value={content.image_overlay || 0}
+                        onChange={(e) => onChange({
+                          ...content,
+                          image_overlay: parseInt(e.target.value)
+                        })}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Darken the image to improve text readability (0% = no overlay)</p>
+                    </div>
+                  </>
+                )}
               </div>
             )}
-            <MediaPicker
-              type="image"
-              onSelect={(url) => {
-                onChange({ ...content, background_image: url });
-                setUploadError(null);
-              }}
-              pageSlug={pageSlug}
-            />
           </div>
         </div>
       );

@@ -744,6 +744,12 @@ function HeroSection({ content, settings }: { content: Record<string, any>; sett
   const headline = content.headline || 'Welcome';
   const headlineHighlight = content.headline_highlight || '';
   const subheadline = content.subheadline || '';
+  const backgroundImage = content.background_image || null;
+  const imageLayout = content.image_layout || 'full-width';
+  const imageWidth = content.image_width || 400;
+  const imageHeight = content.image_height || 300;
+  const imagePosition = content.image_position || 'center';
+  const imageOverlay = content.image_overlay || 0;
   
   // Support both legacy format (cta_text/cta_link) and new button object format
   const button = content.button || {
@@ -751,6 +757,180 @@ function HeroSection({ content, settings }: { content: Record<string, any>; sett
     link: content.cta_link || '/register',
   };
 
+  const primaryColor = settings?.primary_color || '#2563EB';
+
+  // For full-width background image layout
+  if (backgroundImage && imageLayout === 'full-width') {
+    return (
+      <div
+        className="relative py-20 overflow-hidden bg-cover bg-center"
+        style={{
+          backgroundImage: `url('${backgroundImage}')`,
+          backgroundPosition: imagePosition === 'top' ? 'center top' : imagePosition === 'bottom' ? 'center bottom' : 'center center',
+        }}
+      >
+        {/* Overlay for text readability */}
+        {imageOverlay > 0 && (
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: `rgba(0, 0, 0, ${imageOverlay / 100})` }}
+          />
+        )}
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h1 className="text-5xl font-bold text-white mb-6 drop-shadow-lg">
+              {headline}
+              {headlineHighlight && (
+                <>
+                  <br />
+                  <span style={{ color: primaryColor }}>
+                    {headlineHighlight}
+                  </span>
+                </>
+              )}
+            </h1>
+            {subheadline && (
+              <p className="text-xl text-white max-w-3xl mx-auto drop-shadow-lg">{subheadline}</p>
+            )}
+            {button && (
+              <div className="mt-8">
+                <CMSButton
+                  button={button}
+                  bgColor={primaryColor}
+                  textColor="text-white"
+                  hoverClass="hover:opacity-90"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // For grid-based layouts (image + text side-by-side)
+  if (backgroundImage && (imageLayout === 'grid-left' || imageLayout === 'grid-right' || imageLayout === 'grid-center')) {
+    const containerClass = imageLayout === 'grid-left' || imageLayout === 'grid-right' 
+      ? 'grid grid-cols-1 md:grid-cols-2 gap-8 items-center'
+      : 'flex flex-col md:flex-row items-center justify-center gap-8';
+    
+    const imageWidthValue = imageLayout === 'grid-center' ? imageWidth * 1.2 : imageWidth;
+    
+    const imageElement = (
+      <div className={imageLayout === 'grid-center' ? 'flex justify-center' : ''}>
+        <img
+          src={backgroundImage}
+          alt="Hero"
+          style={{
+            width: `${imageWidthValue}px`,
+            height: `${imageHeight}px`,
+            objectFit: 'cover',
+          }}
+          className="rounded-lg shadow-lg"
+        />
+      </div>
+    );
+
+    const textElement = (
+      <div>
+        <h1 className="text-5xl font-bold text-gray-900 mb-6">
+          {headline}
+          {headlineHighlight && (
+            <>
+              <br />
+              <span style={{ color: primaryColor }}>
+                {headlineHighlight}
+              </span>
+            </>
+          )}
+        </h1>
+        {subheadline && (
+          <p className="text-xl text-gray-600 max-w-2xl">{subheadline}</p>
+        )}
+        {button && (
+          <div className="mt-8">
+            <CMSButton
+              button={button}
+              bgColor={primaryColor}
+              textColor="text-white"
+              hoverClass="hover:opacity-90"
+            />
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className={containerClass}>
+          {imageLayout === 'grid-right' ? (
+            <>
+              {textElement}
+              {imageElement}
+            </>
+          ) : imageLayout === 'grid-left' ? (
+            <>
+              {imageElement}
+              {textElement}
+            </>
+          ) : (
+            /* grid-center */
+            <>
+              {textElement}
+              {imageElement}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // For contained layout (image + text, centered)
+  if (backgroundImage && imageLayout === 'contained') {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="flex flex-col items-center text-center">
+          <img
+            src={backgroundImage}
+            alt="Hero"
+            style={{
+              width: `${imageWidth}px`,
+              height: `${imageHeight}px`,
+              objectFit: 'cover',
+            }}
+            className="rounded-lg shadow-lg mb-8"
+          />
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            {headline}
+            {headlineHighlight && (
+              <>
+                <br />
+                <span style={{ color: primaryColor }}>
+                  {headlineHighlight}
+                </span>
+              </>
+            )}
+          </h1>
+          {subheadline && (
+            <p className="text-xl text-gray-600 max-w-3xl">{subheadline}</p>
+          )}
+          {button && (
+            <div className="mt-8">
+              <CMSButton
+                button={button}
+                bgColor={primaryColor}
+                textColor="text-white"
+                hoverClass="hover:opacity-90"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Default layout (no image or no layout specified)
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
       <div className="text-center mb-16">
@@ -759,9 +939,7 @@ function HeroSection({ content, settings }: { content: Record<string, any>; sett
           {headlineHighlight && (
             <>
               <br />
-              {/* This inline style uses dynamic color from settings prop */}
-              {/* eslint-disable-next-line */}
-              <span style={{ color: settings?.primary_color || '#2563EB' }}>
+              <span style={{ color: primaryColor }}>
                 {headlineHighlight}
               </span>
             </>
@@ -770,12 +948,11 @@ function HeroSection({ content, settings }: { content: Record<string, any>; sett
         {subheadline && (
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">{subheadline}</p>
         )}
-        {/* CTA button using reusable CMSButton component */}
         {button && (
           <div className="mt-8">
             <CMSButton
               button={button}
-              bgColor={settings?.primary_color || '#2563EB'}
+              bgColor={primaryColor}
               textColor="text-white"
               hoverClass="hover:opacity-90"
             />
