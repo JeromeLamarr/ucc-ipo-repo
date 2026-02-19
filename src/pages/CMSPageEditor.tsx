@@ -1147,6 +1147,178 @@ function TextSectionEditor({ content, onChange }: { content: Record<string, any>
                 Show subtle dividers above and below
               </label>
             </div>
+
+            {/* Grid Layout Controls */}
+            <div className="pt-4 border-t border-gray-300">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900">Grid Layout</h4>
+                    <p className="text-xs text-gray-600 mt-1">Display content in columns (e.g., Mission & Vision side-by-side)</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="gridLayout"
+                    checked={content.internal_grid?.enabled === true}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        onChange({
+                          ...content,
+                          internal_grid: { enabled: true, columns: 2, gap: 'gap-6' },
+                          blocks: content.blocks && content.blocks.length > 0 ? content.blocks : [{ title: '', content: content.body_content || '' }]
+                        });
+                      } else {
+                        onChange({
+                          ...content,
+                          internal_grid: { enabled: false, columns: 2, gap: 'gap-6' }
+                        });
+                      }
+                    }}
+                    className="h-5 w-5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  />
+                </div>
+
+                {content.internal_grid?.enabled && (
+                  <div className="space-y-3 mt-3 pt-3 border-t border-blue-200">
+                    {/* Number of Columns */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-2">
+                        Number of Columns
+                      </label>
+                      <select
+                        value={content.internal_grid?.columns || 2}
+                        onChange={(e) => onChange({
+                          ...content,
+                          internal_grid: {
+                            ...content.internal_grid,
+                            columns: parseInt(e.target.value)
+                          }
+                        })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value={2}>2 Columns</option>
+                        <option value={3}>3 Columns</option>
+                        <option value={4}>4 Columns</option>
+                      </select>
+                    </div>
+
+                    {/* Gap/Spacing */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-2">
+                        Column Spacing
+                      </label>
+                      <select
+                        value={content.internal_grid?.gap || 'gap-6'}
+                        onChange={(e) => onChange({
+                          ...content,
+                          internal_grid: {
+                            ...content.internal_grid,
+                            gap: e.target.value
+                          }
+                        })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="gap-4">Small (16px)</option>
+                        <option value="gap-6">Medium (24px)</option>
+                        <option value="gap-8">Large (32px)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Content Blocks Manager */}
+              {content.internal_grid?.enabled && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Content Blocks ({(content.blocks || []).length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentBlocks = content.blocks || [];
+                        onChange({
+                          ...content,
+                          blocks: [...currentBlocks, { title: '', content: '' }]
+                        });
+                      }}
+                      className="text-sm px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 font-medium"
+                    >
+                      + Add Block
+                    </button>
+                  </div>
+
+                  {(!content.blocks || content.blocks.length === 0) && (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">No blocks yet. Click "Add Block" to create content.</p>
+                    </div>
+                  )}
+
+                  {(content.blocks || []).map((block: any, idx: number) => (
+                    <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3 mb-3">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-sm font-semibold text-gray-900">Block {idx + 1}</h5>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newBlocks = (content.blocks || []).filter((_: any, i: number) => i !== idx);
+                            onChange({
+                              ...content,
+                              blocks: newBlocks
+                            });
+                          }}
+                          className="text-red-600 hover:text-red-700 text-xs font-medium"
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Block Title (optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={block.title || ''}
+                          onChange={(e) => {
+                            const newBlocks = [...(content.blocks || [])];
+                            newBlocks[idx] = { ...newBlocks[idx], title: e.target.value };
+                            onChange({
+                              ...content,
+                              blocks: newBlocks
+                            });
+                          }}
+                          placeholder="e.g., Our Mission"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Block Content <span className="text-red-600">*</span>
+                        </label>
+                        <textarea
+                          value={block.content || ''}
+                          onChange={(e) => {
+                            const newBlocks = [...(content.blocks || [])];
+                            newBlocks[idx] = { ...newBlocks[idx], content: e.target.value };
+                            onChange({
+                              ...content,
+                              blocks: newBlocks
+                            });
+                          }}
+                          placeholder="Enter content for this block..."
+                          rows={4}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Use line breaks to create paragraphs</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
