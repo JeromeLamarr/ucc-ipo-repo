@@ -1,0 +1,181 @@
+# ============================================================================
+# RECOMMENDED GITIGNORE for Vite + React + Supabase + Bolt.new Project
+# ============================================================================
+# This file provides comprehensive protection for development artifacts
+# while preserving all essential source code and configuration
+
+# ============================================================================
+# BUILD & DEPENDENCY ARTIFACTS (Heavy - DO NOT TRACK)
+# ============================================================================
+
+# Node.js dependencies (reinstall with npm install)
+node_modules/
+package-lock.json
+
+# Vite build outputs
+dist/
+dist-ssr/
+*.local
+
+# Build cache
+.cache/
+.vite/
+
+# ============================================================================
+# TEMPORARY & AUTO-GENERATED FILES (DO NOT TRACK)
+# ============================================================================
+
+# Temporary Claude AI assistant working directories
+tmpclaude-*/
+
+# Log files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# IDE temporary files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.swn
+*~
+
+# ============================================================================
+# ENVIRONMENT & SECRETS (CRITICAL - NEVER COMMIT)
+# ============================================================================
+
+# Environment variables with secrets (never commit)
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.development.local
+
+# DO NOT IGNORE: .env.example (example template for team)
+# .env.example is INTENTIONALLY NOT in this .gitignore
+
+# ============================================================================
+# IDE & EDITOR (DO NOT TRACK)
+# ============================================================================
+
+# VS Code specific
+.vscode/*
+!.vscode/extensions.json
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+
+# JetBrains IDEs
+.idea/
+.idea_modules/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.vim
+.netrc
+
+# macOS
+.AppleDouble
+.AppleDB
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# ============================================================================
+# SUPABASE CONFIGURATION (SAFE - LOCAL DEVELOPMENT ONLY)
+# ============================================================================
+
+# Supabase local development cache
+supabase/.temp/
+supabase/.cache/
+supabase/seed.sql
+
+# Local Supabase files (auto-generated)
+supabase/.branches/
+
+# ============================================================================
+# TEST & DEBUG ARTIFACTS (DO NOT TRACK)
+# ============================================================================
+
+# Jest coverage
+.coverage
+coverage/
+
+# Vitest
+.vitest/
+
+# Playwright
+test-results/
+playwright-report/
+
+# ============================================================================
+# OS FILES (DO NOT TRACK)
+# ============================================================================
+
+# macOS
+.DS_Store
+._*
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Linux
+.directory
+
+# ============================================================================
+# PRESERVED FILES (DO NOT .gitignore these!)
+# ============================================================================
+
+# These are intentionally NOT in .gitignore:
+#
+# ✅ .env.example     - Template for developers
+# ✅ src/             - All source code
+# ✅ public/          - Static assets
+# ✅ supabase/        - Migration files (tracked)
+# ✅ scripts/         - Build/setup scripts
+# ✅ vite.config.ts   - Build configuration
+# ✅ tsconfig.json    - TypeScript configuration
+# ✅ tailwind.config.js - Tailwind configuration
+# ✅ *.md             - Documentation files
+# ✅ .bolt/           - Bolt.new configuration
+# ✅ .supabase/config.json - Supabase settings
+
+# ============================================================================
+# SPECIAL RULES FOR Bolt.new INTEGRATION
+# ============================================================================
+
+# Bolt.new session files (safe to ignore)
+.bolt_session
+.bolt_cache
+
+# Build artifacts created during Bolt deployment
+out/
+build/
+
+# ============================================================================
+# OPTIONAL: Git will warn about ignored patterns if they don't match anything
+# Use this for debugging if needed:
+# ============================================================================
+# To check what files are being ignored:
+# git status --ignored
+#
+# To check what's being tracked:
+# git ls-files
