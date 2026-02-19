@@ -39,7 +39,14 @@ VALUES (
     'text_alignment', 'left',
     'max_width', 'normal',
     'background_style', 'none',
-    'show_divider', false
+    'show_divider', false,
+    'text_style_preset', 'default',
+    'title_style', 'normal',
+    'text_size', 'medium',
+    'visual_tone', 'neutral',
+    'accent_icon', 'none',
+    'emphasize_section', false,
+    'vertical_spacing', 'normal'
   ),
   0
 );
@@ -55,7 +62,14 @@ VALUES (
     'text_alignment', 'left',
     'max_width', 'normal',
     'background_style', 'none',
-    'show_divider', false
+    'show_divider', false,
+    'text_style_preset', 'default',
+    'title_style', 'normal',
+    'text_size', 'medium',
+    'visual_tone', 'neutral',
+    'accent_icon', 'none',
+    'emphasize_section', false,
+    'vertical_spacing', 'normal'
   ),
   1
 );
