@@ -1055,6 +1055,7 @@ function ShowcaseBlockForm({ formData, updateField, addArrayItem, removeArrayIte
 // ============================================================================
 
 function TextSectionForm({ formData, updateField }: any) {
+  console.log('TextSectionForm rendering with formData:', formData);
   const hasGridEnabled = formData.internal_grid?.enabled === true;
   const blocks = Array.isArray(formData.blocks) ? formData.blocks : [];
 
