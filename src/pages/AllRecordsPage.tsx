@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { FileText, Search, Filter, Eye, Download, Plus, Award } from 'lucide-react';
+import { FileText, Search, Filter, Eye, Download, Plus, Award, Trash2 } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
@@ -20,6 +20,7 @@ export function AllRecordsPage() {
   const [filteredRecords, setFilteredRecords] = useState<IpRecord[]>([]);
   const [filteredDrafts, setFilteredDrafts] = useState<IpRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string; title: string } | null>(null);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,6 +46,7 @@ export function AllRecordsPage() {
   const fetchRecords = async () => {
     try {
       // Fetch ALL records from ip_records (both drafts and submitted)
+      // Only fetch non-deleted records
       const { data, error } = await supabase
         .from('ip_records')
         .select(`
@@ -53,6 +55,7 @@ export function AllRecordsPage() {
           supervisor:users!supervisor_id(*),
           evaluator:users!evaluator_id(*)
         `)
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -61,6 +64,27 @@ export function AllRecordsPage() {
       console.error('Error fetching records:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteRecord = async (recordId: string) => {
+    try {
+      const { error } = await supabase
+        .from('ip_records')
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+        })
+        .eq('id', recordId);
+
+      if (error) throw error;
+
+      // Refresh records
+      await fetchRecords();
+      setDeleteConfirmation(null);
+    } catch (error) {
+      console.error('Error deleting record:', error);
+      alert('Failed to delete record. Please try again.');
     }
   };
 
@@ -210,13 +234,22 @@ export function AllRecordsPage() {
                       {formatDate(record.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Link
-                        to={`/dashboard/submissions/${record.id}`}
-                        className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          to={`/dashboard/submissions/${record.id}`}
+                          className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View
+                        </Link>
+                        <button
+                          onClick={() => setDeleteConfirmation({ id: record.id, title: record.title })}
+                          className="text-red-600 hover:text-red-700 font-medium inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -365,13 +398,22 @@ export function AllRecordsPage() {
                       {formatDate(record.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Link
-                        to={`/dashboard/submissions/${record.id}`}
-                        className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          to={`/dashboard/submissions/${record.id}`}
+                          className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View
+                        </Link>
+                        <button
+                          onClick={() => setDeleteConfirmation({ id: record.id, title: record.title })}
+                          className="text-red-600 hover:text-red-700 font-medium inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -402,6 +444,33 @@ export function AllRecordsPage() {
           Access them from the <strong>Legacy Records</strong> section in the sidebar.
         </p>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Confirm Delete</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete the record "<strong>{deleteConfirmation.title}</strong>"? 
+              It will be moved to the Deleted Archive and can be restored later.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirmation(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteRecord(deleteConfirmation.id)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

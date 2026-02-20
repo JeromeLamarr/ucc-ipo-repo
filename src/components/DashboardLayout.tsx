@@ -89,6 +89,12 @@ const navItems: NavItem[] = [
     roles: ['admin'],
   },
   {
+    label: 'Deleted Archive',
+    path: '/dashboard/deleted-records',
+    icon: Archive,
+    roles: ['admin'],
+  },
+  {
     label: 'Assignments',
     path: '/dashboard/assignments',
     icon: UserCheck,

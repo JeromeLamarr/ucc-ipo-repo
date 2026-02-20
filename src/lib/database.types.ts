@@ -94,6 +94,8 @@ export interface Database {
           deadline_at: string | null;
           created_at: string;
           updated_at: string;
+          is_deleted: boolean;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -111,6 +113,8 @@ export interface Database {
           deadline_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          is_deleted?: boolean;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -128,6 +132,8 @@ export interface Database {
           deadline_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          is_deleted?: boolean;
+          deleted_at?: string | null;
         };
       };
       ip_documents: {

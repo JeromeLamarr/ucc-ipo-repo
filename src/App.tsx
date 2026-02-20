@@ -19,6 +19,7 @@ import { PublicPagesManagement } from '@pages/PublicPagesManagement';
 import { PageSectionsManagement } from '@pages/PageSectionsManagement';
 import { SubmissionDetailPage } from '@pages/SubmissionDetailPage';
 import { AllRecordsPage } from '@pages/AllRecordsPage';
+import { DeletedArchivePage } from '@pages/DeletedArchivePage';
 import { LegacyRecordsPage } from '@pages/LegacyRecordsPage';
 import { AddLegacyRecordPage } from '@pages/AddLegacyRecordPage';
 import { LegacyRecordDetailPage } from '@pages/LegacyRecordDetailPage';
@@ -66,6 +67,7 @@ function DashboardRouter() {
         <Route path="public-pages/:slug/edit" element={<CMSPageEditor />} />
         <Route path="public-pages/:pageId" element={<PageSectionsManagement />} />
         <Route path="records" element={<AllRecordsPage />} />
+        <Route path="deleted-records" element={<DeletedArchivePage />} />
         <Route path="legacy-records" element={<LegacyRecordsPage />} />
         <Route path="legacy-records/new" element={<AddLegacyRecordPage />} />
         <Route path="legacy-records/:id" element={<LegacyRecordDetailPage />} />
