@@ -96,6 +96,12 @@ export interface Database {
           updated_at: string;
           is_deleted: boolean;
           deleted_at: string | null;
+          tracking_id: string | null;
+          is_legacy_record: boolean | null;
+          legacy_source: string | null;
+          digitized_at: string | null;
+          created_by_admin_id: string | null;
+          current_step: number | null;
         };
         Insert: {
           id?: string;
@@ -115,6 +121,12 @@ export interface Database {
           updated_at?: string;
           is_deleted?: boolean;
           deleted_at?: string | null;
+          tracking_id?: string | null;
+          is_legacy_record?: boolean | null;
+          legacy_source?: string | null;
+          digitized_at?: string | null;
+          created_by_admin_id?: string | null;
+          current_step?: number | null;
         };
         Update: {
           id?: string;
@@ -134,6 +146,12 @@ export interface Database {
           updated_at?: string;
           is_deleted?: boolean;
           deleted_at?: string | null;
+          tracking_id?: string | null;
+          is_legacy_record?: boolean | null;
+          legacy_source?: string | null;
+          digitized_at?: string | null;
+          created_by_admin_id?: string | null;
+          current_step?: number | null;
         };
       };
       ip_documents: {

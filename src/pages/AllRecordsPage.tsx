@@ -58,7 +58,13 @@ export function AllRecordsPage() {
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching records:', error);
+        throw error;
+      }
+
+      console.log('Fetched records:', data?.length || 0, 'records');
+      console.log('Sample record:', data?.[0]);
       setRecords(data || []);
     } catch (error) {
       console.error('Error fetching records:', error);
@@ -89,9 +95,13 @@ export function AllRecordsPage() {
   };
 
   const filterRecords = () => {
+    console.log('Filtering records. Total records:', records.length);
+
     // Separate drafts from workflow records
     const drafts = records.filter((record) => record.status === 'draft');
     const submitted = records.filter((record) => record.status !== 'draft');
+
+    console.log('Drafts:', drafts.length, 'Submitted:', submitted.length);
 
     // Apply filters only to submitted records (not to drafts)
     let filtered = submitted;
@@ -111,6 +121,9 @@ export function AllRecordsPage() {
     if (categoryFilter !== 'all') {
       filtered = filtered.filter((record) => record.category === categoryFilter);
     }
+
+    console.log('Filtered workflow records:', filtered.length);
+    console.log('Filtered drafts:', drafts.length);
 
     setFilteredRecords(filtered);
     setFilteredDrafts(drafts);
