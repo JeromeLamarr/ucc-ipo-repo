@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { FileText, Search, Filter, Eye, Download, Plus, Award, Trash2 } from 'lucide-react';
+import { FileText, Search, Filter, Eye, Download, Plus, Award, Trash2, MoreVertical } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
@@ -184,48 +184,49 @@ export function AllRecordsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 lg:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">All IP Records</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">All IP Records</h1>
+          <p className="text-gray-600 mt-1 text-sm lg:text-base">
             Viewing {filteredRecords.length} workflow records and {filteredDrafts.length} drafts
           </p>
         </div>
         <button
           onClick={exportToCSV}
-          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+          className="flex items-center justify-center gap-2 px-4 lg:px-6 py-2 lg:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm lg:text-base"
         >
-          <Download className="h-5 w-5" />
+          <Download className="h-4 w-4 lg:h-5 lg:w-5" />
           Export CSV
         </button>
       </div>
 
       {/* DRAFT SUBMISSIONS SECTION */}
       {filteredDrafts.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-amber-200 p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Draft Submissions ({filteredDrafts.length})</h2>
-            <p className="text-gray-600 text-sm mt-1">Incomplete submissions waiting to be submitted to the workflow</p>
+        <div className="bg-white rounded-xl shadow-sm border border-amber-200 p-4 lg:p-6">
+          <div className="mb-4 lg:mb-6">
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Draft Submissions ({filteredDrafts.length})</h2>
+            <p className="text-gray-600 text-xs lg:text-sm mt-1">Incomplete submissions waiting to be submitted to the workflow</p>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-amber-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Title
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Applicant
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-amber-50">
                     Actions
                   </th>
                 </tr>
@@ -233,34 +234,38 @@ export function AllRecordsPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedDrafts.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{record.title}</div>
+                    <td className="px-4 py-3">
+                      <div className="text-sm font-medium text-gray-900 max-w-xs truncate" title={record.title}>
+                        {record.title}
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="text-sm text-gray-900">{record.applicant?.full_name}</div>
                       <div className="text-xs text-gray-500">{record.applicant?.email}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900 capitalize">{record.category}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(record.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center gap-3">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm sticky right-0 bg-white">
+                      <div className="flex items-center justify-end gap-2">
                         <Link
                           to={`/dashboard/submissions/${record.id}`}
                           className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+                          title="View"
                         >
                           <Eye className="h-4 w-4" />
-                          View
+                          <span className="hidden xl:inline">View</span>
                         </Link>
                         <button
                           onClick={() => setDeleteConfirmation({ id: record.id, title: record.title })}
                           className="text-red-600 hover:text-red-700 font-medium inline-flex items-center gap-1"
+                          title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Delete
+                          <span className="hidden xl:inline">Delete</span>
                         </button>
                       </div>
                     </td>
@@ -268,6 +273,48 @@ export function AllRecordsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden space-y-4">
+            {paginatedDrafts.map((record) => (
+              <div key={record.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-gray-900 mb-1">{record.title}</h3>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                      {record.category}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center text-gray-600">
+                    <span className="font-medium w-24">Applicant:</span>
+                    <span>{record.applicant?.full_name}</span>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <span className="font-medium w-24">Created:</span>
+                    <span>{formatDate(record.created_at)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100">
+                  <Link
+                    to={`/dashboard/submissions/${record.id}`}
+                    className="flex-1 text-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium inline-flex items-center justify-center gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View
+                  </Link>
+                  <button
+                    onClick={() => setDeleteConfirmation({ id: record.id, title: record.title })}
+                    className="flex-1 text-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium inline-flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
 
           {draftsTotalPages > 1 && (
@@ -287,30 +334,30 @@ export function AllRecordsPage() {
       )}
 
       {/* WORKFLOW IP RECORDS SECTION */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Workflow IP Records ({filteredRecords.length})</h2>
-          <p className="text-gray-600 text-sm mt-1">Active submissions in the evaluation workflow</p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
+        <div className="mb-4 lg:mb-6">
+          <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Workflow IP Records ({filteredRecords.length})</h2>
+          <p className="text-gray-600 text-xs lg:text-sm mt-1">Active submissions in the evaluation workflow</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4 mb-4 lg:mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by title or applicant..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-9 lg:pl-10 pr-3 lg:pr-4 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as IpStatus | 'all')}
-              className="w-full pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+              className="w-full pl-9 lg:pl-10 pr-8 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
             >
               <option value="all">All Statuses</option>
               <option value="submitted">Submitted</option>
@@ -324,11 +371,11 @@ export function AllRecordsPage() {
           </div>
 
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as IpCategory | 'all')}
-              className="w-full pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+              className="w-full pl-9 lg:pl-10 pr-8 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
             >
               <option value="all">All Categories</option>
               <option value="patent">Patent</option>
@@ -341,32 +388,33 @@ export function AllRecordsPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Title
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Applicant
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Category
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
                   Supervisor
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
                   Evaluator
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden 2xl:table-cell">
                   Created
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50">
                   Actions
                 </th>
               </tr>
@@ -381,50 +429,54 @@ export function AllRecordsPage() {
                 </tr>
               ) : (
                 paginatedWorkflowRecords.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{record.title}</div>
+                  <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 py-3">
+                      <div className="text-sm font-medium text-gray-900 max-w-xs truncate" title={record.title}>
+                        {record.title}
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">
                       <div className="text-sm text-gray-900">{record.applicant?.full_name}</div>
-                      <div className="text-xs text-gray-500">{record.applicant?.email}</div>
+                      <div className="text-xs text-gray-500 truncate max-w-[180px]">{record.applicant?.email}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900 capitalize">{record.category}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <span
-                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           getStatusColor(record.status)
                         }`}
                       >
                         {getStatusLabel(record.status)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 hidden xl:table-cell">
                       {record.supervisor?.full_name || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 hidden xl:table-cell">
                       {record.evaluator?.full_name || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 hidden 2xl:table-cell">
                       {formatDate(record.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center gap-3">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm sticky right-0 bg-white">
+                      <div className="flex items-center justify-end gap-2">
                         <Link
                           to={`/dashboard/submissions/${record.id}`}
                           className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+                          title="View Details"
                         >
                           <Eye className="h-4 w-4" />
-                          View
+                          <span className="hidden 2xl:inline">View</span>
                         </Link>
                         <button
                           onClick={() => setDeleteConfirmation({ id: record.id, title: record.title })}
                           className="text-red-600 hover:text-red-700 font-medium inline-flex items-center gap-1"
+                          title="Delete Record"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Delete
+                          <span className="hidden 2xl:inline">Delete</span>
                         </button>
                       </div>
                     </td>
@@ -433,6 +485,76 @@ export function AllRecordsPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="lg:hidden space-y-4">
+          {filteredRecords.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No workflow records found</p>
+            </div>
+          ) : (
+            paginatedWorkflowRecords.map((record) => (
+              <div key={record.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-gray-900 mb-2">{record.title}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {record.category}
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          getStatusColor(record.status)
+                        }`}
+                      >
+                        {getStatusLabel(record.status)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center text-gray-600">
+                    <span className="font-medium w-24">Applicant:</span>
+                    <span className="truncate">{record.applicant?.full_name}</span>
+                  </div>
+                  {record.supervisor?.full_name && (
+                    <div className="flex items-center text-gray-600">
+                      <span className="font-medium w-24">Supervisor:</span>
+                      <span className="truncate">{record.supervisor.full_name}</span>
+                    </div>
+                  )}
+                  {record.evaluator?.full_name && (
+                    <div className="flex items-center text-gray-600">
+                      <span className="font-medium w-24">Evaluator:</span>
+                      <span className="truncate">{record.evaluator.full_name}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center text-gray-600">
+                    <span className="font-medium w-24">Created:</span>
+                    <span>{formatDate(record.created_at)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100">
+                  <Link
+                    to={`/dashboard/submissions/${record.id}`}
+                    className="flex-1 text-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium inline-flex items-center justify-center gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View
+                  </Link>
+                  <button
+                    onClick={() => setDeleteConfirmation({ id: record.id, title: record.title })}
+                    className="flex-1 text-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium inline-flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {workflowTotalPages > 1 && (
