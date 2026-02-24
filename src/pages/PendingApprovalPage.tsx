@@ -1,10 +1,20 @@
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Clock, LogOut, HelpCircle, Home } from 'lucide-react';
+import { useEffect } from 'react';
 
 export function PendingApprovalPage() {
-  const { signOut } = useAuth();
+  const { signOut, profile, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect approved users or non-applicants to dashboard
+  useEffect(() => {
+    if (!loading && profile) {
+      if (profile.role !== 'applicant' || profile.is_approved === true) {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [loading, profile, navigate]);
 
   const handleLogOut = async () => {
     await signOut();
@@ -14,6 +24,33 @@ export function PendingApprovalPage() {
   const handleGoHome = () => {
     navigate('/');
   };
+
+  // Show loading spinner while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Safety check - if no profile, show error
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Profile</h1>
+          <p className="text-gray-600 mb-6">Unable to load your account information.</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="text-blue-600 hover:text-blue-700 font-medium"
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">

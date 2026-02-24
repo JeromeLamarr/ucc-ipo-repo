@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@contexts/AuthContext';
 import { ProtectedRoute } from '@components/ProtectedRoute';
+import { ErrorBoundary } from '@components/ErrorBoundary';
 import { DashboardLayout } from '@components/DashboardLayout';
 import { LandingPage } from '@pages/LandingPage';
 import { LoginPage } from '@pages/LoginPage';
@@ -89,7 +90,8 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
+        <ErrorBoundary>
+          <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -121,8 +123,9 @@ function App() {
               </div>
             </div>
           } />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ErrorBoundary>
       </AuthProvider>
     </BrowserRouter>
   );
