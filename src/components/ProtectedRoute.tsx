@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserRole } from '../lib/database.types';
 
@@ -10,6 +10,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -48,7 +49,8 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   // Check if applicant is approved (NEW: Admin approval workflow)
-  if (profile.role === 'applicant' && profile.is_approved === false) {
+  // IMPORTANT: Only redirect to /pending-approval if NOT already there (prevents infinite loop)
+  if (profile.role === 'applicant' && profile.is_approved === false && location.pathname !== '/pending-approval') {
     return <Navigate to="/pending-approval" replace />;
   }
 
