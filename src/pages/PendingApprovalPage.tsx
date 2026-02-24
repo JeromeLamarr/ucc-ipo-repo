@@ -32,8 +32,9 @@ export function PendingApprovalPage() {
 
         {/* Description */}
         <p className="text-gray-600 mb-6 leading-relaxed">
-          Thank you for registering! Your account is currently under review by the administrator.
-          You will be notified via email once your account has been approved.
+          Thank you for registering! Your email has been verified and you've successfully logged in. 
+          Your account is currently pending approval from the University IP Office administrator.
+          You will receive an email notification once your account has been approved.
         </p>
 
         {/* Timeline */}
@@ -49,8 +50,12 @@ export function PendingApprovalPage() {
 
         {/* Info Box */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8">
+          <p className="text-sm text-gray-600 mb-3">
+            <strong>What happens next?</strong> An administrator will review your registration and approve your account. 
+            Once approved, you'll be able to submit intellectual property disclosures and access all system features.
+          </p>
           <p className="text-sm text-gray-600">
-            In the meantime, you can visit our public pages to learn more about the system and the IP submission process.
+            In the meantime, you're welcome to visit our public pages to learn more about the IP submission process.
           </p>
         </div>
 
@@ -75,13 +80,17 @@ export function PendingApprovalPage() {
 
         {/* Support Footer */}
         <div className="mt-8 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500 mb-3">Questions?</p>
+          <p className="text-xs text-gray-600 font-semibold mb-2 uppercase tracking-wide">Need Help?</p>
+          <p className="text-xs text-gray-600 mb-3">
+            If you have questions about the approval process or need to update your registration, 
+            please reach out to us.
+          </p>
           <a
             href="mailto:support@ucc.edu.gh"
             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium text-sm"
           >
             <HelpCircle className="w-4 h-4" />
-            Contact Support
+            support@ucc.edu.gh
           </a>
         </div>
       </div>

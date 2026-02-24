@@ -172,20 +172,51 @@ export function ApplicantDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Pending Approval Banner */}
+      {profile && profile.is_approved === false && (
+        <div className="bg-amber-50 border-2 border-amber-200 border-dotted rounded-xl p-6 md:p-8">
+          <div className="flex gap-4">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-6 w-6 md:h-8 md:w-8" style={{ color: '#d97706' }} />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg md:text-xl font-bold text-amber-900 mb-2">Account Under Review</h3>
+              <p className="text-amber-800 mb-4">Your account is currently pending approval from the University IP Office. This typically takes 1-2 business days.</p>
+              <p className="text-sm text-amber-700">Once approved, you'll receive an email confirmation and will be able to access all features of the system, including submitting intellectual property disclosures.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-6">
         <div>
           <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-3">Welcome, {profile?.full_name}</h1>
           <p className="text-lg text-gray-600 font-medium">Manage your intellectual property submissions</p>
         </div>
-        <Link
-          to="/dashboard/submit"
-          className="flex items-center gap-2 px-8 py-4 text-white rounded-xl hover:font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 w-fit"
-          style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)` }}
-        >
-          <Plus className="h-6 w-6" />
-          New Submission
-        </Link>
+        {profile && profile.is_approved === false ? (
+          <div className="relative group">
+            <button
+              disabled
+              className="flex items-center gap-2 px-8 py-4 text-gray-400 bg-gray-100 rounded-xl shadow-lg cursor-not-allowed opacity-60 w-fit"
+            >
+              <Plus className="h-6 w-6" />
+              New Submission
+            </button>
+            <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-sm rounded py-2 px-3 whitespace-nowrap">
+              Available after account approval
+            </div>
+          </div>
+        ) : (
+          <Link
+            to="/dashboard/submit"
+            className="flex items-center gap-2 px-8 py-4 text-white rounded-xl hover:font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 w-fit"
+            style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)` }}
+          >
+            <Plus className="h-6 w-6" />
+            New Submission
+          </Link>
+        )}
       </div>
 
       {/* Stats Cards */}

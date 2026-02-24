@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { useBranding } from '../hooks/useBranding';
-import { Check, X, Clock, Mail, Calendar } from 'lucide-react';
+import { Check, X, Clock, Mail, Calendar, AlertCircle } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 
 interface PendingApplicant {
@@ -15,12 +16,30 @@ interface PendingApplicant {
 
 export function AdminPendingApplicants() {
   const { primaryColor } = useBranding();
+  const { profile } = useAuth();
   const [pendingApplicants, setPendingApplicants] = useState<PendingApplicant[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [showRejectReason, setShowRejectReason] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Authorization check: only admins can approve applicants
+  if (profile?.role !== 'admin') {
+    return (
+      <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 md:p-8">
+        <div className="flex gap-4">
+          <div className="flex-shrink-0">
+            <AlertCircle className="h-6 w-6 md:h-8 md:w-8 text-red-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-red-900 mb-2">Access Denied</h3>
+            <p className="text-red-800">Only administrators can approve applicant accounts. If you need to approve applications, please contact the system administrator.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetchPendingApplicants();
@@ -70,32 +89,44 @@ export function AdminPendingApplicants() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const updateData: Database['public']['Tables']['users']['Update'] = {
-        is_approved: true,
-        approved_at: new Date().toISOString(),
-        approved_by: session.user.id,
-      };
-      const { error } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', applicantId);
+      // Call the approve-applicant edge function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/approve-applicant`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ applicant_user_id: applicantId }),
+        }
+      );
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || result.message || 'Failed to approve applicant');
+      }
 
       // Remove approved applicant from list
       setPendingApplicants((prev) => prev.filter((a) => a.id !== applicantId));
-      setMessage({ type: 'success', text: 'Applicant approved successfully' });
+      
+      // Show status based on email success
+      if (result.email_sent) {
+        setMessage({ type: 'success', text: `✓ Applicant approved. Confirmation email sent to ${result.applicant_email}` });
+      } else {
+        setMessage({ type: 'success', text: `✓ Applicant approved (email could not be sent: ${result.email_error || result.message}). Contact them to notify of approval.` });
+      }
 
-      // Log the action
-      const logData: Database['public']['Tables']['activity_logs']['Insert'] = {
-        user_id: session.user.id,
-        action: 'approve_applicant',
-        details: { applicant_id: applicantId, applicant_email: pendingApplicants.find(a => a.id === applicantId)?.email },
-      };
-      await supabase.from('activity_logs').insert(logData);
+      console.log('[AdminPendingApplicants] Approval successful:', {
+        applicantId,
+        email: result.applicant_email,
+        emailSent: result.email_sent,
+        approvedAt: result.approved_at,
+      });
     } catch (error) {
       console.error('Error approving applicant:', error);
-      setMessage({ type: 'error', text: 'Failed to approve applicant' });
+      setMessage({ type: 'error', text: `Failed to approve applicant: ${error instanceof Error ? error.message : 'Unknown error'}` });
     } finally {
       setProcessingId(null);
     }

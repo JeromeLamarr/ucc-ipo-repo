@@ -23,6 +23,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 2. Update ip_records insert policy to check applicant approval
 -- This prevents unapproved applicants from creating submissions even if they bypass frontend checks
 DROP POLICY IF EXISTS "Applicants can create their own IP records" ON ip_records;
+DROP POLICY IF EXISTS "Applicants can create their own IP records (must be approved)" ON ip_records;
 
 CREATE POLICY "Applicants can create their own IP records (must be approved)"
   ON ip_records
@@ -37,6 +38,7 @@ CREATE POLICY "Applicants can create their own IP records (must be approved)"
 
 -- 3. Prevent unapproved applicants from uploading files
 DROP POLICY IF EXISTS "Users can upload documents for their own IP" ON ip_documents;
+DROP POLICY IF EXISTS "Users can upload documents (applicants must be approved)" ON ip_documents;
 
 CREATE POLICY "Users can upload documents (applicants must be approved)"
   ON ip_documents
@@ -51,6 +53,7 @@ CREATE POLICY "Users can upload documents (applicants must be approved)"
 
 -- 4. Ensure unapproved applicants can't view their own IP records either (belt-and-suspenders)
 DROP POLICY IF EXISTS "Applicants can view created IP records" ON ip_records;
+DROP POLICY IF EXISTS "Applicants can view created IP records (if approved)" ON ip_records;
 
 CREATE POLICY "Applicants can view created IP records (if approved)"
   ON ip_records
