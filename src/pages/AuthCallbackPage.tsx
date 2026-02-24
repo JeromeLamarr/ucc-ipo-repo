@@ -11,28 +11,65 @@ export function AuthCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Wait for Supabase to process the callback hash automatically
-        // Give the auth session time to be established
+        // Log the hash for debugging
+        console.log('[AuthCallback] URL hash:', window.location.hash);
+        console.log('[AuthCallback] URL search:', window.location.search);
+
+        // Wait a brief moment for Supabase to process the URL hash/search params
         await new Promise(resolve => setTimeout(resolve, 500));
 
+        // Try to get the current session - Supabase may have already established it
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
+          console.error('[AuthCallback] Session error:', sessionError);
           throw sessionError;
         }
 
-        if (!session) {
+        let finalSession = session;
+
+        // If no session exists, try to exchange the code/token from URL (for PKCE flow)
+        if (!finalSession) {
+          console.log('[AuthCallback] No session found, attempting to exchange code...');
+          
+          // Extract code from URL if present (from Supabase callback)
+          const params = new URLSearchParams(window.location.search);
+          const code = params.get('code');
+          
+          if (code) {
+            console.log('[AuthCallback] Found code in URL, exchanging for session...');
+            try {
+              const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+              
+              if (exchangeError) {
+                console.error('[AuthCallback] Code exchange error:', exchangeError);
+                throw exchangeError;
+              }
+              
+              finalSession = exchangeData?.session;
+              console.log('[AuthCallback] Code exchange successful, session:', !!finalSession);
+            } catch (exchangeErr) {
+              console.error('[AuthCallback] Failed to exchange code:', exchangeErr);
+              // Continue - session might still be available
+            }
+          }
+        }
+
+        if (!finalSession) {
+          console.error('[AuthCallback] No session available after attempts');
           setStatus('error');
           setMessage('Email verification failed. Please try registering again or contact support.');
           setTimeout(() => navigate('/register'), 3000);
           return;
         }
 
-        const user = session.user;
+        const user = finalSession.user;
+        console.log('[AuthCallback] Verified user:', user.id, 'Email confirmed:', !!user.email_confirmed_at);
 
         if (!user.email_confirmed_at) {
+          console.warn('[AuthCallback] Email not confirmed yet. email_confirmed_at:', user.email_confirmed_at);
           setStatus('error');
-          setMessage('Email verification incomplete. Please try again.');
+          setMessage('Email verification incomplete. The verification link may have expired. Please try registering again.');
           setTimeout(() => navigate('/register'), 3000);
           return;
         }
@@ -45,11 +82,13 @@ export function AuthCallbackPage() {
           .maybeSingle();
 
         if (profileError && profileError.code !== 'PGRST116') {
+          console.error('[AuthCallback] Profile query error:', profileError);
           throw profileError;
         }
 
         // If profile doesn't exist, create it
         if (!profile) {
+          console.log('[AuthCallback] Creating user profile...');
           const { error: insertError } = await supabase
             .from('users')
             .insert({
@@ -62,22 +101,26 @@ export function AuthCallbackPage() {
             });
 
           if (insertError) {
-            console.error('Error creating profile:', insertError);
+            console.error('[AuthCallback] Error creating profile:', insertError);
             throw insertError;
           }
+          console.log('[AuthCallback] Profile created successfully');
+        } else {
+          console.log('[AuthCallback] Profile already exists');
         }
 
         // Success - redirect to dashboard
+        console.log('[AuthCallback] Verification successful, redirecting to dashboard');
         setStatus('success');
-        setMessage('Email verified successfully! Redirecting to dashboard...');
+        setMessage('Email verified successfully! Redirecting...');
         setTimeout(() => {
           navigate('/dashboard');
-        }, 2000);
+        }, 1500);
       } catch (err: any) {
-        console.error('Callback error:', err);
+        console.error('[AuthCallback] Callback error:', err);
         setStatus('error');
-        setMessage(err.message || 'An error occurred during email verification. Please try again.');
-        setTimeout(() => navigate('/register'), 3000);
+        setMessage(err.message || 'An error occurred during email verification. Please try again or contact support.');
+        setTimeout(() => navigate('/register'), 4000);
       }
     };
 

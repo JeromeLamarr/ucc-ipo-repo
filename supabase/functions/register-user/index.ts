@@ -262,11 +262,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // Generate magic link
+    // Get the app URL for the redirectTo - this should point to the frontend app's callback handler
+    const appUrl = Deno.env.get("APP_URL") || "https://ucc-ipo.com";
+    
     const { data: signInData, error: signInError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
       email,
       options: {
-        redirectTo: `${supabaseUrl.replace('/rest/v1', '')}/auth/v1/callback?type=magiclink`,
+        redirectTo: `${appUrl}/auth/callback`,
       },
     });
 
