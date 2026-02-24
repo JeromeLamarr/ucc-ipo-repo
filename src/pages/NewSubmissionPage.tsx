@@ -130,9 +130,19 @@ export function NewSubmissionPage() {
   );
 
   useEffect(() => {
+    // SECURITY: Check if applicant is approved before allowing submission
+    if (profile?.role === 'applicant' && profile?.is_approved === false) {
+      setError('Your account is pending administrator approval. You cannot submit applications at this time.');
+      // Optionally redirect after brief delay to show message
+      const redirectTimer = setTimeout(() => {
+        navigate('/pending-approval', { replace: true });
+      }, 2000);
+      return () => clearTimeout(redirectTimer);
+    }
+
     fetchSupervisors();
     fetchDepartments();
-  }, []);
+  }, [profile]);
 
   const fetchSupervisors = async () => {
     try {

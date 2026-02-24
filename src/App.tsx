@@ -28,6 +28,7 @@ import { DepartmentManagementPage } from '@pages/DepartmentManagementPage';
 import { SettingsPage } from '@pages/SettingsPage';
 import { CertificateVerifyPage } from '@pages/CertificateVerifyPage';
 import { DisclosureVerifyPage } from '@pages/DisclosureVerifyPage';
+import { PendingApprovalPage } from '@pages/PendingApprovalPage';
 import { useEffect } from 'react';
 import { ensureHomeCMSPageExists } from '@lib/cmsSetup';
 
@@ -95,6 +96,14 @@ function App() {
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/verify/:trackingId" element={<CertificateVerifyPage />} />
           <Route path="/verify-disclosure/:trackingId" element={<DisclosureVerifyPage />} />
+          <Route
+            path="/pending-approval"
+            element={
+              <ProtectedRoute>
+                <PendingApprovalPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/pages/:slug" element={<CMSPageRenderer />} />
           <Route
             path="/dashboard/*"

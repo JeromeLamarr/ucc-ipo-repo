@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
 import { Users, FileText, TrendingUp, Activity } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
+import { AdminPendingApplicants } from '../components/AdminPendingApplicants';
 import type { Database } from '../lib/database.types';
 
 type User = Database['public']['Tables']['users']['Row'];
@@ -125,6 +126,9 @@ export function AdminDashboard() {
         <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-3">Admin Dashboard</h1>
         <p className="text-lg text-gray-600 font-medium">System overview and real-time analytics</p>
       </div>
+
+      {/* Pending Applicants Section - HIGH PRIORITY */}
+      <AdminPendingApplicants />
 
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -43,6 +43,11 @@ export interface Database {
           profile_data: Json;
           created_at: string;
           updated_at: string;
+          is_approved: boolean;
+          approved_at: string | null;
+          approved_by: string | null;
+          rejected_at: string | null;
+          rejection_reason: string | null;
         };
         Insert: {
           id?: string;
@@ -59,6 +64,11 @@ export interface Database {
           profile_data?: Json;
           created_at?: string;
           updated_at?: string;
+          is_approved?: boolean;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          rejected_at?: string | null;
+          rejection_reason?: string | null;
         };
         Update: {
           id?: string;
@@ -75,6 +85,11 @@ export interface Database {
           profile_data?: Json;
           created_at?: string;
           updated_at?: string;
+          is_approved?: boolean;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          rejected_at?: string | null;
+          rejection_reason?: string | null;
         };
       };
       ip_records: {

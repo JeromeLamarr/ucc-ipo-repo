@@ -47,6 +47,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />;
   }
 
+  // Check if applicant is approved (NEW: Admin approval workflow)
+  if (profile.role === 'applicant' && profile.is_approved === false) {
+    return <Navigate to="/pending-approval" replace />;
+  }
+
   // Check role permissions if specified
   if (allowedRoles && !allowedRoles.includes(profile.role)) {
     return <Navigate to="/unauthorized" replace />;

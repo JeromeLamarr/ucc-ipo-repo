@@ -227,12 +227,14 @@ Deno.serve(async (req: Request) => {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // Update the profile created by trigger with department_id using service role
+    // NEW APPLICANTS: Set is_approved = FALSE (pending admin approval)
     const { data: updateData, error: profileError } = await supabase
       .from("users")
       .update({
         full_name: fullName,
         department_id: departmentId && departmentId !== '' ? departmentId : null,
-        role: 'applicant'
+        role: 'applicant',
+        is_approved: false
       })
       .eq("auth_user_id", authData.user.id)
       .select();
