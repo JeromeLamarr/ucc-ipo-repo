@@ -126,51 +126,62 @@ export function AuthCallbackPage() {
 
         console.log('[AuthCallback] Email confirmed:', user.email);
 
-        // Check if user profile exists
-        const { data: profile, error: profileError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('auth_user_id', user.id)
-          .maybeSingle();
+        // Wait for database trigger to create profile (retry up to 3 times)
+        console.log('[AuthCallback] Waiting for profile creation by trigger...');
+        let profile = null;
+        let retries = 0;
+        const maxRetries = 3;
 
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error('[AuthCallback] Profile lookup error:', profileError.message);
-          throw profileError;
+        while (!profile && retries < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s between attempts
+
+          const { data, error: profileError } = await supabase
+            .from('users')
+            .select('id, role, is_verified, is_approved')
+            .eq('auth_user_id', user.id)
+            .maybeSingle();
+
+          if (profileError && profileError.code !== 'PGRST116') {
+            console.error('[AuthCallback] Profile lookup error:', profileError.message);
+            throw profileError;
+          }
+
+          if (data) {
+            profile = data;
+            console.log('[AuthCallback] Profile found:', {
+              id: data.id,
+              role: data.role,
+              is_verified: data.is_verified,
+              is_approved: data.is_approved
+            });
+            break;
+          }
+
+          retries++;
+          console.log(`[AuthCallback] Profile not found yet, retry ${retries}/${maxRetries}`);
         }
 
-        // If profile doesn't exist, create it
         if (!profile) {
-          console.log('[AuthCallback] Creating user profile...');
-          const { error: insertError } = await supabase
-            .from('users')
-            .insert({
-              auth_user_id: user.id,
-              email: user.email,
-              full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-              affiliation: user.user_metadata?.affiliation || null,
-              role: 'applicant',
-              is_verified: true,
-              is_approved: false,
-            });
-
-          if (insertError) {
-            console.error('[AuthCallback] Error creating profile:', insertError.message);
-            // Profile creation failed but email is verified - still allow login
-            console.warn('[AuthCallback] Continuing despite profile creation error');
-          } else {
-            console.log('[AuthCallback] Profile created successfully');
-          }
-        } else {
-          console.log('[AuthCallback] Profile already exists');
+          console.error('[AuthCallback] Profile creation by trigger failed or timed out');
+          setStatus('error');
+          setMessage('Email verified, but profile creation failed. Please contact support at support@ucc-ipo.com');
+          setTimeout(() => navigate('/login'), 4000);
+          return;
         }
 
         // Success!
-        console.log('[AuthCallback] Email verification complete, redirecting...');
+        console.log('[AuthCallback] Email verification complete, profile ready');
         setStatus('success');
-        setMessage('Email verified successfully! Redirecting to dashboard...');
+
+        if (profile.is_approved === false) {
+          setMessage('Email verified successfully! Your account is pending admin approval. You will be notified once approved.');
+        } else {
+          setMessage('Email verified successfully! Redirecting to dashboard...');
+        }
+
         setTimeout(() => {
           navigate('/dashboard');
-        }, 1500);
+        }, 2500);
       } catch (err: any) {
         // Only log error message, NOT the error object or stack
         const errorMsg = err?.message || 'Unknown verification error';

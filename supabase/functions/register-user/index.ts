@@ -221,32 +221,8 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log("[register-user] Auth user created:", authData.user.id);
-    console.log("[register-user] Auth user created successfully:", authData.user.id);
 
-    // Wait for trigger to create the profile
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Update the profile created by trigger with department_id using service role
-    // NEW APPLICANTS: Set is_approved = FALSE (pending admin approval)
-    const { data: updateData, error: profileError } = await supabase
-      .from("users")
-      .update({
-        full_name: fullName,
-        department_id: departmentId && departmentId !== '' ? departmentId : null,
-        role: 'applicant',
-        is_approved: false
-      })
-      .eq("auth_user_id", authData.user.id)
-      .select();
-
-    if (profileError) {
-      console.error("[register-user] Profile update error:", profileError);
-      console.error("[register-user] Attempted to update with:", { auth_user_id: authData.user.id, department_id: departmentId, role: 'applicant' });
-    } else {
-      console.log("[register-user] Profile updated successfully:", updateData);
-    }
-
-    // Store temporary registration data
+    // Store temporary registration data for the trigger to use when email is verified
     const { error: tempRegError } = await supabase
       .from("temp_registrations")
       .insert({
@@ -258,235 +234,30 @@ Deno.serve(async (req: Request) => {
 
     if (tempRegError) {
       console.error("[register-user] Warning: Could not store temp registration data:", tempRegError);
-      // Don't fail - user is created, just tracking is missing
+      // Don't fail - user is created, trigger will use metadata as fallback
     }
 
-    // Generate magic link
-    // Get the app URL for the redirectTo - this should point to the frontend app's callback handler
-    const appUrl = Deno.env.get("APP_URL") || "https://ucc-ipo.com";
-    
-    const { data: signInData, error: signInError } = await supabase.auth.admin.generateLink({
-      type: "magiclink",
-      email,
-      options: {
-        redirectTo: `${appUrl}/auth/callback`,
-      },
-    });
+    // SUCCESS: Supabase automatically sends the confirmation email
+    // No need to generate magic link or send custom email
+    console.log("[register-user] Registration successful. Supabase will send confirmation email automatically.");
 
-    if (signInError) {
-      console.error("[register-user] Generate link error:", signInError);
-      // Even if magic link fails, continue - email can still be sent with basic link
-      console.warn("[register-user] Continuing with email send despite magic link generation failure");
-    }
-
-    // The magic link is in signInData
-    const magicLink = signInData?.properties?.action_link;
-
-    if (!magicLink) {
-      console.error("[register-user] Failed to create magic link - magicLink is:", magicLink);
-      console.error("[register-user] signInData:", signInData);
-      // Continue anyway - we have alternative email flow
-      console.warn("[register-user] Continuing despite no magic link");
-    }
-
-    // Send verification email
-    const emailHtml = magicLink ? `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #1a59a6 0%, #0d3a7a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; background: #1a59a6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
-            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; font-size: 13px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Welcome to UCC IP Management</h1>
-            </div>
-            <div class="content">
-              <h2>Hello ${fullName},</h2>
-              <p>Thank you for registering with the University of Caloocan City Intellectual Property Management System.</p>
-              
-              <p>To complete your registration and activate your account, please click the button below:</p>
-              
-              <center>
-                <a href="${magicLink}" class="button">Verify Email Address</a>
-              </center>
-              
-              <p>Or copy and paste this link in your browser:</p>
-              <p style="word-break: break-all; font-size: 12px; color: #6b7280;">
-                ${magicLink}
-              </p>
-              
-              <p style="margin-top: 30px;"><strong>This link expires in 24 hours.</strong></p>
-              
-              <div class="warning">
-                <strong>Security Note:</strong> If you did not create this account, please ignore this email. Do not share this link with anyone.
-              </div>
-            </div>
-            <div class="footer">
-              <p>University of Caloocan City Intellectual Property Office</p>
-              <p><a href="https://ucc-ipo.com" style="color: #1a59a6; text-decoration: none;">ucc-ipo.com</a></p>
-              <p>Protecting Innovation, Promoting Excellence</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    ` : `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #1a59a6 0%, #0d3a7a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; background: #1a59a6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
-            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; font-size: 13px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Welcome to UCC IP Management</h1>
-            </div>
-            <div class="content">
-              <h2>Hello ${fullName},</h2>
-              <p>Thank you for registering with the University of Caloocan City Intellectual Property Management System.</p>
-              
-              <p>Your account has been created successfully. You will be able to log in shortly after your email is verified. Our system will send you a verification link shortly.</p>
-              
-              <p style="margin-top: 30px;">If you don't receive a verification email within 5 minutes, please check your spam folder or contact support.</p>
-              
-              <div class="warning">
-                <strong>Security Note:</strong> If you did not create this account, please ignore this email.
-              </div>
-            </div>
-            <div class="footer">
-              <p>University of Caloocan City Intellectual Property Office</p>
-              <p><a href="https://ucc-ipo.com" style="color: #1a59a6; text-decoration: none;">ucc-ipo.com</a></p>
-              <p>Protecting Innovation, Promoting Excellence</p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    // Send email via Resend API directly
-    let emailSent = false;
-    let emailError: string | null = null;
-
-    try {
-      console.log("[register-user] Sending verification email to:", email);
-      
-      const resendApiKey = Deno.env.get("RESEND_API_KEY");
-      const resendFromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@ucc-ipo.com";
-      
-      if (!resendApiKey) {
-        console.error("[register-user] RESEND_API_KEY not configured");
-        emailError = "Email service not configured";
-      } else {
-        const emailResponse = await fetch(
-          "https://api.resend.com/emails",
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${resendApiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              from: `UCC IP Office <${resendFromEmail}>`,
-              to: [email],
-              subject: "Verify Your Email - UCC IP Management System",
-              html: emailHtml,
-            }),
-          }
-        );
-
-        console.log("[register-user] Email response status:", emailResponse.status);
-        
-        if (!emailResponse.ok) {
-          const errorText = await emailResponse.text();
-          console.error("[register-user] Email service HTTP error:", {
-            status: emailResponse.status,
-            statusText: emailResponse.statusText,
-            body: errorText,
-          });
-          emailError = `HTTP ${emailResponse.status}: ${emailResponse.statusText}`;
-        } else {
-          try {
-            const emailResult = await emailResponse.json();
-            console.log("[register-user] Email service response:", emailResult);
-
-            // Check if the response indicates success
-            if (emailResult.id) {
-              console.log("[register-user] Email sent successfully with ID:", emailResult.id);
-              emailSent = true;
-            } else if (emailResult.error) {
-              console.error("[register-user] Email service returned error:", emailResult.error);
-              emailError = emailResult.error;
-            } else {
-              // Unexpected response format, but no explicit error
-              console.log("[register-user] Email service response format unexpected:", emailResult);
-              emailSent = true; // Assume success if no error field
-            }
-          } catch (jsonError) {
-            console.error("[register-user] Failed to parse email response JSON:", jsonError);
-            emailError = "Invalid response from email service";
-          }
-        }
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Account created successfully. Please check your email to verify your account.",
+      }),
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       }
-    } catch (emailNetworkError: any) {
-      console.error("[register-user] Failed to call email service:", emailNetworkError);
-      emailError = emailNetworkError.message || "Network error calling email service";
-    }
-
-    // Even if email failed, user is created - return success with appropriate message
-    if (emailSent) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Account created successfully. Check your email for the verification link.",
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    } else {
-      // Email failed but user exists
-      console.error("[register-user] Email delivery failed:", emailError);
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Account created successfully. However, we encountered an issue sending the verification email.",
-          warning: `Email delivery issue: ${emailError || "Unknown error"}. Please use the 'Resend Email' option on the login page.`,
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
+    );
   } catch (error: any) {
     console.error("[register-user] Registration error:", error);
     console.error("[register-user] Error stack:", error.stack);
-    
-    // Return 200 with error details instead of 500 to prevent "non-2xx status code" errors
-    // The frontend will check the success field
+
     return new Response(
       JSON.stringify({
         success: false,
@@ -503,4 +274,3 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
-
