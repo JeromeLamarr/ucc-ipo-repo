@@ -59,6 +59,15 @@ serve(async (req) => {
       errors: [] as string[],
     };
 
+    // Helper function to format SLA duration and grace period
+    const formatSLADetails = (durationDays: number, graceDays: number): string => {
+      let details = `Duration: ${durationDays} day${durationDays !== 1 ? 's' : ''}`;
+      if (graceDays > 0) {
+        details += ` + ${graceDays} day${graceDays !== 1 ? 's' : ''} grace period`;
+      }
+      return details;
+    };
+
     // ==========================================
     // 2. PROCESS EACH OVERDUE STAGE
     // ==========================================
@@ -148,13 +157,31 @@ serve(async (req) => {
                   (1000 * 60 * 60 * 24)
               );
 
+              // Get SLA policy info for detailed notification
+              const slaDetails = {
+                duration_days: policyData?.duration_days || 7,
+                grace_days: policyData?.grace_days || 0,
+              };
+
+              // Format consequence message based on stage type
+              let consequence = '';
+              if (isExpired) {
+                consequence = isApplicantStage
+                  ? 'Your submission deadline has expired. Your record may be closed or marked as incomplete. Please contact support immediately.'
+                  : 'This deadline has expired. Please contact an administrator.';
+              } else {
+                consequence = isApplicantStage
+                  ? `After the grace period (${slaDetails.grace_days} day${slaDetails.grace_days !== 1 ? 's' : ''}), your submission may be closed or marked as incomplete.`
+                  : 'Please complete this review immediately. Overdue work may impact the overall submission timeline.';
+              }
+
               const notificationTitle = isExpired
-                ? `Action Required: Override Deadline Expired - ${stageInstance.ip_records?.title}`
+                ? `Action Required: Deadline Expired - ${stageInstance.ip_records?.title}`
                 : `Overdue: ${stage.replace(/_/g, " ")} - ${stageInstance.ip_records?.title}`;
 
               const notificationMessage = isExpired
-                ? `Your deadline for ${stage.replace(/_/g, " ")} expired ${daysOverdue} days ago. Please contact support.`
-                : `Your ${stage.replace(/_/g, " ")} task is ${daysOverdue} days overdue. Please complete it immediately.`;
+                ? `Your deadline for ${stage.replace(/_/g, " ")} (${formatSLADetails(slaDetails.duration_days, slaDetails.grace_days)}) expired ${daysOverdue} days ago.\n\n${consequence}`
+                : `Your ${stage.replace(/_/g, " ")} task is ${daysOverdue} days overdue.\n\nSLA Duration: ${formatSLADetails(slaDetails.duration_days, slaDetails.grace_days)}\n\nConsequence: ${consequence}`;
 
               // Create notification record
               const { error: notifError } = await supabase
@@ -169,6 +196,9 @@ serve(async (req) => {
                     stage,
                     days_overdue: daysOverdue,
                     is_expired: isExpired,
+                    due_date: (extendedUntil || dueAt).toISOString(),
+                    sla_duration_days: slaDetails.duration_days,
+                    sla_grace_days: slaDetails.grace_days,
                   },
                 });
 
@@ -193,6 +223,20 @@ serve(async (req) => {
                     title: notificationTitle,
                     message: notificationMessage,
                     submissionTitle: stageInstance.ip_records?.title,
+                    additionalInfo: {
+                      'Stage': stage.replace(/_/g, " "),
+                      'Status': isExpired ? 'EXPIRED' : 'OVERDUE',
+                      'Days Overdue': daysOverdue.toString(),
+                      'SLA Duration': `${slaDetails.duration_days} day${slaDetails.duration_days !== 1 ? 's' : ''}`,
+                      'Grace Period': `${slaDetails.grace_days} day${slaDetails.grace_days !== 1 ? 's' : ''}`,
+                      'Due Date': new Date(extendedUntil || dueAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }),
+                    },
                   }),
                 });
               } catch (emailError) {

@@ -29,16 +29,29 @@ export function ProcessTrackingWizard({
 }: ProcessTrackingWizardProps) {
   const [tracking, setTracking] = useState<any[]>([]);
   const [stageInstances, setStageInstances] = useState<any[]>([]);
+  const [slaPolicies, setSlaPolicies] = useState<any[]>([]);
   const [steps, setSteps] = useState<ProcessStep[]>([]);
 
   useEffect(() => {
     fetchTracking();
     fetchStageInstances();
+    fetchSLAPolicies();
   }, [ipRecordId]);
+
+  const fetchSLAPolicies = async () => {
+    const { data, error } = await supabase
+      .from('workflow_sla_policies')
+      .select('*')
+      .eq('is_active', true);
+
+    if (!error && data) {
+      setSlaPolicies(data);
+    }
+  };
 
   useEffect(() => {
     updateSteps();
-  }, [currentStatus, currentStage, tracking, stageInstances]);
+  }, [currentStatus, currentStage, tracking, stageInstances, slaPolicies]);
 
   const fetchTracking = async () => {
     const { data, error } = await supabase
@@ -77,7 +90,7 @@ export function ProcessTrackingWizard({
   /**
    * Calculate SLA status badge info for a stage
    */
-  const getSLAStatus = (stage: string): { status: 'on-track' | 'due-soon' | 'overdue' | 'expired', daysRemaining: number, dueDate: string } | null => {
+  const getSLAStatus = (stage: string): { status: 'on-track' | 'due-soon' | 'overdue' | 'expired', daysRemaining: number, dueDate: string, startDate?: string, durationDays?: number, graceDays?: number } | null => {
     // Find the latest stage instance for this stage
     const stageInstance = stageInstances
       .filter(si => si.stage === stage)
@@ -86,9 +99,13 @@ export function ProcessTrackingWizard({
 
     if (!stageInstance) return null;
 
+    // Get SLA policy for this stage
+    const policy = slaPolicies.find(p => p.stage === stage);
+
     const now = new Date();
     const dueAt = new Date(stageInstance.extended_until || stageInstance.due_at);
     const daysLeft = Math.ceil((dueAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const startAt = new Date(stageInstance.started_at);
     
     let status: 'on-track' | 'due-soon' | 'overdue' | 'expired'; 
     if (stageInstance.status === 'EXPIRED') {
@@ -105,6 +122,9 @@ export function ProcessTrackingWizard({
       status,
       daysRemaining: daysLeft,
       dueDate: dueAt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      startDate: startAt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      durationDays: policy?.duration_days,
+      graceDays: policy?.grace_days,
     };
   };
 
@@ -334,17 +354,47 @@ export function ProcessTrackingWizard({
               )}
 
               {step.status === 'current' && getSLAStatus(step.stage) && (
-                <div className="mt-2 rounded bg-blue-50 p-2 border border-blue-100">
-                  <div className="flex items-center gap-1 text-xs text-blue-700">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>
-                      Due: {getSLAStatus(step.stage)?.dueDate} 
-                      {getSLAStatus(step.stage)?.daysRemaining ? (
-                        <> • {getSLAStatus(step.stage)?.daysRemaining! > 0 
-                          ? `${getSLAStatus(step.stage)?.daysRemaining} days remaining` 
-                          : `${Math.abs(getSLAStatus(step.stage)?.daysRemaining!)} days overdue`}</> 
-                      ) : null}
-                    </span>
+                <div className="mt-3 space-y-2">
+                  <div className="rounded bg-blue-50 p-3 border border-blue-100">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-semibold text-blue-900">Deadline</span>
+                      </div>
+                      <span className="text-sm font-bold text-blue-900">
+                        {getSLAStatus(step.stage)?.dueDate}
+                      </span>
+                    </div>
+                    <div className="text-xs text-blue-700 space-y-1">
+                      {getSLAStatus(step.stage)?.daysRemaining! > 0 ? (
+                        <div>
+                          <strong>{getSLAStatus(step.stage)?.daysRemaining} day{getSLAStatus(step.stage)?.daysRemaining !== 1 ? 's' : ''}</strong> remaining
+                        </div>
+                      ) : (
+                        <div className="text-red-600 font-semibold">
+                          ⚠️ {Math.abs(getSLAStatus(step.stage)?.daysRemaining!)} day{Math.abs(getSLAStatus(step.stage)?.daysRemaining!) !== 1 ? 's' : ''} overdue
+                        </div>
+                      )}
+                      {getSLAStatus(step.stage)?.startDate && (
+                        <div>Started: {getSLAStatus(step.stage)?.startDate}</div>
+                      )}
+                      {getSLAStatus(step.stage)?.durationDays && (
+                        <div>
+                          Duration: {getSLAStatus(step.stage)?.durationDays} day{getSLAStatus(step.stage)?.durationDays !== 1 ? 's' : ''}
+                          {getSLAStatus(step.stage)?.graceDays ? ` + ${getSLAStatus(step.stage)?.graceDays} day${getSLAStatus(step.stage)?.graceDays !== 1 ? 's' : ''} grace period` : ''}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Show deadline info for completed stages that had SLA tracking */}
+              {step.status === 'completed' && getSLAStatus(step.stage) && (
+                <div className="mt-2 text-xs text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                    Completed {getSLAStatus(step.stage)?.daysRemaining! >= 0 ? 'on time' : 'after deadline'}
                   </div>
                 </div>
               )}

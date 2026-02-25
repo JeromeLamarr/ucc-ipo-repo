@@ -16,6 +16,7 @@ interface EmailRequest {
   submissionTitle?: string;
   submissionCategory?: string;
   applicantName?: string;
+  additionalInfo?: Record<string, string>;
 }
 
 function generateHtmlFromMessage(title: string, message: string, additionalInfo?: Record<string, string>): string {
@@ -90,7 +91,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: EmailRequest = await req.json();
-    const { to, subject, html, text, title, message, submissionTitle, submissionCategory, applicantName } = body;
+    const { to, subject, html, text, title, message, submissionTitle, submissionCategory, applicantName, additionalInfo } = body;
 
     console.log("Received email request:", {
       to,
@@ -120,11 +121,14 @@ Deno.serve(async (req: Request) => {
     let finalText = text;
 
     if (!finalHtml && message && title) {
-      const additionalInfo: Record<string, string> = {};
-      if (applicantName) additionalInfo['Applicant'] = applicantName;
-      if (submissionTitle) additionalInfo['Submission Title'] = submissionTitle;
-      if (submissionCategory) additionalInfo['Category'] = submissionCategory;
-      finalHtml = generateHtmlFromMessage(title, message, additionalInfo);
+      const info: Record<string, string> = additionalInfo || {};
+      // Fall back to building additionalInfo from legacy fields if not provided
+      if (!additionalInfo) {
+        if (applicantName) info['Applicant'] = applicantName;
+        if (submissionTitle) info['Submission Title'] = submissionTitle;
+        if (submissionCategory) info['Category'] = submissionCategory;
+      }
+      finalHtml = generateHtmlFromMessage(title, message, info);
       finalText = `${title}\n\n${message}`;
     }
 
