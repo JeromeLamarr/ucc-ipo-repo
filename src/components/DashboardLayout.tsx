@@ -18,7 +18,8 @@ import {
   PieChart,
   UserCheck,
   Archive,
-  Globe
+  Globe,
+  Clock
 } from 'lucide-react';
 import type { UserRole } from '../lib/database.types';
 
@@ -104,6 +105,12 @@ const navItems: NavItem[] = [
     label: 'Departments',
     path: '/dashboard/departments',
     icon: Settings,
+    roles: ['admin'],
+  },
+  {
+    label: 'SLA Policies',
+    path: '/dashboard/sla-policies',
+    icon: Clock,
     roles: ['admin'],
   },
   {
