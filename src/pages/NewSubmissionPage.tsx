@@ -78,6 +78,8 @@ export function NewSubmissionPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [supervisors, setSupervisors] = useState<User[]>([]);
+  const [supervisorsLoading, setSupervisorsLoading] = useState(true);
+  const [supervisorsError, setSupervisorsError] = useState('');
   const [departments, setDepartments] = useState<Department[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -146,16 +148,56 @@ export function NewSubmissionPage() {
 
   const fetchSupervisors = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name, department_id, departments(name)')
-        .eq('role', 'supervisor')
-        .order('full_name');
+      setSupervisorsLoading(true);
+      setSupervisorsError('');
+      console.log('[fetchSupervisors] Starting edge function call...');
 
-      if (error) throw error;
-      setSupervisors(data || []);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('[fetchSupervisors] No active session');
+        setSupervisorsError('Not authenticated');
+        setSupervisorsLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-supervisors`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      console.log('[fetchSupervisors] Edge function response:', {
+        status: response.status,
+        success: result.success,
+        dataLength: result.data?.length || 0,
+        error: result.error,
+        details: result.details,
+        data: result.data,
+      });
+
+      if (!response.ok) {
+        const errorMsg = result.error || `HTTP ${response.status}`;
+        setSupervisorsError(errorMsg);
+        console.error('[fetchSupervisors] Edge function error:', errorMsg, result.details);
+        setSupervisorsLoading(false);
+        return;
+      }
+
+      setSupervisors(result.data || []);
+      setSupervisorsError('');
     } catch (error) {
-      console.error('Error fetching supervisors:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error('[fetchSupervisors] Exception caught:', error);
+      setSupervisorsError(errorMsg);
+    } finally {
+      setSupervisorsLoading(false);
     }
   };
 
@@ -1131,17 +1173,32 @@ export function NewSubmissionPage() {
                 <p className="text-sm text-gray-500 mb-2">
                   Choose a supervisor to review your submission, or leave blank for direct evaluation
                 </p>
+                {supervisorsError && (
+                  <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-yellow-700">Unable to load supervisors: {supervisorsError}</p>
+                  </div>
+                )}
                 <select
                   value={formData.supervisorId}
                   onChange={(e) => setFormData({ ...formData, supervisorId: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  disabled={supervisorsLoading}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
                 >
-                  <option value="">No supervisor selected (Admin will assign)</option>
-                  {supervisors.map((supervisor: any) => (
-                    <option key={supervisor.id} value={supervisor.id}>
-                      {supervisor.full_name} - {supervisor.departments?.name || 'No department'}
-                    </option>
-                  ))}
+                  {supervisorsLoading ? (
+                    <option value="">Loading supervisors…</option>
+                  ) : supervisors.length === 0 ? (
+                    <option value="">No supervisors available</option>
+                  ) : (
+                    <>
+                      <option value="">No supervisor selected (Admin will assign)</option>
+                      {supervisors.map((supervisor: any) => (
+                        <option key={supervisor.id} value={supervisor.id}>
+                          {supervisor.full_name} — {supervisor.department?.name || 'No Department'}
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </select>
               </div>
             </div>
