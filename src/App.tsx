@@ -26,6 +26,7 @@ import { AddLegacyRecordPage } from '@pages/AddLegacyRecordPage';
 import { LegacyRecordDetailPage } from '@pages/LegacyRecordDetailPage';
 import { AssignmentManagementPage } from '@pages/AssignmentManagementPage';
 import { DepartmentManagementPage } from '@pages/DepartmentManagementPage';
+import { AdminSLAManagement } from '@pages/AdminSLAManagement';
 import { SettingsPage } from '@pages/SettingsPage';
 import { CertificateVerifyPage } from '@pages/CertificateVerifyPage';
 import { DisclosureVerifyPage } from '@pages/DisclosureVerifyPage';
@@ -75,6 +76,7 @@ function DashboardRouter() {
         <Route path="legacy-records/:id" element={<LegacyRecordDetailPage />} />
         <Route path="assignments" element={<AssignmentManagementPage />} />
         <Route path="departments" element={<DepartmentManagementPage />} />
+        <Route path="sla-policies" element={<AdminSLAManagement />} />
         <Route path="analytics" element={<AdminDashboard />} />
       </Routes>
     </DashboardLayout>

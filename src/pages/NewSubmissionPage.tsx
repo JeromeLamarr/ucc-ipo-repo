@@ -616,6 +616,44 @@ export function NewSubmissionPage() {
 
       if (ipError) throw ipError;
 
+      // ==========================================
+      // SLA TRACKING: Create initial stage instance
+      // ==========================================
+      try {
+        // Determine which stage to create based on initial status
+        let initialSlaStage: string | null = null;
+        let initialAssignedUserId: string | null = null;
+
+        if (initialStatus === 'waiting_supervisor' && formData.supervisorId) {
+          initialSlaStage = 'supervisor_review';
+          initialAssignedUserId = formData.supervisorId;
+        } else if (initialStatus === 'waiting_evaluation') {
+          // Will be handled below after evaluator assignment
+          initialSlaStage = 'evaluation';
+          // assignedUserId will be set after evaluator assignment
+        }
+
+        // Create stage instance if we have a stage
+        // Note: For waiting_evaluation, we'll create it after evaluator is assigned
+        if (initialSlaStage === 'supervisor_review' && initialAssignedUserId) {
+          const { data: stageData, error: stageError } = await supabase
+            .rpc('create_stage_instance', {
+              p_record_id: ipRecord.id,
+              p_stage: initialSlaStage,
+              p_assigned_user_id: initialAssignedUserId,
+            });
+
+          if (stageError) {
+            console.warn('Could not create initial SLA stage instance:', stageError);
+          } else {
+            console.log('Created initial SLA stage instance:', stageData);
+          }
+        }
+      } catch (slaError) {
+        // SLA tracking is non-critical; log but don't fail the submission
+        console.warn('SLA tracking error (non-critical):', slaError);
+      }
+
       // Upload all files with proper error handling and progress tracking
       const uploadedDocuments: Array<{ type: string; name: string }> = [];
       setUploading(true);
@@ -771,6 +809,26 @@ export function NewSubmissionPage() {
           status: 'waiting_evaluation',
           current_stage: 'Waiting for Evaluation',
         }).eq('id', ipRecord.id);
+
+        // ==========================================
+        // SLA TRACKING: Create evaluation stage instance for auto-assigned evaluator
+        // ==========================================
+        try {
+          const { data: evalStageData, error: evalStageError } = await supabase
+            .rpc('create_stage_instance', {
+              p_record_id: ipRecord.id,
+              p_stage: 'evaluation',
+              p_assigned_user_id: categoryEvaluator.id,
+            });
+
+          if (evalStageError) {
+            console.warn('Could not create evaluation SLA stage instance:', evalStageError);
+          } else {
+            console.log('Created evaluation SLA stage instance:', evalStageData);
+          }
+        } catch (slaError) {
+          console.warn('SLA tracking error (non-critical):', slaError);
+        }
 
         await supabase.from('notifications').insert({
           user_id: categoryEvaluator.id,

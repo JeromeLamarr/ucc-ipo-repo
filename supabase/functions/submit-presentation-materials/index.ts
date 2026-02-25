@@ -66,6 +66,42 @@ Deno.serve(async (req: Request) => {
       },
     });
 
+    // ==========================================
+    // SLA TRACKING: Close materials_requested and create certificate_issued
+    // ==========================================
+    try {
+      // Close the materials_requested stage instance
+      const { data: closedStageData, error: closedStageError } = await supabase
+        .rpc('close_stage_instance', {
+          p_record_id: ip_record_id,
+          p_close_status: 'COMPLETED',
+        });
+
+      if (closedStageError) {
+        console.warn('Could not close materials_requested stage instance:', closedStageError);
+      } else {
+        console.log('Closed materials_requested stage instance:', closedStageData);
+      }
+
+      // Create certificate_issued stage instance
+      // assigned_user_id can be admin/system if available, otherwise NULL is ok
+      const { data: certStageData, error: certStageError } = await supabase
+        .rpc('create_stage_instance', {
+          p_record_id: ip_record_id,
+          p_stage: 'certificate_issued',
+          p_assigned_user_id: null, // Admin/system will handle certificate generation
+        });
+
+      if (certStageError) {
+        console.warn('Could not create certificate_issued stage instance:', certStageError);
+      } else {
+        console.log('Created certificate_issued stage instance:', certStageData);
+      }
+    } catch (slaError) {
+      // SLA tracking is non-critical; log but don't fail the submission
+      console.warn('SLA tracking error (non-critical):', slaError);
+    }
+
     // Send notification email to applicant
     if (ipRecord.applicant?.email && resendApiKey) {
       try {

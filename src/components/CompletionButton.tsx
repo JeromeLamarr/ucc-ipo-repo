@@ -92,6 +92,26 @@ export function CompletionButton({
         throw new Error('Failed to update record status');
       }
 
+      // ==========================================
+      // SLA TRACKING: Close certificate_issued stage as workflow is completed
+      // ==========================================
+      try {
+        const { data: closedStageData, error: closedStageError } = await supabase
+          .rpc('close_stage_instance', {
+            p_record_id: recordId,
+            p_close_status: 'COMPLETED',
+          });
+
+        if (closedStageError) {
+          console.warn('Could not close certificate_issued stage instance:', closedStageError);
+        } else {
+          console.log('Closed certificate_issued stage instance:', closedStageData);
+        }
+      } catch (slaError) {
+        // SLA tracking is non-critical; log but don't fail the completion
+        console.warn('SLA tracking error (non-critical):', slaError);
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
 
       // Send status notification email

@@ -604,6 +604,54 @@ export function SubmissionDetailPage() {
 
       if (updateError) throw updateError;
 
+      // ==========================================
+      // SLA TRACKING: Close revision_requested and create next stage
+      // ==========================================
+      try {
+        // Close the revision_requested stage instance (either evaluator_revision or supervisor_revision)
+        const { data: closedStageData, error: closedStageError } = await supabase
+          .rpc('close_stage_instance', {
+            p_record_id: id,
+            p_close_status: 'COMPLETED',
+          });
+
+        if (closedStageError) {
+          console.warn('Could not close revision stage instance:', closedStageError);
+        } else {
+          console.log('Closed revision stage instance:', closedStageData);
+        }
+
+        // Create next stage instance based on where it's going
+        let nextStage: string | null = null;
+        let nextAssignedUserId: string | null = null;
+
+        if (newStatus === 'waiting_supervisor' && record.supervisor_id) {
+          nextStage = 'supervisor_review';
+          nextAssignedUserId = record.supervisor_id;
+        } else if (newStatus === 'waiting_evaluation' && record.evaluator_id) {
+          nextStage = 'evaluation';
+          nextAssignedUserId = record.evaluator_id;
+        }
+
+        if (nextStage && nextAssignedUserId) {
+          const { data: newStageData, error: newStageError } = await supabase
+            .rpc('create_stage_instance', {
+              p_record_id: id,
+              p_stage: nextStage,
+              p_assigned_user_id: nextAssignedUserId,
+            });
+
+          if (newStageError) {
+            console.warn(`Could not create ${nextStage} stage instance:`, newStageError);
+          } else {
+            console.log(`Created ${nextStage} stage instance:`, newStageData);
+          }
+        }
+      } catch (slaError) {
+        // SLA tracking is non-critical; log but don't fail the workflow
+        console.warn('SLA tracking error (non-critical):', slaError);
+      }
+
       // Handle document deletions using edge function
       if (editData.documentsToDelete && editData.documentsToDelete.length > 0) {
         console.log(`[ResubmitDeletion] Starting deletion of ${editData.documentsToDelete.length} documents`);
