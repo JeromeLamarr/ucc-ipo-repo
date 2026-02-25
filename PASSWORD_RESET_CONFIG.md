@@ -1,100 +1,161 @@
-# Password Reset Flow - Supabase Configuration
+# Password Reset Flow - Custom Implementation
 
 ## Overview
 
-The password reset feature uses Supabase's built-in password recovery functionality (`resetPasswordForEmail` and `updateUser`). This document outlines the required Supabase settings to make the forgot password and reset password flows work correctly.
+The password reset feature uses custom Supabase Edge Functions with email tokens to provide a secure, beautiful password reset flow. Unlike Supabase's built-in recovery, this implementation:
+- Uses secure random tokens (instead of built-in auth recovery links)
+- Sends beautifully designed HTML emails (matching verification email style)
+- Supports HashRouter URLs (`/#/reset-password?token=...`)
+- Provides better UX and security controls
 
 ## Required Supabase Settings
 
-### 1. Site URL
-The Site URL is the base URL of your application. Supabase uses this to construct the password reset email links.
+### 1. Database Migration
+The migration `20260226000000_add_password_reset_tokens.sql` creates the `password_reset_tokens` table. This must be applied to your Supabase database.
 
-**For Production:**
-- Site URL: `https://ucc-ipo.com`
+**Table structure:**
+- `id` (uuid, primary key)
+- `user_id` (uuid, references auth.users)
+- `token` (text, unique random 64-char token)
+- `email` (text, for reference)
+- `expires_at` (timestamptz, 1 hour expiration)
+- `used` (boolean, tracks if token has been redeemed)
+- `created_at` (timestamptz)
 
-**For Local Development:**
-- Note: Local development typically uses the default Supabase settings; no special configuration needed for localhost during development.
+### 2. Edge Functions
+Two new edge functions are required:
+- `send-password-reset-email` - Generates token and sends email
+- `reset-password-with-token` - Validates token and updates password
 
-### 2. Redirect URLs
+These are deployed automatically to your Supabase project at:
+- `{SUPABASE_URL}/functions/v1/send-password-reset-email`
+- `{SUPABASE_URL}/functions/v1/reset-password-with-token`
 
-Supabase needs to whitelist the redirect URLs that password reset emails can direct users to. Since the app uses HashRouter (`/#/` routes), the redirect URLs must include the hash.
+### 3. Environment Variables for Edge Functions
+Ensure these Supabase project settings are configured:
+- `SUPABASE_URL` - Your project URL (auto-configured)
+- `SUPABASE_SERVICE_ROLE_KEY` - Service role key (auto-configured)
+- Email service (Resend or Supabase built-in) configured under **Authentication > Email**
 
-Add these redirect URLs in your Supabase dashboard under **Authentication > Settings > Redirect URLs**:
-
-#### Production Redirect URL
-```
-https://ucc-ipo.com/#/reset-password
-```
-
-#### Local Development Redirect URL
-```
-http://localhost:3000/#/reset-password
-```
-
-**Important:** The `#/` is required because the app uses React Router with HashRouter for client-side routing.
-
-### 3. Email Configuration
-
-Supabase sends password reset emails from your configured email service. Two options are supported:
-
-#### Option A: Supabase Built-in Email (Recommended)
-- No additional configuration required
-- Emails are sent from your Supabase project's default email address
-- Uses SMTP configured by Supabase
-
-#### Option B: Custom Email (Resend)
-If you've configured Resend as your email provider:
-- Set `RESEND_API_KEY` in environment variables (if used for other notifications)
-- Note: Password reset emails use Supabase's auth service, not Resend
+No additional configuration beyond standard Supabase setup is required.
 
 ## How the Password Reset Flow Works
 
-1. **User visits /#/forgot-password**
-   - Enters their email address
-   - Frontend calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/#/reset-password` })`
-   - User always sees: "If that email exists, a reset link will be sent shortly" (prevents email enumeration)
+### Step 1: User requests password reset
+1. User visits `/#/forgot-password`
+2. Enters their email address
+3. Frontend calls `POST /functions/v1/send-password-reset-email` via edge function
 
-2. **Email is sent**
-   - Supabase sends an email with a recovery link
-   - Link includes a session token and redirects to `/#/reset-password`
+### Step 2: Backend generates token and sends email
+1. Edge function receives email
+2. Looks up user in Supabase auth
+3. **Generates secure random 64-character token**
+4. Stores token in `password_reset_tokens` table with 1-hour expiration
+5. Constructs beautiful HTML email with reset link: `https://ucc-ipo.com/#/reset-password?token=xxxxx`
+6. Sends email via configured email service (Resend or Supabase)
+7. **Returns success regardless of whether user exists** (prevents email enumeration)
 
-3. **User clicks email link**
-   - Browser redirects to `/#/reset-password` with session token in URL fragment
-   - Supabase automatically detects and validates the session (via `detectSessionInUrl: true` in client config)
-   - Frontend checks `supabase.auth.getSession()` and validates the user
+### Step 3: User receives and clicks email link
+1. Email arrives with "Reset Your Password" from UCC IP Office
+2. Email includes:
+   - User-friendly explanation
+   - Large blue button: "Reset My Password"
+   - Fallback link for copy-paste
+   - Security warnings (never share link, 1-hour expiration)
+3. User clicks button, redirected to `/#/reset-password?token=xxxxx`
 
-4. **User sets new password**
-   - Enters new password (minimum 8 characters) and confirms it
-   - Frontend calls `supabase.auth.updateUser({ password: newPassword })`
-   - On success, redirects to `/#/login`
+### Step 4: Reset password page validates and updates
+1. ResetPasswordPage extracts token from URL query params
+2. Displays password form (password + confirm password)
+3. User enters new password (minimum 8 characters)
+4. On submit, frontend calls `POST /functions/v1/reset-password-with-token` with:
+   - `token`: from URL params
+   - `password`: new password
+5. Backend validates:
+   - Token exists in database
+   - Token is not expired
+   - Token has not been used before
+6. **Updates user's Supabase auth password** via admin API
+7. Marks token as `used = true` (prevents reuse)
+8. Returns success
 
-## Email Template (Default Supabase)
+### Step 5: User redirected to login
+1. ResetPasswordPage shows success message
+2. Auto-redirects to `/#/login` after 2 seconds
+3. User can now log in with new password
 
-The default Supabase password reset email includes:
-- Subject: "Reset your password"
-- A clickable button linking to your redirect URL with session token
-- Plain text fallback
+## Email Template Design
 
-To customize the email template, go to **Authentication > Email Templates** in your Supabase dashboard.
+The password reset email uses the same professional design as the verification email:
+
+**Visual Design:**
+- Header: Gradient background (purple to pink) with "Reset Your Password" title
+- Logo: UCC Intellectual Property Management System
+- Main Content: Personalized greeting with explanation
+- CTA Button: Large gradient button "Reset My Password"
+- Fallback: Copy-paste link for users with image blocking
+- Warning: Yellow alert box: "⏰ This link will expire in 1 hour"
+- Footer: Security tips and contact info
+
+**Email Content:**
+```
+Subject: Reset Your Password - UCC IP Management
+
+Hello [User Name],
+
+Password Reset Request
+
+We received a request to reset the password for your UCC IP Management account.
+
+Click the button below to reset your password:
+[BUTTON: Reset My Password]
+
+Or copy this link:
+https://ucc-ipo.com/#/reset-password?token=xxxxx
+
+⏰ This link will expire in 1 hour
+For security reasons, you'll need to complete the password reset within 1 hour.
+
+If you didn't request a password reset, please ignore this email or contact support if you're concerned about your account's security.
+
+---
+For Your Security:
+• Never share this link with anyone
+• UCC Staff will never ask for your password
+• Always verify the sender's email address
+
+University Intellectual Property Management System
+© 2026 University of Caloocan City
+```
 
 ## Testing
 
 ### Local Testing
 1. Ensure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in `.env`
-2. Run the app: `npm run dev`
-3. Navigate to `http://localhost:3000/#/login`
-4. Click "Forgot your password?"
-5. Enter a test email
-6. Check your actual email (you'll need an email account registered in your Supabase project)
-7. Click the reset link in the email
-8. Verify you're redirected to `http://localhost:3000/#/reset-password`
-9. Set a new password and verify you can log in
+2. Ensure migration has been applied to your Supabase database
+3. Ensure edge functions are deployed (`send-password-reset-email` and `reset-password-with-token`)
+4. Run the app: `npm run dev`
+5. Navigate to `http://localhost:3000/#/login`
+6. Click "Forgot your password?"
+7. Enter a test email that exists in your Supabase auth
+8. Click "Send Reset Link"
+9. Verify generic success message appears
+10. Check your email inbox (watch for spam folder)
+11. Click the "Reset My Password" button in the email
+12. Verify you're redirected to `http://localhost:3000/#/reset-password?token=xxxxx`
+13. Set a new password and submit
+14. Verify success message and auto-redirect to login
+15. Sign in with new password to confirm success
 
 ### Production Testing
-1. Verify `https://ucc-ipo.com/#/reset-password` is in your Supabase redirect URLs (with the hash)
-2. Navigate to `https://ucc-ipo.com/#/login`
-3. Test with real email addresses in production
-4. Verify email link redirects to `https://ucc-ipo.com/#/reset-password`
+1. Verify migration is applied to production database
+2. Verify edge functions are deployed to production
+3. Navigate to `https://ucc-ipo.com/#/login`
+4. Click "Forgot your password?"
+5. Test with real email address
+6. Verify email arrives with proper styling
+7. Click reset link and complete password reset
+8. Confirm new password works on login
 
 ## Security Notes
 
@@ -108,35 +169,110 @@ To customize the email template, go to **Authentication > Email Templates** in y
 
 ### Email not received
 - Check email spam/junk folder
-- Verify the email address exists in your Supabase users table
-- Check Supabase project logs for email sending errors
+- Verify the email address exists in your Supabase auth users (check `auth.users` table)
+- Check Supabase Edge Function logs: go to **Functions > send-password-reset-email > Logs**
+- Verify email service is configured in **Authentication > Email** settings
+- Check if token was created: query `password_reset_tokens` table for the email
 
-### "Invalid or expired reset link" error
-- Reset links typically expire after 1 hour (configurable in Supabase)
-- User should request a new reset link
+### "Invalid or expired reset token" error
+- Link may have expired (tokens valid for 1 hour only)
+- User may have tried to use the same link twice
+- Token may have been corrupted in email link
+- Request a new reset link from the login page
 
-### Password update fails
-- Ensure password is at least 8 characters
-- Check browser console for specific error messages
-- Verify Supabase project is running and accessible
+### Reset email has poor formatting
+- Check that your email client supports HTML (use desktop/webmail if mobile doesn't render)
+- Verify the `send-password-reset-email` function is running correctly (check Function logs)
+- The email is sent through your configured email service (Resend or Supabase) - verify that service is working
+
+### User can't access reset password page
+- Check the URL query param: should be `/#/reset-password?token=xxxxx`
+- Verify token is at least 32 characters (should be 64)
+- Ensure HashRouter is being used (URLs should have `/#/`)
+- Check browser console for JavaScript errors
+
+### Password update fails with "Unauthorized"
+- The edge function may be missing or disabled
+- Check Function logs for `reset-password-with-token`
+- Verify the token is valid and exists in the `password_reset_tokens` table
+- Ensure the token hasn't been marked as `used = true` already
+
+### Email looks different than expected
+- Email design may vary by email client (Gmail, Outlook, Apple Mail render differently)
+- Some email clients strip certain CSS styles for security
+- The fallback text link should always work even if styling is broken
+
+### Token generation takes too long
+- Edge Functions may be cold-starting
+- Subsequent requests will be faster as the function warms up
+- Check Function logs for any errors or timeouts
+
+### Multiple reset tokens for same user
+- This is expected behavior - each reset request generates a new token
+- Old tokens can still be used as long as they haven't expired
+- Only one token can successfully reset (once used, it can't be reused)
 
 ## Environment Variables
 
-These are already configured in `.env` but needed for the password reset flow:
+The app uses standard Supabase environment variables already configured in `.env`:
 
 ```
-VITE_SUPABASE_URL=https://mqfftubqlwiemtxpagps.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-No special environment variables are needed for the password reset feature beyond these standard Supabase credentials.
+The edge functions automatically use:
+- `SUPABASE_URL` (auto-configured in edge function runtime)
+- `SUPABASE_SERVICE_ROLE_KEY` (auto-configured in edge function runtime)
+
+No special environment variables needed for password reset beyond the standard Supabase setup.
+
+## Database Deployment
+
+The migration file must be applied to your Supabase database:
+```
+supabase/migrations/20260226000000_add_password_reset_tokens.sql
+```
+
+This migration:
+- Creates the `password_reset_tokens` table
+- Sets up appropriate indexes for performance
+- Enables RLS (Row Level Security)
+- Creates helper function for cleanup (optional)
+
+Apply via Supabase CLI:
+```bash
+supabase db push
+```
+
+## Edge Functions Deployment
+
+Both edge functions must be deployed:
+1. `supabase/functions/send-password-reset-email/index.ts`
+2. `supabase/functions/reset-password-with-token/index.ts`
+
+Deploy via Supabase CLI:
+```bash
+supabase functions deploy send-password-reset-email
+supabase functions deploy reset-password-with-token
+```
+
+Or if using Bolt deployment: push to main branch, Bolt will deploy automatically.
 
 ## Related Files
 
-- Frontend Pages:
-  - `src/pages/ForgotPasswordPage.tsx` - Forget password form
-  - `src/pages/ResetPasswordPage.tsx` - Password reset form
-- Routing:
-  - `src/App.tsx` - Routes configured for `/forgot-password` and `/reset-password`
-- Supabase Client:
-  - `src/lib/supabase.ts` - Supabase client initialization
+### Frontend Pages
+- `src/pages/ForgotPasswordPage.tsx` - Forgot password form (calls edge function)
+- `src/pages/ResetPasswordPage.tsx` - Reset password form (uses token from URL)
+- `src/App.tsx` - Routes for `/forgot-password` and `/reset-password`
+
+### Backend / Edge Functions
+- `supabase/functions/send-password-reset-email/index.ts` - Generates token and sends email
+- `supabase/functions/reset-password-with-token/index.ts` - Validates token and updates password
+
+### Database
+- `supabase/migrations/20260226000000_add_password_reset_tokens.sql` - Password reset tokens table
+- Table: `password_reset_tokens` - Stores reset tokens with expiration
+
+### Supabase Client
+- `src/lib/supabase.ts` - Supabase client initialization (unchanged for password reset)

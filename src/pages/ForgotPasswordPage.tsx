@@ -1,7 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, AlertCircle, CheckCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { PublicNavigation } from '../components/PublicNavigation';
 
 export function ForgotPasswordPage() {
@@ -17,19 +16,28 @@ export function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      // Always show success message regardless of whether email exists (security)
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/#/reset-password`,
-      });
+      // Call the custom edge function that handles email sending with custom template
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/send-password-reset-email`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        }
+      );
 
-      // We don't return different messages based on whether it succeeded or failed
+      const result = await response.json();
+
+      // Always show success message (edge function returns success even if email doesn't exist)
       // This prevents email enumeration attacks
       setEmail('');
       setSuccess(true);
 
-      if (error) {
-        // Log for debugging but still show generic message
-        console.warn('Password reset error:', error.message);
+      if (!result.success) {
+        console.warn('Password reset issue:', result.error);
       }
 
       // Redirect after a delay so user can see the success message

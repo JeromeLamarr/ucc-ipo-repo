@@ -1,7 +1,6 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, AlertCircle, CheckCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { PublicNavigation } from '../components/PublicNavigation';
 
 export function ResetPasswordPage() {
@@ -10,32 +9,38 @@ export function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isValidSession, setIsValidSession] = useState(false);
-  const [sessionChecking, setSessionChecking] = useState(true);
+  const [isValidToken, setIsValidToken] = useState(false);
+  const [tokenChecking, setTokenChecking] = useState(true);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
 
-  // Check if user has a valid session from the password reset email link
+  // Check if we have a valid token from the URL
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          setIsValidSession(true);
-        } else {
-          setError('Invalid or expired reset link. Please request a new one.');
-          setIsValidSession(false);
-        }
-      } catch (err) {
-        console.error('Error checking session:', err);
-        setError('Error validating your session. Please try again.');
-        setIsValidSession(false);
-      } finally {
-        setSessionChecking(false);
+    const checkToken = async () => {
+      if (!token) {
+        setError('No reset token provided. Please request a new password reset link.');
+        setIsValidToken(false);
+        setTokenChecking(false);
+        return;
       }
+
+      // Token format validation (basic check)
+      if (token.length < 32) {
+        setError('Invalid reset token format.');
+        setIsValidToken(false);
+        setTokenChecking(false);
+        return;
+      }
+
+      // The token will be fully validated when the user tries to reset
+      // For now, just confirm we have a token
+      setIsValidToken(true);
+      setTokenChecking(false);
     };
 
-    checkSession();
-  }, []);
+    checkToken();
+  }, [token]);
 
   const validatePassword = (): boolean => {
     setError('');
@@ -68,12 +73,26 @@ export function ResetPasswordPage() {
     setLoading(true);
 
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password,
-      });
+      // Call the custom edge function
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/reset-password-with-token`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            token,
+            password,
+          }),
+        }
+      );
 
-      if (updateError) {
-        setError(updateError.message);
+      const result = await response.json();
+
+      if (!result.success) {
+        setError(result.error || 'Failed to reset password');
         return;
       }
 
@@ -94,7 +113,7 @@ export function ResetPasswordPage() {
     }
   };
 
-  if (sessionChecking) {
+  if (tokenChecking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
         <PublicNavigation />
@@ -107,7 +126,7 @@ export function ResetPasswordPage() {
     );
   }
 
-  if (!isValidSession) {
+  if (!isValidToken) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
         <PublicNavigation />
@@ -123,7 +142,7 @@ export function ResetPasswordPage() {
                   {error || 'This password reset link is no longer valid or has expired.'}
                 </p>
                 <a
-                  href="/forgot-password"
+                  href="/#/forgot-password"
                   className="inline-block text-center bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-medium text-sm"
                 >
                   Request a new reset link
