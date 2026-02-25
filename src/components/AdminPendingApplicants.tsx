@@ -48,36 +48,55 @@ export function AdminPendingApplicants() {
   const fetchPendingApplicants = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('users')
-        .select(`
-          id,
-          email,
-          full_name,
-          department_id,
-          created_at,
-          departments(name)
-        `)
-        .eq('role', 'applicant')
-        .eq('is_approved', false)
-        .is('rejected_at', null)
-        .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
 
-      const applicants: PendingApplicant[] = (data || []).map((user: any) => ({
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        department_id: user.department_id,
-        created_at: user.created_at,
-        department_name: user.departments?.name || 'N/A',
-      }));
+      if (!session) {
+        console.error('[AdminPendingApplicants] No session found');
+        throw new Error('Authentication required');
+      }
 
-      setPendingApplicants(applicants);
-    } catch (error) {
-      console.error('Error fetching pending applicants:', error);
-      setMessage({ type: 'error', text: 'Failed to load pending applicants' });
+      console.log('[AdminPendingApplicants] Fetching pending applicants via edge function...');
+      console.log('[AdminPendingApplicants] User:', session.user.email, '| Role:', profile?.role);
+
+      // Call edge function with SERVICE ROLE access
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-pending-applicants`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      console.log('[AdminPendingApplicants] Edge function response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[AdminPendingApplicants] Edge function error:', {
+          status: response.status,
+          error: errorData,
+        });
+        throw new Error(errorData.error || errorData.message || 'Failed to fetch pending applicants');
+      }
+
+      const result = await response.json();
+      console.log('[AdminPendingApplicants] Success! Found:', result.count, 'pending applicants');
+      console.log('[AdminPendingApplicants] Applicants:', result.applicants);
+
+      setPendingApplicants(result.applicants || []);
+    } catch (error: any) {
+      console.error('[AdminPendingApplicants] ERROR:', {
+        message: error?.message,
+        stack: error?.stack,
+      });
+      setMessage({
+        type: 'error',
+        text: `Failed to load pending applicants: ${error?.message || 'Unknown error'}`
+      });
     } finally {
       setLoading(false);
     }
