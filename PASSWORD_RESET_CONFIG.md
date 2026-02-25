@@ -17,19 +17,21 @@ The Site URL is the base URL of your application. Supabase uses this to construc
 
 ### 2. Redirect URLs
 
-Supabase needs to whitelist the redirect URLs that password reset emails can direct users to. The email links will redirect to `/reset-password`.
+Supabase needs to whitelist the redirect URLs that password reset emails can direct users to. Since the app uses HashRouter (`/#/` routes), the redirect URLs must include the hash.
 
 Add these redirect URLs in your Supabase dashboard under **Authentication > Settings > Redirect URLs**:
 
 #### Production Redirect URL
 ```
-https://ucc-ipo.com/reset-password
+https://ucc-ipo.com/#/reset-password
 ```
 
 #### Local Development Redirect URL
 ```
-http://localhost:3000/reset-password
+http://localhost:3000/#/reset-password
 ```
+
+**Important:** The `#/` is required because the app uses React Router with HashRouter for client-side routing.
 
 ### 3. Email Configuration
 
@@ -47,24 +49,24 @@ If you've configured Resend as your email provider:
 
 ## How the Password Reset Flow Works
 
-1. **User visits /forgot-password**
+1. **User visits /#/forgot-password**
    - Enters their email address
-   - Frontend calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` })`
+   - Frontend calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/#/reset-password` })`
    - User always sees: "If that email exists, a reset link will be sent shortly" (prevents email enumeration)
 
 2. **Email is sent**
    - Supabase sends an email with a recovery link
-   - Link includes a session token and redirects to `/reset-password`
+   - Link includes a session token and redirects to `/#/reset-password`
 
 3. **User clicks email link**
-   - Browser redirects to `/reset-password` with session in URL
-   - Supabase automatically detects and validates the session
+   - Browser redirects to `/#/reset-password` with session token in URL fragment
+   - Supabase automatically detects and validates the session (via `detectSessionInUrl: true` in client config)
    - Frontend checks `supabase.auth.getSession()` and validates the user
 
 4. **User sets new password**
    - Enters new password (minimum 8 characters) and confirms it
    - Frontend calls `supabase.auth.updateUser({ password: newPassword })`
-   - On success, redirects to `/login`
+   - On success, redirects to `/#/login`
 
 ## Email Template (Default Supabase)
 
@@ -80,16 +82,19 @@ To customize the email template, go to **Authentication > Email Templates** in y
 ### Local Testing
 1. Ensure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set in `.env`
 2. Run the app: `npm run dev`
-3. Navigate to `http://localhost:3000/login`
+3. Navigate to `http://localhost:3000/#/login`
 4. Click "Forgot your password?"
 5. Enter a test email
 6. Check your actual email (you'll need an email account registered in your Supabase project)
 7. Click the reset link in the email
-8. Set a new password and verify you can log in
+8. Verify you're redirected to `http://localhost:3000/#/reset-password`
+9. Set a new password and verify you can log in
 
 ### Production Testing
-1. Verify `https://ucc-ipo.com/reset-password` is in your Supabase redirect URLs
-2. Test with real email addresses in production
+1. Verify `https://ucc-ipo.com/#/reset-password` is in your Supabase redirect URLs (with the hash)
+2. Navigate to `https://ucc-ipo.com/#/login`
+3. Test with real email addresses in production
+4. Verify email link redirects to `https://ucc-ipo.com/#/reset-password`
 
 ## Security Notes
 

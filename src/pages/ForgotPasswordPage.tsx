@@ -19,7 +19,7 @@ export function ForgotPasswordPage() {
     try {
       // Always show success message regardless of whether email exists (security)
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/#/reset-password`,
       });
 
       // We don't return different messages based on whether it succeeded or failed
