@@ -142,6 +142,26 @@ export function AssignmentManagementPage() {
 
         if (assignError && !assignError.message.includes('duplicate')) throw assignError;
 
+        // ==========================================
+        // SLA TRACKING: Create supervisor_review stage instance
+        // ==========================================
+        try {
+          const { data: stageData, error: stageError } = await supabase
+            .rpc('create_stage_instance', {
+              p_record_id: selectedRecord.id,
+              p_stage: 'supervisor_review',
+              p_assigned_user_id: assignmentData.supervisorId,
+            });
+
+          if (stageError) {
+            console.warn('Could not create supervisor_review stage instance:', stageError);
+          } else {
+            console.log('Created supervisor_review stage instance:', stageData);
+          }
+        } catch (slaError) {
+          console.warn('SLA tracking error (non-critical):', slaError);
+        }
+
         await supabase.from('notifications').insert({
           user_id: assignmentData.supervisorId,
           type: 'assignment',

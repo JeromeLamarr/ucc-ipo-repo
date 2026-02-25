@@ -218,6 +218,26 @@ export function MaterialsSubmissionForm({
         throw new Error(`Failed to save materials: ${updateError.message}`);
       }
 
+      // ==========================================
+      // SLA TRACKING: Close materials_requested stage
+      // ==========================================
+      try {
+        const { data: closedStageData, error: closedStageError } = await supabase
+          .rpc('close_stage_instance', {
+            p_record_id: ipRecordId,
+            p_close_status: 'COMPLETED',
+          });
+
+        if (closedStageError) {
+          console.warn('Could not close materials_requested stage instance:', closedStageError);
+        } else {
+          console.log('Closed materials_requested stage instance:', closedStageData);
+        }
+      } catch (slaError) {
+        // SLA tracking is non-critical; log but don't fail the submission
+        console.warn('SLA tracking error (non-critical):', slaError);
+      }
+
       console.log('Materials submitted successfully');
       setSubmitSuccess(true);
       await fetchMaterialsStatus();

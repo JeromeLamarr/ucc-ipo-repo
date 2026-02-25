@@ -252,6 +252,54 @@ export function SubmissionDetailPage() {
 
       if (updateError) throw updateError;
 
+      // ==========================================
+      // SLA TRACKING: Close revision stage and create next stage
+      // ==========================================
+      try {
+        // Close the revision_requested stage instance (applicant was revising)
+        const { data: closedStageData, error: closedStageError } = await supabase
+          .rpc('close_stage_instance', {
+            p_record_id: record.id,
+            p_close_status: 'COMPLETED',
+          });
+
+        if (closedStageError) {
+          console.warn('Could not close revision_requested stage instance:', closedStageError);
+        } else {
+          console.log('Closed revision_requested stage instance:', closedStageData);
+        }
+
+        // Create next stage based on where revision goes
+        let nextStage: string;
+        let nextAssignedUserId: string | null = null;
+
+        if (record.status === 'supervisor_revision') {
+          nextStage = 'supervisor_review';
+          nextAssignedUserId = record.supervisor_id;
+        } else if (record.status === 'evaluator_revision') {
+          nextStage = 'evaluation';
+          nextAssignedUserId = record.evaluator_id;
+        }
+
+        if (nextStage && nextAssignedUserId) {
+          const { data: newStageData, error: newStageError } = await supabase
+            .rpc('create_stage_instance', {
+              p_record_id: record.id,
+              p_stage: nextStage,
+              p_assigned_user_id: nextAssignedUserId,
+            });
+
+          if (newStageError) {
+            console.warn(`Could not create ${nextStage} stage instance:`, newStageError);
+          } else {
+            console.log(`Created ${nextStage} stage instance:`, newStageData);
+          }
+        }
+      } catch (slaError) {
+        // SLA tracking is non-critical; log but don't fail the resubmission
+        console.warn('SLA tracking error (non-critical):', slaError);
+      }
+
       const notifyUserId = record.status === 'supervisor_revision'
         ? record.supervisor_id
         : record.status === 'evaluator_revision'

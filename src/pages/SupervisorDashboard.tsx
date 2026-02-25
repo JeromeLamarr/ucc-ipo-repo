@@ -220,6 +220,55 @@ export function SupervisorDashboard() {
 
       console.log('Successfully updated record:', updateData);
 
+      // ==========================================
+      // SLA TRACKING: Close current supervisor_review stage and create next stage
+      // ==========================================
+      try {
+        // Close the supervisor_review stage instance
+        const { data: closedStageData, error: closedStageError } = await supabase
+          .rpc('close_stage_instance', {
+            p_record_id: selectedRecord.id,
+            p_close_status: 'COMPLETED',
+          });
+
+        if (closedStageError) {
+          console.warn('Could not close supervisor_review stage instance:', closedStageError);
+        } else {
+          console.log('Closed supervisor_review stage instance:', closedStageData);
+        }
+
+        // Create next stage instance based on action
+        let nextStage: string | null = null;
+        let nextAssignedUserId: string | null = null;
+
+        if (action === 'approve') {
+          nextStage = 'evaluation';
+          nextAssignedUserId = evaluatorId; // The evaluator we found above
+        } else if (action === 'revision') {
+          nextStage = 'revision_requested';
+          nextAssignedUserId = selectedRecord.applicant_id; // Applicant must revise
+        }
+        // For reject, no next stage - workflow ends
+
+        if (nextStage) {
+          const { data: newStageData, error: newStageError } = await supabase
+            .rpc('create_stage_instance', {
+              p_record_id: selectedRecord.id,
+              p_stage: nextStage,
+              p_assigned_user_id: nextAssignedUserId,
+            });
+
+          if (newStageError) {
+            console.warn(`Could not create ${nextStage} stage instance:`, newStageError);
+          } else {
+            console.log(`Created ${nextStage} stage instance:`, newStageData);
+          }
+        }
+      } catch (slaError) {
+        // SLA tracking is non-critical; log but don't fail the workflow
+        console.warn('SLA tracking error (non-critical):', slaError);
+      }
+
       await supabase.from('supervisor_assignments').update({
         status: action === 'approve' ? 'accepted' : 'rejected',
         remarks: remarks,

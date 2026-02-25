@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { CheckCircle, Circle, Clock, XCircle } from 'lucide-react';
+import { CheckCircle, Circle, Clock, XCircle, AlertTriangle, Calendar } from 'lucide-react';
 import { getStatusLabel, getStatusDescription } from '../lib/statusLabels';
 
-// Force rebuild - version 2.0
+// Force rebuild - version 3.0 (added SLA tracking)
 interface ProcessStep {
   stage: string;
   label: string;
@@ -11,6 +11,9 @@ interface ProcessStep {
   status: 'completed' | 'current' | 'pending' | 'rejected';
   date?: string;
   actor?: string;
+  dueDate?: string;
+  remainingDays?: number;
+  slaStatus?: 'on-track' | 'due-soon' | 'overdue' | 'expired';
 }
 
 interface ProcessTrackingWizardProps {
@@ -25,15 +28,17 @@ export function ProcessTrackingWizard({
   currentStage,
 }: ProcessTrackingWizardProps) {
   const [tracking, setTracking] = useState<any[]>([]);
+  const [stageInstances, setStageInstances] = useState<any[]>([]);
   const [steps, setSteps] = useState<ProcessStep[]>([]);
 
   useEffect(() => {
     fetchTracking();
+    fetchStageInstances();
   }, [ipRecordId]);
 
   useEffect(() => {
     updateSteps();
-  }, [currentStatus, currentStage, tracking]);
+  }, [currentStatus, currentStage, tracking, stageInstances]);
 
   const fetchTracking = async () => {
     const { data, error } = await supabase
@@ -44,8 +49,18 @@ export function ProcessTrackingWizard({
 
     if (!error && data) {
       setTracking(data);
-      // Force update with latest data
-      updateSteps();
+    }
+  };
+
+  const fetchStageInstances = async () => {
+    const { data, error } = await supabase
+      .from('workflow_stage_instances')
+      .select('*')
+      .eq('ip_record_id', ipRecordId)
+      .order('created_at', { ascending: true });
+
+    if (!error && data) {
+      setStageInstances(data);
     }
   };
 
@@ -57,6 +72,40 @@ export function ProcessTrackingWizard({
     if (tracking.length === 0) return null;
     // Get the most recent record
     return tracking[tracking.length - 1]?.status || null;
+  };
+
+  /**
+   * Calculate SLA status badge info for a stage
+   */
+  const getSLAStatus = (stage: string): { status: 'on-track' | 'due-soon' | 'overdue' | 'expired', daysRemaining: number, dueDate: string } | null => {
+    // Find the latest stage instance for this stage
+    const stageInstance = stageInstances
+      .filter(si => si.stage === stage)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .at(0);
+
+    if (!stageInstance) return null;
+
+    const now = new Date();
+    const dueAt = new Date(stageInstance.extended_until || stageInstance.due_at);
+    const daysLeft = Math.ceil((dueAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    let status: 'on-track' | 'due-soon' | 'overdue' | 'expired'; 
+    if (stageInstance.status === 'EXPIRED') {
+      status = 'expired';
+    } else if (stageInstance.status === 'OVERDUE') {
+      status = 'overdue';
+    } else if (daysLeft <= 2 && daysLeft > 0) {
+      status = 'due-soon';
+    } else {
+      status = 'on-track';
+    }
+
+    return {
+      status,
+      daysRemaining: daysLeft,
+      dueDate: dueAt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+    };
   };
 
   const updateSteps = () => {
@@ -172,6 +221,9 @@ export function ProcessTrackingWizard({
             })
           : undefined,
         actor: relatedTracking?.actor_name,
+        slaStatus: getSLAStatus(step.stage)?.status,
+        dueDate: getSLAStatus(step.stage)?.dueDate,
+        remainingDays: getSLAStatus(step.stage)?.daysRemaining,
       };
     });
 
@@ -232,21 +284,36 @@ export function ProcessTrackingWizard({
                 >
                   {step.label}
                 </h4>
-                {step.status === 'current' && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                    In Progress
-                  </span>
-                )}
-                {step.status === 'completed' && (
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                    Completed
-                  </span>
-                )}
-                {step.status === 'rejected' && (
-                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
-                    Rejected
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {step.status === 'current' && getSLAStatus(step.stage) && (
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      getSLAStatus(step.stage)?.status === 'expired' ? 'bg-red-100 text-red-700' :
+                      getSLAStatus(step.stage)?.status === 'overdue' ? 'bg-red-100 text-red-700' :
+                      getSLAStatus(step.stage)?.status === 'due-soon' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>
+                      {getSLAStatus(step.stage)?.status === 'expired' ? 'Deadline Expired' :
+                       getSLAStatus(step.stage)?.status === 'overdue' ? 'Overdue' :
+                       getSLAStatus(step.stage)?.status === 'due-soon' ? 'Due Soon' :
+                       'On Track'}
+                    </span>
+                  )}
+                  {step.status === 'current' && !getSLAStatus(step.stage) && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                      In Progress
+                    </span>
+                  )}
+                  {step.status === 'completed' && (
+                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                      Completed
+                    </span>
+                  )}
+                  {step.status === 'rejected' && (
+                    <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                      Rejected
+                    </span>
+                  )}
+                </div>
               </div>
 
               <p
@@ -266,7 +333,23 @@ export function ProcessTrackingWizard({
                 </p>
               )}
 
-              {step.status === 'current' && (
+              {step.status === 'current' && getSLAStatus(step.stage) && (
+                <div className="mt-2 rounded bg-blue-50 p-2 border border-blue-100">
+                  <div className="flex items-center gap-1 text-xs text-blue-700">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>
+                      Due: {getSLAStatus(step.stage)?.dueDate} 
+                      {getSLAStatus(step.stage)?.daysRemaining ? (
+                        <> • {getSLAStatus(step.stage)?.daysRemaining! > 0 
+                          ? `${getSLAStatus(step.stage)?.daysRemaining} days remaining` 
+                          : `${Math.abs(getSLAStatus(step.stage)?.daysRemaining!)} days overdue`}</> 
+                      ) : null}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {step.status === 'current' && !getSLAStatus(step.stage) && (
                 <div className="mt-2">
                   <p className="text-sm font-medium text-blue-600">{currentStage}</p>
                 </div>

@@ -286,6 +286,55 @@ export function EvaluatorDashboard() {
 
       console.log('[EvaluatorDashboard] Successfully updated record:', updateData);
 
+      // ==========================================
+      // SLA TRACKING: Close current evaluation stage and create next stage
+      // ==========================================
+      try {
+        // Close the evaluation stage instance
+        const { data: closedStageData, error: closedStageError } = await supabase
+          .rpc('close_stage_instance', {
+            p_record_id: selectedRecord.id,
+            p_close_status: 'COMPLETED',
+          });
+
+        if (closedStageError) {
+          console.warn('Could not close evaluation stage instance:', closedStageError);
+        } else {
+          console.log('Closed evaluation stage instance:', closedStageData);
+        }
+
+        // Create next stage instance based on decision
+        let nextStage: string | null = null;
+        let nextAssignedUserId: string | null = null;
+
+        if (evaluationForm.decision === 'approved') {
+          nextStage = 'materials_requested';
+          nextAssignedUserId = selectedRecord.applicant_id; // Applicant submits materials
+        } else if (evaluationForm.decision === 'revision') {
+          nextStage = 'evaluator_revision';
+          nextAssignedUserId = selectedRecord.applicant_id; // Applicant must revise
+        }
+        // For reject, no next stage - workflow ends
+
+        if (nextStage) {
+          const { data: newStageData, error: newStageError } = await supabase
+            .rpc('create_stage_instance', {
+              p_record_id: selectedRecord.id,
+              p_stage: nextStage,
+              p_assigned_user_id: nextAssignedUserId,
+            });
+
+          if (newStageError) {
+            console.warn(`Could not create ${nextStage} stage instance:`, newStageError);
+          } else {
+            console.log(`Created ${nextStage} stage instance:`, newStageData);
+          }
+        }
+      } catch (slaError) {
+        // SLA tracking is non-critical; log but don't fail the workflow
+        console.warn('SLA tracking error (non-critical):', slaError);
+      }
+
       await supabase.from('notifications').insert({
         user_id: selectedRecord.applicant_id,
         type: 'evaluation_complete',
