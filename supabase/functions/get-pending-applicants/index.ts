@@ -79,6 +79,7 @@ Deno.serve(async (req: Request) => {
     console.log('[get-pending-applicants] Admin verified, fetching pending applicants...');
 
     // Fetch pending applicants using SERVICE ROLE (bypasses RLS)
+    // Using explicit FK constraint name to fix PostgREST embedded join
     const { data: applicants, error: fetchError } = await serviceClient
       .from('users')
       .select(`
@@ -87,9 +88,7 @@ Deno.serve(async (req: Request) => {
         full_name,
         department_id,
         created_at,
-        departments (
-          name
-        )
+        department:departments!users_department_id_fkey(name)
       `)
       .eq('role', 'applicant')
       .eq('is_approved', false)
@@ -102,11 +101,14 @@ Deno.serve(async (req: Request) => {
         details: fetchError.details,
         hint: fetchError.hint,
         code: fetchError.code,
+        full_error: JSON.stringify(fetchError, null, 2),
       });
       return new Response(
         JSON.stringify({
           error: 'Failed to fetch pending applicants',
           details: fetchError.message,
+          hint: fetchError.hint,
+          code: fetchError.code,
         }),
         {
           status: 500,
@@ -116,6 +118,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log('[get-pending-applicants] Found', applicants?.length || 0, 'pending applicants');
+    console.log('[get-pending-applicants] Raw data:', JSON.stringify(applicants, null, 2));
 
     // Transform the data to match expected format
     const transformedApplicants = (applicants || []).map((user: any) => ({
@@ -124,7 +127,7 @@ Deno.serve(async (req: Request) => {
       full_name: user.full_name,
       department_id: user.department_id,
       created_at: user.created_at,
-      department_name: user.departments?.name || 'N/A',
+      department_name: user.department?.name || 'N/A',
     }));
 
     return new Response(
