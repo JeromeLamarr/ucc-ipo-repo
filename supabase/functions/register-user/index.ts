@@ -1,12 +1,63 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, Accept, Origin",
-  "Access-Control-Max-Age": "86400",
-};
+// =====================================================================
+// RUNTIME VALIDATION: Check all required environment variables at startup
+// =====================================================================
+
+// List of required environment variables
+const REQUIRED_ENV_VARS = [
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "RESEND_API_KEY",
+  "APP_URL",
+];
+
+// Validate all required variables are set
+const missingVars: string[] = [];
+for (const varName of REQUIRED_ENV_VARS) {
+  const value = Deno.env.get(varName);
+  if (!value || value.trim() === "") {
+    missingVars.push(varName);
+  }
+}
+
+// If any required vars are missing, log and fail startup
+if (missingVars.length > 0) {
+  const errorMsg = `[register-user] STARTUP ERROR: Missing required environment variables: ${missingVars.join(", ")}. Configure these in Supabase Edge Functions secrets.`;
+  console.error(errorMsg);
+  // Exit with error - this prevents the function from being called
+  throw new Error(errorMsg);
+}
+
+console.log("[register-user] ✓ All required environment variables configured at startup");
+
+// =====================================================================
+// CORS Configuration: Allow specific origins (not wildcard)
+// =====================================================================
+
+function getCorsHeaders(origin?: string): Record<string, string> {
+  // Allowed origins (add more as needed)
+  const allowedOrigins = [
+    "https://ucc-ipo.com",
+    "https://www.ucc-ipo.com",
+    "http://localhost:5173",    // Vite default dev port
+    "http://localhost:3000",    // Alternative dev port
+    "http://127.0.0.1:5173",    // Localhost alternative
+  ];
+
+  // Check if the request origin is allowed
+  const requestOrigin = origin || "";
+  const corsOrigin = allowedOrigins.includes(requestOrigin) ? requestOrigin : allowedOrigins[0];
+
+  return {
+    "Access-Control-Allow-Origin": corsOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, Accept, Origin",
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Max-Age": "86400",
+  };
+}
 
 interface RegisterUserRequest {
   email: string;
@@ -17,20 +68,25 @@ interface RegisterUserRequest {
 }
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin") || undefined;
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
+    console.log(`[register-user] CORS preflight from origin: ${origin}`);
     return new Response(null, {
-      status: 200,
+      status: 204,
       headers: corsHeaders,
     });
   }
 
   // Only accept POST requests
   if (req.method !== "POST") {
+    console.warn(`[register-user] Invalid method: ${req.method}`);
     return new Response(
       JSON.stringify({
         success: false,
-        error: "Method not allowed",
+        error: "Method not allowed. Use POST.",
       }),
       {
         status: 405,
@@ -44,19 +100,16 @@ Deno.serve(async (req: Request) => {
 
   try {
     console.log("[register-user] === REGISTER USER FUNCTION CALLED ===");
-    console.log("[register-user] Request method:", req.method);
-    console.log("[register-user] Request headers:", Object.fromEntries(req.headers.entries()));
+    console.log("[register-user] Request from origin:", origin);
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    // Get environment variables (guaranteed to exist from startup validation)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const resendApiKey = Deno.env.get("RESEND_API_KEY")!;
+    const appUrl = Deno.env.get("APP_URL")!;
+    const resendFromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@ucc-ipo.com";
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("[register-user] Missing Supabase environment variables");
-      throw new Error("Missing Supabase configuration");
-    }
-
-    console.log("[register-user] Supabase configured:", !!supabaseUrl);
-
+    console.log("[register-user] Environment validated. Creating Supabase client...");
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body
@@ -157,7 +210,11 @@ Deno.serve(async (req: Request) => {
     // Auth users will be managed through proper lifecycle management
 
     // Create auth user with email_confirm=false (requires email verification)
-    console.log("[register-user] Creating auth user for email:", email);
+    console.log("[register-user] Step: Creating auth user");
+    console.log("[register-user] Email:", email);
+    console.log("[register-user] Password strength: " + (password.length >= 10 ? "strong" : "medium"));
+    console.log("[register-user] Email confirmation required: true");
+    
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
@@ -169,8 +226,12 @@ Deno.serve(async (req: Request) => {
     });
 
     if (authError) {
+      console.error("[register-user] ERROR: auth.createUser failed");
+      console.error("[register-user] Auth error message:", authError.message);
+      
       // Check if user already exists
       if (authError.message && authError.message.includes("already registered")) {
+        console.log("[register-user] User already registered, returning existing account");
         return new Response(
           JSON.stringify({
             success: true,
@@ -188,11 +249,11 @@ Deno.serve(async (req: Request) => {
       }
       
       // Log and return 200 per requirement — do not block registration flow with 4xx/5xx
-      console.error("[register-user] auth.createUser error:", authError);
+      console.error("[register-user] Unhandled auth error, returning error to client");
       return new Response(
         JSON.stringify({
           success: false,
-          error: "ERR_AUTH: " + (authError.message || "Unknown"),
+          error: "ERR_AUTH: " + (authError.message || "Unknown error"),
         }),
         {
           status: 200,
@@ -205,10 +266,11 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!authData.user) {
+      console.error("[register-user] ERROR: No user returned from createUser");
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Failed to create account",
+          error: "Failed to create account (no user ID)",
         }),
         {
           status: 200,
@@ -220,8 +282,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log("[register-user] Auth user created:", authData.user.id);
-    console.log("[register-user] Auth user created successfully:", authData.user.id);
+    console.log("[register-user] ✓ Auth user created successfully");
+    console.log("[register-user] User ID:", authData.user.id);
+    console.log("[register-user] Email status: awaiting verification");
 
     // Wait for trigger to create the profile
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -261,36 +324,40 @@ Deno.serve(async (req: Request) => {
       // Don't fail - user is created, just tracking is missing
     }
 
-    // Generate magic link
-    // Get the app URL for the redirectTo - this should point to the frontend app's callback handler
-    const appUrl = Deno.env.get("APP_URL") || "https://ucc-ipo.com";
+    // Generate email confirmation link using signup type
+    console.log("[register-user] Step: Generating email confirmation link");
+    console.log("[register-user] Action: Using generateLink(type=signup) for email verification");
+    console.log("[register-user] Email:", email);
+    console.log("[register-user] Redirect URL:", `${appUrl}/auth/callback`);
     
-    const { data: signInData, error: signInError } = await supabase.auth.admin.generateLink({
-      type: "magiclink",
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: "signup",
       email,
       options: {
         redirectTo: `${appUrl}/auth/callback`,
       },
     });
 
-    if (signInError) {
-      console.error("[register-user] Generate link error:", signInError);
-      // Even if magic link fails, continue - email can still be sent with basic link
-      console.warn("[register-user] Continuing with email send despite magic link generation failure");
+    if (linkError) {
+      console.error("[register-user] ERROR: generateLink failed:", linkError);
+      console.error("[register-user] Error details:", { code: linkError.status, message: linkError.message });
+      throw new Error(`Failed to generate email confirmation link: ${linkError.message}`);
     }
 
-    // The magic link is in signInData
-    const magicLink = signInData?.properties?.action_link;
+    // Extract the action_link from the response
+    const actionLink = linkData?.properties?.action_link;
 
-    if (!magicLink) {
-      console.error("[register-user] Failed to create magic link - magicLink is:", magicLink);
-      console.error("[register-user] signInData:", signInData);
-      // Continue anyway - we have alternative email flow
-      console.warn("[register-user] Continuing despite no magic link");
+    if (!actionLink) {
+      console.error("[register-user] ERROR: action_link missing from response");
+      console.error("[register-user] Response data:", JSON.stringify(linkData));
+      throw new Error("Email confirmation link could not be generated (missing action_link)");
     }
 
-    // Send verification email
-    const emailHtml = magicLink ? `
+    console.log("[register-user] ✓ Email confirmation link generated successfully");
+    console.log("[register-user] Link preview:", actionLink.substring(0, 80) + "...");
+
+    // Send verification email with confirmation link via Resend
+    const emailHtml = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -313,15 +380,15 @@ Deno.serve(async (req: Request) => {
               <h2>Hello ${fullName},</h2>
               <p>Thank you for registering with the University of Caloocan City Intellectual Property Management System.</p>
               
-              <p>To complete your registration and activate your account, please click the button below:</p>
+              <p>To complete your registration and activate your account, please click the button below to verify your email:</p>
               
               <center>
-                <a href="${magicLink}" class="button">Verify Email Address</a>
+                <a href="${actionLink}" class="button">Verify Email Address</a>
               </center>
               
               <p>Or copy and paste this link in your browser:</p>
               <p style="word-break: break-all; font-size: 12px; color: #6b7280;">
-                ${magicLink}
+                ${actionLink}
               </p>
               
               <p style="margin-top: 30px;"><strong>This link expires in 24 hours.</strong></p>
@@ -338,163 +405,101 @@ Deno.serve(async (req: Request) => {
           </div>
         </body>
       </html>
-    ` : `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #1a59a6 0%, #0d3a7a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; background: #1a59a6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
-            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; font-size: 13px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Welcome to UCC IP Management</h1>
-            </div>
-            <div class="content">
-              <h2>Hello ${fullName},</h2>
-              <p>Thank you for registering with the University of Caloocan City Intellectual Property Management System.</p>
-              
-              <p>Your account has been created successfully. You will be able to log in shortly after your email is verified. Our system will send you a verification link shortly.</p>
-              
-              <p style="margin-top: 30px;">If you don't receive a verification email within 5 minutes, please check your spam folder or contact support.</p>
-              
-              <div class="warning">
-                <strong>Security Note:</strong> If you did not create this account, please ignore this email.
-              </div>
-            </div>
-            <div class="footer">
-              <p>University of Caloocan City Intellectual Property Office</p>
-              <p><a href="https://ucc-ipo.com" style="color: #1a59a6; text-decoration: none;">ucc-ipo.com</a></p>
-              <p>Protecting Innovation, Promoting Excellence</p>
-            </div>
-          </div>
-        </body>
-      </html>
     `;
 
-    // Send email via Resend API directly
-    let emailSent = false;
-    let emailError: string | null = null;
+    // Send email via Resend API
+    console.log("[register-user] Step: Sending verification email via Resend");
+    console.log("[register-user] Email to:", email);
+    console.log("[register-user] From:", `UCC IP Office <${resendFromEmail}>`);
+    console.log("[register-user] Resend API endpoint: https://api.resend.com/emails");
+    
+    const emailPayload = {
+      from: `UCC IP Office <${resendFromEmail}>`,
+      to: [email],  // Resend accepts: to: string | string[] (array preferred)
+      subject: "Verify Your Email - UCC IP Management System",
+      html: emailHtml,
+    };
 
-    try {
-      console.log("[register-user] Sending verification email to:", email);
-      
-      const resendApiKey = Deno.env.get("RESEND_API_KEY");
-      const resendFromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@ucc-ipo.com";
-      
-      if (!resendApiKey) {
-        console.error("[register-user] RESEND_API_KEY not configured");
-        emailError = "Email service not configured";
-      } else {
-        const emailResponse = await fetch(
-          "https://api.resend.com/emails",
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${resendApiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              from: `UCC IP Office <${resendFromEmail}>`,
-              to: [email],
-              subject: "Verify Your Email - UCC IP Management System",
-              html: emailHtml,
-            }),
-          }
-        );
-
-        console.log("[register-user] Email response status:", emailResponse.status);
-        
-        if (!emailResponse.ok) {
-          const errorText = await emailResponse.text();
-          console.error("[register-user] Email service HTTP error:", {
-            status: emailResponse.status,
-            statusText: emailResponse.statusText,
-            body: errorText,
-          });
-          emailError = `HTTP ${emailResponse.status}: ${emailResponse.statusText}`;
-        } else {
-          try {
-            const emailResult = await emailResponse.json();
-            console.log("[register-user] Email service response:", emailResult);
-
-            // Check if the response indicates success
-            if (emailResult.id) {
-              console.log("[register-user] Email sent successfully with ID:", emailResult.id);
-              emailSent = true;
-            } else if (emailResult.error) {
-              console.error("[register-user] Email service returned error:", emailResult.error);
-              emailError = emailResult.error;
-            } else {
-              // Unexpected response format, but no explicit error
-              console.log("[register-user] Email service response format unexpected:", emailResult);
-              emailSent = true; // Assume success if no error field
-            }
-          } catch (jsonError) {
-            console.error("[register-user] Failed to parse email response JSON:", jsonError);
-            emailError = "Invalid response from email service";
-          }
-        }
+    console.log("[register-user] Sending POST request to Resend API...");
+    const emailResponse = await fetch(
+      "https://api.resend.com/emails",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(emailPayload),
       }
-    } catch (emailNetworkError: any) {
-      console.error("[register-user] Failed to call email service:", emailNetworkError);
-      emailError = emailNetworkError.message || "Network error calling email service";
+    );
+
+    console.log("[register-user] Resend response status:", emailResponse.status, emailResponse.statusText);
+    
+    if (!emailResponse.ok) {
+      const errorText = await emailResponse.text();
+      console.error("[register-user] ERROR: Resend API returned error");
+      console.error("[register-user] Status:", emailResponse.status);
+      console.error("[register-user] Status Text:", emailResponse.statusText);
+      console.error("[register-user] Response Body:", errorText);
+      throw new Error(`Email service error (HTTP ${emailResponse.status}): ${errorText}`);
     }
 
-    // Even if email failed, user is created - return success with appropriate message
-    if (emailSent) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Account created successfully. Check your email for the verification link.",
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    } else {
-      // Email failed but user exists
-      console.error("[register-user] Email delivery failed:", emailError);
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Account created successfully. However, we encountered an issue sending the verification email.",
-          warning: `Email delivery issue: ${emailError || "Unknown error"}. Please use the 'Resend Email' option on the login page.`,
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+    let emailResult;
+    try {
+      emailResult = await emailResponse.json();
+    } catch (parseError) {
+      console.error("[register-user] ERROR: Could not parse Resend response as JSON");
+      console.error("[register-user] Error:", parseError);
+      throw new Error("Email service returned invalid response");
     }
+
+    console.log("[register-user] ✓ Resend API response received");
+    console.log("[register-user] Email ID from Resend:", emailResult.id);
+
+    if (!emailResult.id) {
+      console.error("[register-user] ERROR: No message ID in Resend response");
+      console.error("[register-user] Response data:", JSON.stringify(emailResult));
+      throw new Error("Email service did not confirm delivery (no message ID)");
+    }
+
+    console.log("[register-user] ✓ Email sent successfully to:", email);
+    console.log("[register-user] Message ID:", emailResult.id);
+
+    // Return success to frontend
+    console.log("[register-user] ✓ REGISTRATION COMPLETE");
+    console.log("[register-user] Summary: User created, email sent, awaiting verification");
+    
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Account created successfully. Check your email for the verification link.",
+      }),
+      {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
   } catch (error: any) {
-    console.error("[register-user] Registration error:", error);
+    console.error("[register-user] ❌ REGISTRATION FAILED");
+    console.error("[register-user] Error message:", error.message);
+    console.error("[register-user] Error type:", error.name);
     console.error("[register-user] Error stack:", error.stack);
     
-    // Return 200 with error details instead of 500 to prevent "non-2xx status code" errors
-    // The frontend will check the success field
+    // Return 500 for configuration/system errors (NOT user input errors)
+    // This helps distinguish between client errors and server problems
+    const statusCode = error.message?.includes("not configured") ? 500 : 400;
+    
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message || "Registration failed. Please try again.",
-        details: error.toString(),
+        details: process.env.NODE_ENV === "development" ? error.toString() : undefined,
       }),
       {
-        status: 200,
+        status: statusCode,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
