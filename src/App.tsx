@@ -31,6 +31,7 @@ import { SettingsPage } from '@pages/SettingsPage';
 import { CertificateVerifyPage } from '@pages/CertificateVerifyPage';
 import { DisclosureVerifyPage } from '@pages/DisclosureVerifyPage';
 import { PendingApprovalPage } from '@pages/PendingApprovalPage';
+import { ForgotPasswordPage } from '@pages/ForgotPasswordPage';
 import { useEffect } from 'react';
 import { ensureHomeCMSPageExists } from '@lib/cmsSetup';
 
@@ -97,6 +98,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/verify/:trackingId" element={<CertificateVerifyPage />} />
           <Route path="/verify-disclosure/:trackingId" element={<DisclosureVerifyPage />} />

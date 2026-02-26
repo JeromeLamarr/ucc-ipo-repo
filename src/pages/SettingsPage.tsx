@@ -1,14 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranding } from '../hooks/useBranding';
 import { supabase } from '../lib/supabase';
 import { User, Lock, Bell, Shield, Save, AlertCircle, CheckCircle, Palette } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { AdminBrandingSettingsPage } from './AdminBrandingSettingsPage';
 
 export function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
   const { primaryColor } = useBranding();
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'branding'>('profile');
+  const [searchParams] = useSearchParams();
+  
+  // Read ?tab query param, default to profile
+  const tabFromUrl = (searchParams.get('tab') as 'profile' | 'password' | 'notifications' | 'branding') || 'profile';
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'branding'>(tabFromUrl);
+  
+  // Update activeTab when URL query param changes
+  useEffect(() => {
+    setActiveTab(tabFromUrl);
+  }, [tabFromUrl]);
+  
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
