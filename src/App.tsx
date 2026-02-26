@@ -6,8 +6,6 @@ import { DashboardLayout } from '@components/DashboardLayout';
 import { LandingPage } from '@pages/LandingPage';
 import { LoginPage } from '@pages/LoginPage';
 import { RegisterPage } from '@pages/RegisterPage';
-import { ForgotPasswordPage } from '@pages/ForgotPasswordPage';
-import { ResetPasswordPage } from '@pages/ResetPasswordPage';
 import { AuthCallbackPage } from '@pages/AuthCallbackPage';
 import { CMSPageRenderer } from '@pages/CMSPageRenderer';
 import { CMSPageEditor } from '@pages/CMSPageEditor';
@@ -99,8 +97,6 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/verify/:trackingId" element={<CertificateVerifyPage />} />
           <Route path="/verify-disclosure/:trackingId" element={<DisclosureVerifyPage />} />
