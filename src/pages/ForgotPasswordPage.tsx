@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { PublicNavigation } from '../components/PublicNavigation';
+import { supabase } from '../lib/supabase';
 
 type Step = 'email' | 'code';
 
@@ -14,54 +15,6 @@ export function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Helper function to make API calls
-  const callEdgeFunction = async (functionName: string, payload: any) => {
-    const appUrl = window.location.origin;
-
-    try {
-      const response = await fetch(
-        `${appUrl}/.netlify/functions/${functionName}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Origin': appUrl,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (err: any) {
-      console.error(`Error calling ${functionName}:`, err);
-      // Fallback: try direct Supabase URL
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) throw new Error('Supabase URL not configured');
-
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/${functionName}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Origin': appUrl,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      return await response.json();
-    }
-  };
-
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -69,15 +22,21 @@ export function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const result = await callEdgeFunction('request-password-reset-code', {
-        email: email.trim(),
+      const { data, error: functionError } = await supabase.functions.invoke('request-password-reset-code', {
+        body: { email: email.trim() },
       });
 
-      if (result.success) {
+      if (functionError) {
+        console.error('Function error:', functionError);
+        setError('Failed to send code. Please try again.');
+        return;
+      }
+
+      if (data?.success) {
         setSuccess('Check your email for the 6-digit code.');
         setStep('code');
       } else {
-        setError(result.error || 'Failed to send code');
+        setError(data?.message || 'Failed to send code');
       }
     } catch (err: any) {
       setError('Failed to send code. Please try again.');
@@ -94,17 +53,25 @@ export function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const result = await callEdgeFunction('verify-password-reset-code', {
-        email: email.trim(),
-        code: code.trim(),
+      const { data, error: functionError } = await supabase.functions.invoke('verify-password-reset-code', {
+        body: {
+          email: email.trim(),
+          code: code.trim(),
+        },
       });
 
-      if (result.success && result.actionLink) {
+      if (functionError) {
+        console.error('Function error:', functionError);
+        setError('Failed to verify code. Please try again.');
+        return;
+      }
+
+      if (data?.success && data?.actionLink) {
         setSuccess('Code verified! Redirecting to password reset...');
         // Redirect using the action link (this will authenticate the user)
-        window.location.href = result.actionLink;
+        window.location.href = data.actionLink;
       } else {
-        setError(result.error || 'Invalid code');
+        setError(data?.error || 'Invalid code');
       }
     } catch (err: any) {
       setError('Failed to verify code. Please try again.');
