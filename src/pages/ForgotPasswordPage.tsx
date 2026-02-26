@@ -28,7 +28,8 @@ export function ForgotPasswordPage() {
 
       if (functionError) {
         console.error('Function error:', functionError);
-        setError('Failed to send code. Please try again.');
+        // Show error details if available
+        setError(functionError.message || 'Failed to send code. Please try again.');
         return;
       }
 
@@ -36,11 +37,12 @@ export function ForgotPasswordPage() {
         setSuccess('Check your email for the 6-digit code.');
         setStep('code');
       } else {
-        setError(data?.message || 'Failed to send code');
+        // Show the error message from the function response
+        setError(data?.error || data?.message || 'Failed to send code. Please try again.');
       }
     } catch (err: any) {
-      setError('Failed to send code. Please try again.');
-      console.error(err);
+      setError(err?.message || 'Failed to send code. Please try again.');
+      console.error('Unexpected error:', err);
     } finally {
       setLoading(false);
     }
@@ -62,7 +64,7 @@ export function ForgotPasswordPage() {
 
       if (functionError) {
         console.error('Function error:', functionError);
-        setError('Failed to verify code. Please try again.');
+        setError(functionError.message || 'Failed to verify code. Please try again.');
         return;
       }
 
@@ -71,11 +73,11 @@ export function ForgotPasswordPage() {
         // Redirect using the action link (this will authenticate the user)
         window.location.href = data.actionLink;
       } else {
-        setError(data?.error || 'Invalid code');
+        setError(data?.error || 'Invalid code. Please try again.');
       }
     } catch (err: any) {
-      setError('Failed to verify code. Please try again.');
-      console.error(err);
+      setError(err?.message || 'Failed to verify code. Please try again.');
+      console.error('Unexpected error:', err);
     } finally {
       setLoading(false);
     }

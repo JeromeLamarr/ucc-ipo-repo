@@ -353,11 +353,21 @@ Deno.serve(async (req: Request) => {
       }
     );
   } catch (error) {
-    console.error("[verify-password-reset-code] Error:", error);
+    console.error("[verify-password-reset-code] === CRITICAL ERROR ===");
+    console.error("[verify-password-reset-code] Error type:", error?.constructor?.name);
+    console.error("[verify-password-reset-code] Error message:", error instanceof Error ? error.message : String(error));
+    if (error instanceof Error) {
+      console.error("[verify-password-reset-code] Error stack:", error.stack);
+    }
+    console.error("[verify-password-reset-code] Full error:", error);
+    
+    // Include error message in response for better debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     return new Response(
       JSON.stringify({
         success: false,
-        error: "An error occurred. Please try again later.",
+        error: errorMessage || "An error occurred. Please try again later.",
       }),
       {
         status: 500,
