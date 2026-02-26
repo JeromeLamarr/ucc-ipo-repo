@@ -69,9 +69,36 @@ export function ForgotPasswordPage() {
       }
 
       if (data?.success && data?.actionLink) {
-        setSuccess('Code verified! Redirecting to password reset...');
-        // Redirect using the action link (this will authenticate the user)
-        window.location.href = data.actionLink;
+        setSuccess('Code verified! Authenticating...');
+        
+        // Extract token from action link and establish session
+        // The action link contains token_hash and type parameters
+        const url = new URL(data.actionLink);
+        const tokenHash = url.searchParams.get('token_hash');
+        const type = url.searchParams.get('type');
+        
+        if (tokenHash && type) {
+          // Use verifyOtp to exchange the token for a session
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            email,
+            token: tokenHash,
+            type: 'magiclink',
+          });
+          
+          if (verifyError) {
+            console.error('Token verification error:', verifyError);
+            setError('Failed to authenticate. Please try the magic link sent to your email.');
+          } else {
+            // Session established, navigate to password reset
+            setSuccess('Authenticated! Redirecting to password change...');
+            setTimeout(() => {
+              navigate('/dashboard/settings?tab=password');
+            }, 1000);
+          }
+        } else {
+          // Fallback: use the action link directly
+          window.location.href = data.actionLink;
+        }
       } else {
         setError(data?.error || 'Invalid code. Please try again.');
       }
