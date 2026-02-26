@@ -177,7 +177,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { email, fullName, password, departmentId } = requestData;
+    const { email, fullName, password, departmentId, resend } = requestData;
 
     // Validate input
     if (!email || !fullName || !password) {
@@ -247,6 +247,140 @@ Deno.serve(async (req: Request) => {
           },
         }
       );
+    }
+
+    // Check if this is a resend request for an unverified auth user
+    if (resend) {
+      console.log("[register-user] Resend request detected, checking for unverified auth user");
+
+      // Check if auth user exists
+      const { data: { users: authUsers }, error: listError } = await supabase.auth.admin.listUsers();
+
+      if (listError) {
+        console.error("[register-user] Error listing auth users:", listError);
+      } else {
+        const authUser = authUsers?.find(u => u.email === email);
+
+        if (authUser && !authUser.email_confirmed_at) {
+          console.log("[register-user] Found unverified auth user, generating new verification link");
+
+          // Generate new email confirmation link
+          const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+            type: "signup",
+            email,
+            options: {
+              redirectTo: `${appUrl}/auth/callback`,
+            },
+          });
+
+          if (linkError) {
+            console.error("[register-user] ERROR: generateLink failed:", linkError);
+            throw new Error(`Failed to generate email confirmation link: ${linkError.message}`);
+          }
+
+          const actionLink = linkData?.properties?.action_link;
+
+          if (!actionLink) {
+            console.error("[register-user] ERROR: action_link missing from response");
+            throw new Error("Email confirmation link could not be generated (missing action_link)");
+          }
+
+          console.log("[register-user] ✓ New email confirmation link generated");
+
+          // Send verification email
+          const emailHtml = `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <style>
+                  body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                  .header { background: linear-gradient(135deg, #1a59a6 0%, #0d3a7a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                  .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+                  .button { display: inline-block; background: #1a59a6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+                  .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 14px; }
+                  .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; font-size: 13px; }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <div class="header">
+                    <h1>Verify Your Email</h1>
+                  </div>
+                  <div class="content">
+                    <h2>Hello ${fullName},</h2>
+                    <p>You requested a new verification link for your UCC IP Management System account.</p>
+
+                    <p>To verify your email and activate your account, please click the button below:</p>
+
+                    <center>
+                      <a href="${actionLink}" class="button">Verify Email Address</a>
+                    </center>
+
+                    <p>Or copy and paste this link in your browser:</p>
+                    <p style="word-break: break-all; font-size: 12px; color: #6b7280;">
+                      ${actionLink}
+                    </p>
+
+                    <p style="margin-top: 30px;"><strong>This link expires in 24 hours.</strong></p>
+
+                    <div class="warning">
+                      <strong>Security Note:</strong> If you did not request this email, please ignore it. Do not share this link with anyone.
+                    </div>
+                  </div>
+                  <div class="footer">
+                    <p>University of Caloocan City Intellectual Property Office</p>
+                    <p><a href="https://ucc-ipo.com" style="color: #1a59a6; text-decoration: none;">ucc-ipo.com</a></p>
+                    <p>Protecting Innovation, Promoting Excellence</p>
+                  </div>
+                </div>
+              </body>
+            </html>
+          `;
+
+          const emailPayload = {
+            from: `UCC IP Office <${resendFromEmail}>`,
+            to: [email],
+            subject: "Verify Your Email - UCC IP Management System",
+            html: emailHtml,
+          };
+
+          const emailResponse = await fetch(
+            "https://api.resend.com/emails",
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${resendApiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(emailPayload),
+            }
+          );
+
+          if (!emailResponse.ok) {
+            const errorText = await emailResponse.text();
+            console.error("[register-user] ERROR: Resend API error:", errorText);
+            throw new Error(`Email service error (HTTP ${emailResponse.status}): ${errorText}`);
+          }
+
+          const emailResult = await emailResponse.json();
+          console.log("[register-user] ✓ Verification email resent successfully");
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: "Verification email sent. Please check your inbox.",
+            }),
+            {
+              status: 200,
+              headers: {
+                ...corsHeaders,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+        }
+      }
     }
 
     console.log("[register-user] User does not exist, proceeding with creation");
