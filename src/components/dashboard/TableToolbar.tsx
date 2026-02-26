@@ -38,22 +38,25 @@ export function TableToolbar({
         />
       </div>
 
-      {filters.map((filter, index) => (
-        <div key={index} className="relative">
-          {filter.icon || <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />}
-          <select
-            value={filter.value}
-            onChange={(e) => filter.onChange(e.target.value)}
-            className="w-full pl-9 lg:pl-10 pr-8 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-          >
-            {filter.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      ))}
+      {filters.map((filter, index) => {
+        const IconComponent = filter.icon || <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />;
+        return (
+          <div key={index} className="relative">
+            {IconComponent}
+            <select
+              value={filter.value}
+              onChange={(e) => filter.onChange(e.target.value)}
+              className="w-full pl-9 lg:pl-10 pr-8 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+            >
+              {filter.options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      })}
     </div>
   );
 }
