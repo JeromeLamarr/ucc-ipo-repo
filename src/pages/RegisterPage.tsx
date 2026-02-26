@@ -9,6 +9,8 @@ interface Department {
   name: string;
 }
 
+const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
 export function RegisterPage() {
   const [step, setStep] = useState<'form' | 'email-sent' | 'success'>('form');
   const [email, setEmail] = useState('');
@@ -20,7 +22,56 @@ export function RegisterPage() {
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
   const navigate = useNavigate();
+
+  // Initialize cooldown from localStorage and set up countdown interval
+  useEffect(() => {
+    // Only run this effect when email-sent step is active
+    if (step !== 'email-sent') return;
+
+    // Read cooldown from localStorage
+    const storageKey = `resendCooldownUntil:${email}`;
+    const storedUntil = localStorage.getItem(storageKey);
+    
+    if (storedUntil) {
+      const until = parseInt(storedUntil, 10);
+      const now = Date.now();
+      
+      if (until > now) {
+        setCooldownUntil(until);
+      } else {
+        // Cooldown expired, clean up
+        localStorage.removeItem(storageKey);
+        setCooldownUntil(null);
+      }
+    }
+  }, [step, email]);
+
+  // Update remaining seconds every second while in cooldown
+  useEffect(() => {
+    if (!cooldownUntil) {
+      setRemainingSeconds(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const remaining = Math.max(0, cooldownUntil - now);
+      
+      if (remaining <= 0) {
+        setCooldownUntil(null);
+        setRemainingSeconds(0);
+        localStorage.removeItem(`resendCooldownUntil:${email}`);
+        clearInterval(interval);
+      } else {
+        setRemainingSeconds(Math.ceil(remaining / 1000));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldownUntil, email]);
 
   useEffect(() => {
     fetchDepartments();
@@ -141,6 +192,11 @@ export function RegisterPage() {
 
       // Clear error on success
       setError('');
+
+      // Start cooldown on successful resend
+      const until = Date.now() + COOLDOWN_MS;
+      setCooldownUntil(until);
+      localStorage.setItem(`resendCooldownUntil:${email}`, until.toString());
     } catch (err: any) {
       setError(err.message || 'Failed to resend email. Please try again.');
     } finally {
@@ -322,11 +378,17 @@ export function RegisterPage() {
                 <button
                   type="button"
                   onClick={handleResendEmail}
-                  disabled={loading}
+                  disabled={loading || cooldownUntil !== null}
                   className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   {loading ? 'Sending...' : 'Resend Email'}
                 </button>
+                
+                {cooldownUntil !== null && (
+                  <p className="text-sm text-gray-600 text-center">
+                    Resend available in {String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:{String(remainingSeconds % 60).padStart(2, '0')}
+                  </p>
+                )}
                 
                 <button
                   type="button"
