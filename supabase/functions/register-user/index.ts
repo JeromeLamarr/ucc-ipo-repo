@@ -35,26 +35,47 @@ console.log("[register-user] ✓ All required environment variables configured a
 // =====================================================================
 // CORS Configuration: Allow specific origins (not wildcard)
 // =====================================================================
+// Allowed origins:
+//   - Production: https://ucc-ipo.com, https://www.ucc-ipo.com
+//   - Local dev: http://localhost:5173, http://localhost:3000, http://127.0.0.1:*
+//   - Bolt preview: https://*.bolt.new, https://*.webcontainer.io, https://*--5173--*
+// Uses safe regex matching (no eval), denies by default
 
-function getCorsHeaders(origin?: string): Record<string, string> {
-  // Allowed origins (add more as needed)
-  const allowedOrigins = [
+function isOriginAllowed(origin: string): boolean {
+  if (!origin) return false;
+
+  // Static allowed origins (production + common local dev)
+  const staticAllowed = [
     "https://ucc-ipo.com",
     "https://www.ucc-ipo.com",
-    "http://localhost:5173",    // Vite default dev port
-    "http://localhost:3000",    // Alternative dev port
-    "http://127.0.0.1:5173",    // Localhost alternative
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+  ];
+  if (staticAllowed.includes(origin)) return true;
+
+  // Pattern-based allowed origins (Bolt preview + webcontainer)
+  // Bolt preview domains include: https://*.bolt.new, https://*.webcontainer.io
+  // AND domains containing "--5173--" (Bolt's dev server pattern)
+  const patterns = [
+    /^https:\/\/[a-z0-9\-]+\.bolt\.new$/i,                    // https://*.bolt.new
+    /^https:\/\/[a-z0-9\-]+\.webcontainer\.io$/i,              // https://*.webcontainer.io
+    /^https:\/\/.*--5173--.*\.bolt\.new$/i,                    // https://*--5173--*.bolt.new
+    /^https:\/\/.*--5173--.*\.webcontainer\.io$/i,             // https://*--5173--*.webcontainer.io
   ];
 
-  // Check if the request origin is allowed
+  return patterns.some(pattern => pattern.test(origin));
+}
+
+function getCorsHeaders(origin?: string): Record<string, string> {
   const requestOrigin = origin || "";
-  const corsOrigin = allowedOrigins.includes(requestOrigin) ? requestOrigin : allowedOrigins[0];
+  const corsOrigin = isOriginAllowed(requestOrigin) ? requestOrigin : "https://ucc-ipo.com";
 
   return {
     "Access-Control-Allow-Origin": corsOrigin,
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, Accept, Origin",
-    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Max-Age": "86400",
   };
 }
