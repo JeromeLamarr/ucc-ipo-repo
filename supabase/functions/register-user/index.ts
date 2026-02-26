@@ -55,29 +55,35 @@ function isOriginAllowed(origin: string): boolean {
   ];
   if (staticAllowed.includes(origin)) return true;
 
-  // Pattern-based allowed origins (Bolt preview + webcontainer)
-  // Bolt preview domains include: https://*.bolt.new, https://*.webcontainer.io
-  // AND domains containing "--5173--" (Bolt's dev server pattern)
-  const patterns = [
-    /^https:\/\/[a-z0-9\-]+\.bolt\.new$/i,                    // https://*.bolt.new
-    /^https:\/\/[a-z0-9\-]+\.webcontainer\.io$/i,              // https://*.webcontainer.io
-    /^https:\/\/.*--5173--.*\.bolt\.new$/i,                    // https://*--5173--*.bolt.new
-    /^https:\/\/.*--5173--.*\.webcontainer\.io$/i,             // https://*--5173--*.webcontainer.io
-  ];
+  // Dynamic pattern matching for Bolt preview domains
+  // Allow: *.bolt.new, *.webcontainer.io, or any hostname containing "--5173--"
+  try {
+    const hostname = new URL(origin).hostname;
+    if (hostname.endsWith(".bolt.new")) return true;
+    if (hostname.endsWith(".webcontainer.io")) return true;
+    if (hostname.includes("--5173--")) return true;
+  } catch {
+    // Invalid URL, deny
+    return false;
+  }
 
-  return patterns.some(pattern => pattern.test(origin));
+  return false;
 }
 
 function getCorsHeaders(origin?: string): Record<string, string> {
-  const requestOrigin = origin || "";
-  const corsOrigin = isOriginAllowed(requestOrigin) ? requestOrigin : "https://ucc-ipo.com";
-
-  return {
-    "Access-Control-Allow-Origin": corsOrigin,
+  const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
   };
+
+  // Only set Access-Control-Allow-Origin if the origin is allowed
+  if (origin && isOriginAllowed(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
 }
 
 interface RegisterUserRequest {
@@ -91,6 +97,24 @@ interface RegisterUserRequest {
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin") || undefined;
   const corsHeaders = getCorsHeaders(origin);
+
+  // Reject disallowed origins early (except for preflight)
+  if (origin && !isOriginAllowed(origin) && req.method !== "OPTIONS") {
+    console.warn(`[register-user] Blocked request from disallowed origin: ${origin}`);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Origin not allowed",
+      }),
+      {
+        status: 403,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  }
 
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
