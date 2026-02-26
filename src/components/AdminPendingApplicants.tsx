@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranding } from '../hooks/useBranding';
-import { Check, X, Clock, Mail, Calendar, AlertCircle } from 'lucide-react';
+import { Check, X, AlertCircle } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 
 interface PendingApplicant {
@@ -210,28 +210,20 @@ export function AdminPendingApplicants() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border shadow-lg p-8" style={{ borderColor: `${primaryColor}40` }}>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border shadow-lg p-6 hover:shadow-xl transition-shadow duration-300" style={{ background: `linear-gradient(135deg, #fef3c7, #fcd34d08)`, borderColor: '#fbbf2440' }}>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Clock className="h-6 w-6" style={{ color: '#f59918' }} />
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Pending Applicants</h2>
-            <p className="text-sm text-gray-600">Applications awaiting administrator review</p>
-          </div>
-        </div>
-        <span className="text-3xl font-bold px-4 py-2 rounded-xl" style={{ color: '#f59918', backgroundColor: '#f5991820' }}>
-          {pendingApplicants.length}
-        </span>
+      <div className="mb-4 lg:mb-6">
+        <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Pending Applicants ({pendingApplicants.length})</h2>
+        <p className="text-gray-600 text-xs lg:text-sm mt-1">Applications awaiting administrator review</p>
       </div>
 
       {/* Messages */}
@@ -256,9 +248,9 @@ export function AdminPendingApplicants() {
 
       {/* Empty State */}
       {pendingApplicants.length === 0 ? (
-        <div className="text-center py-8">
-          <Check className="h-12 w-12 mx-auto text-green-500 mb-3" />
-          <p className="text-gray-600 font-medium">No pending applicants</p>
+        <div className="text-center py-12">
+          <Check className="h-12 w-12 mx-auto text-green-500 mb-4 text-gray-300" />
+          <p className="text-gray-500 font-medium">No pending applicants</p>
           <p className="text-sm text-gray-500">All applicants have been reviewed</p>
         </div>
       ) : (
@@ -267,34 +259,33 @@ export function AdminPendingApplicants() {
           {pendingApplicants.map((applicant) => (
             <div
               key={applicant.id}
-              className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors bg-white"
+              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{applicant.full_name}</h3>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Mail className="h-4 w-4" />
-                      {applicant.email}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">{applicant.full_name}</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center text-gray-600">
+                      <span className="font-medium w-24">Email:</span>
+                      <span className="truncate">{applicant.email}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {getDaysWaiting(applicant.created_at)}
+                    {applicant.department_name && (
+                      <div className="flex items-center text-gray-600">
+                        <span className="font-medium w-24">Department:</span>
+                        <span className="truncate">{applicant.department_name}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center text-gray-600">
+                      <span className="font-medium w-24">Submitted:</span>
+                      <span>{getDaysWaiting(applicant.created_at)}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Department: {applicant.department_name}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">Submitted</p>
-                  <p className="text-sm font-medium text-gray-700">{formatDate(applicant.created_at)}</p>
                 </div>
               </div>
 
               {/* Action Buttons */}
               {showRejectReason === applicant.id ? (
-                <div className="mt-4 space-y-3 bg-gray-50 p-4 rounded">
+                <div className="mt-4 pt-3 border-t border-gray-100 space-y-3">
                   <textarea
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
@@ -324,11 +315,11 @@ export function AdminPendingApplicants() {
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-3">
+                <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100">
                   <button
                     onClick={() => handleApprove(applicant.id)}
                     disabled={processingId === applicant.id}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+                    className="flex-1 text-center px-3 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 inline-flex items-center justify-center gap-2 transition-colors"
                   >
                     <Check className="h-4 w-4" />
                     Approve
@@ -336,7 +327,7 @@ export function AdminPendingApplicants() {
                   <button
                     onClick={() => setShowRejectReason(applicant.id)}
                     disabled={processingId === applicant.id}
-                    className="flex-1 px-4 py-2 border border-red-300 text-red-700 font-medium rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+                    className="flex-1 text-center px-3 py-2 border border-red-300 text-red-600 font-medium rounded-lg hover:bg-red-50 disabled:opacity-50 inline-flex items-center justify-center gap-2 transition-colors"
                   >
                     <X className="h-4 w-4" />
                     Reject
