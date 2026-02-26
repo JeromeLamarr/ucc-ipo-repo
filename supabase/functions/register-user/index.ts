@@ -56,11 +56,13 @@ function isOriginAllowed(origin: string): boolean {
   if (staticAllowed.includes(origin)) return true;
 
   // Pattern-based allowed origins (Bolt preview + webcontainer)
-  // Matches: https://XXX.bolt.new, https://XXX.webcontainer.io, https://XXX--5173--XXX
+  // Bolt preview domains include: https://*.bolt.new, https://*.webcontainer.io
+  // AND domains containing "--5173--" (Bolt's dev server pattern)
   const patterns = [
-    /^https:\/\/[a-z0-9\-]+\.bolt\.new$/i,           // https://*.bolt.new
-    /^https:\/\/[a-z0-9\-]+\.webcontainer\.io$/i,     // https://*.webcontainer.io
-    /^https:\/\/[a-z0-9\-]*\-\-5173\-\-[a-z0-9\-]*$/i, // https://*--5173--*
+    /^https:\/\/[a-z0-9\-]+\.bolt\.new$/i,                    // https://*.bolt.new
+    /^https:\/\/[a-z0-9\-]+\.webcontainer\.io$/i,              // https://*.webcontainer.io
+    /^https:\/\/.*--5173--.*\.bolt\.new$/i,                    // https://*--5173--*.bolt.new
+    /^https:\/\/.*--5173--.*\.webcontainer\.io$/i,             // https://*--5173--*.webcontainer.io
   ];
 
   return patterns.some(pattern => pattern.test(origin));
