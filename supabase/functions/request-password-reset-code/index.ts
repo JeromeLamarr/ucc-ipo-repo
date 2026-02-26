@@ -291,6 +291,10 @@ Deno.serve(async (req: Request) => {
       html: emailHtml,
     };
 
+    console.log("[request-password-reset-code] Sending POST request to Resend API...");
+    console.log("[request-password-reset-code] Email to:", email);
+    console.log("[request-password-reset-code] From:", `UCC IP Office <${resendFromEmail}>`);
+    
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -300,15 +304,37 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify(emailPayload),
     });
 
+    console.log("[request-password-reset-code] Resend response status:", emailResponse.status, emailResponse.statusText);
+
     if (!emailResponse.ok) {
       const errorText = await emailResponse.text();
-      console.error("[request-password-reset-code] Resend API error:", errorText);
-      // Log error but still return success (code was stored)
-      console.log("[request-password-reset-code] WARNING: Email may not have been sent, but code stored");
-    } else {
-      const emailResult = await emailResponse.json();
-      console.log("[request-password-reset-code] Email sent successfully");
+      console.error("[request-password-reset-code] ERROR: Resend API returned error");
+      console.error("[request-password-reset-code] Status:", emailResponse.status);
+      console.error("[request-password-reset-code] Status Text:", emailResponse.statusText);
+      console.error("[request-password-reset-code] Response Body:", errorText);
+      throw new Error(`Email service error (HTTP ${emailResponse.status}): ${errorText}`);
     }
+
+    let emailResult;
+    try {
+      emailResult = await emailResponse.json();
+    } catch (parseError) {
+      console.error("[request-password-reset-code] ERROR: Could not parse Resend response as JSON");
+      console.error("[request-password-reset-code] Error:", parseError);
+      throw new Error("Email service returned invalid response");
+    }
+
+    console.log("[request-password-reset-code] ✓ Resend API response received");
+    console.log("[request-password-reset-code] Email ID from Resend:", emailResult.id);
+
+    if (!emailResult.id) {
+      console.error("[request-password-reset-code] ERROR: No message ID in Resend response");
+      console.error("[request-password-reset-code] Response data:", JSON.stringify(emailResult));
+      throw new Error("Email service did not confirm delivery (no message ID)");
+    }
+
+    console.log("[request-password-reset-code] ✓ Email sent successfully to:", email);
+    console.log("[request-password-reset-code] Message ID:", emailResult.id);
 
     // Always return generic success message
     return new Response(
