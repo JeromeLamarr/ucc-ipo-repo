@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { X, Download, FileText, FileJson } from 'lucide-react';
-import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
+import html2pdf from 'html2pdf.js';
 import { Document, Packer, Paragraph, HeadingLevel } from 'docx';
 import type { RecordDocumentationData } from '../utils/fetchFullRecordDocumentation';
 
