@@ -437,28 +437,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Fetch applicant data separately if applicant_id exists
-    let applicant = null;
-    if (recordData.applicant_id) {
-      const { data: applicantData, error: applicantError } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, department_id")
-        .eq("id", recordData.applicant_id)
-        .single();
-
-      if (applicantError) {
-        console.warn("[generate-full-record-documentation-pdf] Applicant fetch warning", {
-          error: applicantError.message,
-        });
-      } else {
-        applicant = applicantData;
-      }
-    }
-
-    // Add applicant to recordData for consistency
+    // Build record with minimal applicant info (just use applicant_id, don't fetch separately)
     const recordWithApplicant = {
       ...recordData,
-      applicant,
+      applicant: recordData.applicant_id ? { id: recordData.applicant_id } : null,
     };
 
     console.log("[generate-full-record-documentation-pdf] Generating PDF for record", {
@@ -473,16 +455,18 @@ Deno.serve(async (req: Request) => {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
-    const fileName = `UCC_IPO_Full_Record_${recordData.reference_number || recordData.id}.pdf`;
+    const fileName = `UCC_IPO_Full_Record_${recordWithApplicant.reference_number || recordWithApplicant.id}.pdf`;
     const filePath = `full-record-docs/${year}/${month}/${fileName}`;
 
     console.log("[generate-full-record-documentation-pdf] Uploading PDF to storage", {
       filePath,
       fileSize: pdfBuffer.length,
+      bucket: "certificates",
     });
 
+    // Use "certificates" bucket (proven to work in certificate generator)
     const { error: uploadError } = await supabase.storage
-      .from("generated-pdfs")
+      .from("certificates")
       .upload(filePath, pdfBuffer, {
         contentType: "application/pdf",
         upsert: true,
@@ -491,6 +475,7 @@ Deno.serve(async (req: Request) => {
     if (uploadError) {
       console.error("[generate-full-record-documentation-pdf] Storage upload error", {
         filePath,
+        bucket: "certificates",
         errorMessage: uploadError.message,
         errorStatus: (uploadError as any).status,
       });
@@ -509,9 +494,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get signed URL
+    // Get signed URL from certificates bucket
     const { data: urlData, error: urlError } = await supabase.storage
-      .from("generated-pdfs")
+      .from("certificates")
       .createSignedUrl(filePath, 3600); // 1 hour expiry
 
     if (urlError || !urlData) {
