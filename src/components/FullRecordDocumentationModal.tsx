@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Download, Printer } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, Download, FileText, FileJson } from 'lucide-react';
 import type { RecordDocumentationData } from '../utils/fetchFullRecordDocumentation';
 
 interface FullRecordDocumentationModalProps {
@@ -17,6 +17,9 @@ export function FullRecordDocumentationModal({
 }: FullRecordDocumentationModalProps) {
   if (!isOpen) return null;
 
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [exportLoading, setExportLoading] = useState<'pdf' | 'docx' | null>(null);
+
   const details = record.details || {};
   const renderField = (val: any) => {
     if (val === undefined || val === null || val === '' || val === 0) {
@@ -28,8 +31,8 @@ export function FullRecordDocumentationModal({
     return String(val);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const getFileName = (ext: string) => {
+    return `UCC_IPO_Full_Record_${record.reference_number || record.id}.${ext}`;
   };
 
   const handleDownloadHTML = () => {
@@ -38,11 +41,187 @@ export function FullRecordDocumentationModal({
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `UCC_IPO_Record_${record.reference_number || record.id}.html`;
+    a.download = getFileName('html');
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      setExportLoading('pdf');
+      
+      if (!contentRef.current) {
+        alert('Documentation content not found. Please try again.');
+        return;
+      }
+
+      // Dynamically import html2pdf
+      const html2pdf = (await import('html2pdf.js')).default;
+
+      const element = contentRef.current;
+      const opt = {
+        margin: 10,
+        filename: getFileName('pdf'),
+        image: {
+          type: 'jpeg',
+          quality: 0.98,
+        },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+        },
+        jsPDF: {
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4',
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      };
+
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setExportLoading(null);
+    }
+  };
+
+  const handleDownloadDOCX = async () => {
+    try {
+      setExportLoading('docx');
+
+      if (!contentRef.current) {
+        alert('Documentation content not found. Please try again.');
+        return;
+      }
+
+      // Dynamically import docx library
+      const { Document, Packer, Paragraph, HeadingLevel, BorderStyle, convertInchesToTwip } = await import('docx');
+
+      // Build document sections from record data
+      const sections = [
+        new Paragraph({
+          text: 'UCC IPO — Full Record Documentation',
+          heading: HeadingLevel.HEADING_1,
+          thematicBreak: false,
+        }),
+        
+        new Paragraph({
+          text: `Tracking Number: ${renderField(record.reference_number)}`,
+          thematicBreak: false,
+        }),
+        new Paragraph({
+          text: `Record ID: ${record.id}`,
+          thematicBreak: false,
+        }),
+        new Paragraph({
+          text: `Status: ${record.status}`,
+          thematicBreak: false,
+        }),
+        new Paragraph({
+          text: `Current Stage: ${record.current_stage}`,
+          thematicBreak: false,
+        }),
+        new Paragraph({
+          text: `Created: ${new Date(record.created_at).toLocaleString()}`,
+          thematicBreak: false,
+        }),
+        new Paragraph({
+          text: `Updated: ${new Date(record.updated_at).toLocaleString()}`,
+          thematicBreak: false,
+        }),
+        
+        new Paragraph({ text: '' }),
+        new Paragraph({
+          text: 'Applicant Information',
+          heading: HeadingLevel.HEADING_2,
+          thematicBreak: false,
+        }),
+        new Paragraph({
+          text: record.applicant
+            ? `${record.applicant.full_name} (${record.applicant.email})`
+            : 'Applicant data not available',
+          thematicBreak: false,
+        }),
+        
+        new Paragraph({ text: '' }),
+        new Paragraph({
+          text: 'Record Overview',
+          heading: HeadingLevel.HEADING_2,
+          thematicBreak: false,
+        }),
+        new Paragraph({ text: `Title: ${renderField(record.title)}`, thematicBreak: false }),
+        new Paragraph({ text: `Category: ${renderField(record.category)}`, thematicBreak: false }),
+        new Paragraph({ text: `Abstract: ${renderField(record.abstract)}`, thematicBreak: false }),
+        
+        new Paragraph({ text: '' }),
+        new Paragraph({
+          text: 'Technical Narrative',
+          heading: HeadingLevel.HEADING_2,
+          thematicBreak: false,
+        }),
+        new Paragraph({ text: `Description: ${renderField(details.description)}`, thematicBreak: false }),
+        new Paragraph({ text: `Technical Field: ${renderField(details.technicalField)}`, thematicBreak: false }),
+        new Paragraph({ text: `Background Art: ${renderField(details.backgroundArt)}`, thematicBreak: false }),
+        new Paragraph({ text: `Problem Statement: ${renderField(details.problemStatement)}`, thematicBreak: false }),
+        new Paragraph({ text: `Solution: ${renderField(details.solution)}`, thematicBreak: false }),
+        new Paragraph({ text: `Advantages: ${renderField(details.advantages)}`, thematicBreak: false }),
+        new Paragraph({ text: `Implementation: ${renderField(details.implementation)}`, thematicBreak: false }),
+        
+        new Paragraph({ text: '' }),
+        new Paragraph({
+          text: 'Prior Art / Keywords / Publications',
+          heading: HeadingLevel.HEADING_2,
+          thematicBreak: false,
+        }),
+        new Paragraph({ text: `Prior Art: ${renderField(details.priorArt)}`, thematicBreak: false }),
+        new Paragraph({ 
+          text: `Keywords: ${(details.keywords || []).length === 0 ? '—' : (details.keywords || []).join(', ')}`,
+          thematicBreak: false,
+        }),
+        new Paragraph({ text: `Related Publications: ${renderField(details.relatedPublications)}`, thematicBreak: false }),
+        
+        new Paragraph({ text: '' }),
+        new Paragraph({
+          text: 'Commercial Information',
+          heading: HeadingLevel.HEADING_2,
+          thematicBreak: false,
+        }),
+        new Paragraph({ text: `Commercial Potential: ${renderField(details.commercialPotential)}`, thematicBreak: false }),
+        new Paragraph({ text: `Target Market: ${renderField(details.targetMarket)}`, thematicBreak: false }),
+        new Paragraph({ text: `Competitive Advantage: ${renderField(details.competitiveAdvantage)}`, thematicBreak: false }),
+        new Paragraph({ text: `Estimated Value: ${renderField(details.estimatedValue)}`, thematicBreak: false }),
+        new Paragraph({ text: `Funding: ${renderField(details.funding)}`, thematicBreak: false }),
+        
+        new Paragraph({ text: '' }),
+        new Paragraph({
+          text: `Generated: ${new Date().toLocaleString()}`,
+          thematicBreak: false,
+        }),
+        ...(adminEmail ? [new Paragraph({ text: `Admin: ${adminEmail}`, thematicBreak: false })] : []),
+      ];
+
+      const doc = new Document({ sections: [{ children: sections }] });
+      const blob = await Packer.toBlob(doc);
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = getFileName('docx');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating DOCX:', error);
+      alert('Failed to generate DOCX. Please try again.');
+    } finally {
+      setExportLoading(null);
+    }
   };
 
   return (
@@ -69,7 +248,7 @@ export function FullRecordDocumentationModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-8">
+        <div className="p-6 space-y-8" ref={contentRef}>
           {/* Header Info */}
           <div className="border-b border-gray-200 pb-6">
             <div className="grid grid-cols-2 gap-4">
@@ -368,23 +547,53 @@ export function FullRecordDocumentationModal({
         <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 flex justify-end gap-3">
           <button
             onClick={handleDownloadHTML}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            disabled={exportLoading !== null}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title="Download as HTML"
           >
             <Download className="h-4 w-4" />
             Download HTML
           </button>
           <button
-            onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            title="Print or save as PDF"
+            onClick={handleDownloadPDF}
+            disabled={exportLoading !== null}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Download as PDF"
           >
-            <Printer className="h-4 w-4" />
-            Print / PDF
+            {exportLoading === 'pdf' ? (
+              <>
+                <span className="h-4 w-4 inline-block animate-spin">⚙️</span>
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4" />
+                Download PDF
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleDownloadDOCX}
+            disabled={exportLoading !== null}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Download as DOCX"
+          >
+            {exportLoading === 'docx' ? (
+              <>
+                <span className="h-4 w-4 inline-block animate-spin">⚙️</span>
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileJson className="h-4 w-4" />
+                Download DOCX
+              </>
+            )}
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-300 text-gray-900 rounded-lg hover:bg-gray-400 transition-colors"
+            disabled={exportLoading !== null}
+            className="px-4 py-2 bg-gray-300 text-gray-900 rounded-lg hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Close
           </button>
