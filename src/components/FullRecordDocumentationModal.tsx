@@ -1,6 +1,10 @@
-import React from 'react';
-import { X, Download, Printer } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Download } from 'lucide-react';
 import type { RecordDocumentationData } from '../utils/fetchFullRecordDocumentation';
+import {
+  generateAndDownloadFullRecordPDF,
+  downloadPDFFromURL,
+} from '../utils/generateFullRecordPDF';
 
 interface FullRecordDocumentationModalProps {
   isOpen: boolean;
@@ -17,7 +21,9 @@ export function FullRecordDocumentationModal({
 }: FullRecordDocumentationModalProps) {
   if (!isOpen) return null;
 
+  const [pdfLoading, setPdfLoading] = useState(false);
   const details = record.details || {};
+
   const renderField = (val: any) => {
     if (val === undefined || val === null || val === '' || val === 0) {
       return '—';
@@ -26,10 +32,6 @@ export function FullRecordDocumentationModal({
       return val.length === 0 ? '—' : val.join(', ');
     }
     return String(val);
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   const handleDownloadHTML = () => {
@@ -43,6 +45,22 @@ export function FullRecordDocumentationModal({
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      setPdfLoading(true);
+      const url = await generateAndDownloadFullRecordPDF(record.id);
+      await downloadPDFFromURL(
+        url,
+        `UCC_IPO_Record_${record.reference_number || record.id}.pdf`
+      );
+    } catch (err: any) {
+      alert(`Failed to download PDF: ${err.message}`);
+      console.error('PDF download error:', err);
+    } finally {
+      setPdfLoading(false);
+    }
   };
 
   return (
@@ -375,12 +393,22 @@ export function FullRecordDocumentationModal({
             Download HTML
           </button>
           <button
-            onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            title="Print or save as PDF"
+            onClick={handleDownloadPDF}
+            disabled={pdfLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400 disabled:cursor-not-allowed"
+            title="Download as PDF (server-generated)"
           >
-            <Printer className="h-4 w-4" />
-            Print / PDF
+            {pdfLoading ? (
+              <>
+                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Download PDF
+              </>
+            )}
           </button>
           <button
             onClick={onClose}
