@@ -1,30 +1,25 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { chromium } from "npm:playwright@latest";
+import type { RecordDocumentationData } from './fetchFullRecordDocumentation';
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
-
-interface DocumentRequest {
-  record_id: string;
-}
-
-// HTML template generator with the same styling as frontend
-function generateHTMLContent(record: any, details: any, adminEmail?: string): string {
-  const renderField = (val: any): string => {
-    if (val === undefined || val === null || val === "" || val === 0) {
-      return "—";
+/**
+ * Generates the complete HTML content for full record documentation.
+ * Used by both the frontend (for HTML download) and backend (for Playwright PDF generation).
+ */
+export function generateHTMLContent(
+  record: RecordDocumentationData,
+  details: any,
+  adminEmail?: string
+): string {
+  const renderField = (val: any) => {
+    if (val === undefined || val === null || val === '' || val === 0) {
+      return '—';
     }
     if (Array.isArray(val)) {
-      return val.length === 0 ? "—" : val.join(", ");
+      return val.length === 0 ? '—' : val.join(', ');
     }
     return String(val);
   };
 
-  const tableHTML = (rows: any[]): string => {
+  const tableHTML = (rows: any[]) => {
     return rows
       .map(
         (row) => `
@@ -35,7 +30,7 @@ function generateHTMLContent(record: any, details: any, adminEmail?: string): st
       </tr>
     `
       )
-      .join("");
+      .join('');
   };
 
   return `
@@ -53,8 +48,6 @@ function generateHTMLContent(record: any, details: any, adminEmail?: string): st
       margin: 0 auto;
       padding: 20px;
       background-color: #f9fafb;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
     }
     .container {
       background-color: white;
@@ -75,12 +68,6 @@ function generateHTMLContent(record: any, details: any, adminEmail?: string): st
       font-size: 18px;
       border-bottom: 1px solid #e5e7eb;
       padding-bottom: 10px;
-    }
-    h3 {
-      color: #1f2937;
-      font-size: 16px;
-      margin-top: 15px;
-      margin-bottom: 10px;
     }
     .section {
       margin-bottom: 30px;
@@ -142,10 +129,6 @@ function generateHTMLContent(record: any, details: any, adminEmail?: string): st
       color: #6b7280;
       font-size: 12px;
     }
-    @page {
-      size: A4;
-      margin: 16mm;
-    }
     @media print {
       body {
         padding: 0;
@@ -154,7 +137,6 @@ function generateHTMLContent(record: any, details: any, adminEmail?: string): st
       .container {
         box-shadow: none;
         padding: 0;
-        background-color: white;
       }
     }
   </style>
@@ -270,29 +252,12 @@ function generateHTMLContent(record: any, details: any, adminEmail?: string): st
 
     <h2>Technical Narrative</h2>
     <div class="section">
-      ${[
-        { key: 'description', label: 'Description' },
-        { key: 'technicalField', label: 'Technical Field' },
-        { key: 'backgroundArt', label: 'Background Art' },
-        { key: 'problemStatement', label: 'Problem Statement' },
-        { key: 'solution', label: 'Solution' },
-        { key: 'advantages', label: 'Advantages' },
-        { key: 'implementation', label: 'Implementation' },
-      ]
-        .map(
-          (field) => `
-        <div class="info-item">
-          <label>${field.label}</label>
-          <value style="white-space: pre-wrap;">${renderField(details[field.key])}</value>
-        </div>
-      `
-        )
-        .join('')}
+      ${generateTechnicalNarrativeFields(details, renderField)}
     </div>
 
     <h2>Inventors / Collaborators / Co-Creators</h2>
     <div class="section">
-      <h3>Inventors</h3>
+      <h3 style="font-size: 16px; margin-top: 15px;">Inventors</h3>
       ${
         (details.inventors || []).length === 0
           ? '<p class="empty">—</p>'
@@ -304,7 +269,7 @@ function generateHTMLContent(record: any, details: any, adminEmail?: string): st
       `
       }
 
-      <h3>Collaborators</h3>
+      <h3 style="font-size: 16px; margin-top: 15px;">Collaborators</h3>
       ${
         (details.collaborators || []).length === 0
           ? '<p class="empty">—</p>'
@@ -316,7 +281,7 @@ function generateHTMLContent(record: any, details: any, adminEmail?: string): st
       `
       }
 
-      <h3>Co-Creators</h3>
+      <h3 style="font-size: 16px; margin-top: 15px;">Co-Creators</h3>
       ${
         (details.coCreators || []).length === 0
           ? '<p class="empty">—</p>'
@@ -347,22 +312,7 @@ function generateHTMLContent(record: any, details: any, adminEmail?: string): st
 
     <h2>Commercial Information</h2>
     <div class="section">
-      ${[
-        { key: 'commercialPotential', label: 'Commercial Potential' },
-        { key: 'targetMarket', label: 'Target Market' },
-        { key: 'competitiveAdvantage', label: 'Competitive Advantage' },
-        { key: 'estimatedValue', label: 'Estimated Value' },
-        { key: 'funding', label: 'Funding' },
-      ]
-        .map(
-          (field) => `
-        <div class="info-item">
-          <label>${field.label}</label>
-          <value style="white-space: pre-wrap;">${renderField(details[field.key])}</value>
-        </div>
-      `
-        )
-        .join('')}
+      ${generateCommercialFields(details, renderField)}
     </div>
 
     ${
@@ -386,161 +336,46 @@ function generateHTMLContent(record: any, details: any, adminEmail?: string): st
   `;
 }
 
-async function generatePDFFromHTML(htmlContent: string): Promise<Buffer> {
-  let browser;
-  try {
-    browser = await chromium.launch();
-    const context = await browser.createBrowserContext();
-    const page = await context.newPage();
+function generateTechnicalNarrativeFields(details: any, renderField: (val: any) => string): string {
+  const fields = [
+    { key: 'description', label: 'Description' },
+    { key: 'technicalField', label: 'Technical Field' },
+    { key: 'backgroundArt', label: 'Background Art' },
+    { key: 'problemStatement', label: 'Problem Statement' },
+    { key: 'solution', label: 'Solution' },
+    { key: 'advantages', label: 'Advantages' },
+    { key: 'implementation', label: 'Implementation' },
+  ];
 
-    // Set HTML content
-    await page.setContent(htmlContent, { waitUntil: "networkidle" });
-
-    // Emulate print media for proper CSS rendering
-    await page.emulateMedia({ media: "print" });
-
-    // Generate PDF with proper options for styling preservation
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      preferCSSPageSize: true,
-      margin: {
-        top: "16mm",
-        right: "16mm",
-        bottom: "16mm",
-        left: "16mm",
-      },
-    });
-
-    await context.close();
-
-    return Buffer.from(pdfBuffer);
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
-  }
-}
-
-async function handleRequest(req: Request): Promise<Response> {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!
-    );
-
-    const { record_id } = (await req.json()) as DocumentRequest;
-
-    if (!record_id) {
-      return new Response(
-        JSON.stringify({ error: "record_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`Generating PDF for record: ${record_id}`);
-
-    // Fetch the IP record with all related details
-    const { data: record, error: recordError } = await supabase
-      .from("ip_records")
-      .select(
-        `
-        id,
-        reference_number,
-        status,
-        current_stage,
-        created_at,
-        updated_at,
-        title,
-        category,
-        abstract,
-        applicant_id,
-        supervisor_id,
-        evaluator_id,
-        applicant:profiles!applicant_id(id, full_name, email, department_id),
-        supervisor:profiles!supervisor_id(id, full_name, email),
-        evaluator:profiles!evaluator_id(id, full_name, email),
-        record_details(*)
+  return fields
+    .map(
+      (field) => `
+        <div class="info-item">
+          <label>${field.label}</label>
+          <value style="white-space: pre-wrap;">${renderField(details[field.key])}</value>
+        </div>
       `
-      )
-      .eq("id", record_id)
-      .single();
-
-    if (recordError || !record) {
-      console.error("Record fetch error:", recordError);
-      return new Response(
-        JSON.stringify({ error: "Record not found", details: recordError }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Extract details from the related record_details table
-    const details = record.record_details?.[0] || {};
-
-    // Generate HTML content with complete styling
-    const htmlContent = generateHTMLContent(record, details);
-
-    // Convert HTML to PDF using Playwright with CSS rendering
-    console.log("Converting HTML to PDF using Playwright...");
-    const pdfBuffer = await generatePDFFromHTML(htmlContent);
-
-    // Upload to storage
-    const fileName = `full-record-docs/${new Date().getFullYear()}/${String(
-      new Date().getMonth() + 1
-    ).padStart(2, "0")}/${record.reference_number || record.id}.pdf`;
-
-    console.log(`Uploading PDF to storage: ${fileName}`);
-
-    const { error: uploadError } = await supabase.storage
-      .from("certificates")
-      .upload(fileName, pdfBuffer, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
-      return new Response(
-        JSON.stringify({ error: "Failed to upload PDF", details: uploadError }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Generate signed URL (valid for 1 hour)
-    const { data: signedURL, error: urlError } = await supabase.storage
-      .from("certificates")
-      .createSignedUrl(fileName, 3600);
-
-    if (urlError || !signedURL) {
-      console.error("URL generation error:", urlError);
-      return new Response(
-        JSON.stringify({ error: "Failed to generate download URL", details: urlError }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("PDF generated and uploaded successfully");
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        url: signedURL.signedUrl,
-        fileName: `UCC_IPO_Record_${record.reference_number || record.id}.pdf`,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    console.error("Function error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error", details: String(error) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
+    )
+    .join('');
 }
 
-Deno.serve(handleRequest);
+function generateCommercialFields(details: any, renderField: (val: any) => string): string {
+  const fields = [
+    { key: 'commercialPotential', label: 'Commercial Potential' },
+    { key: 'targetMarket', label: 'Target Market' },
+    { key: 'competitiveAdvantage', label: 'Competitive Advantage' },
+    { key: 'estimatedValue', label: 'Estimated Value' },
+    { key: 'funding', label: 'Funding' },
+  ];
 
+  return fields
+    .map(
+      (field) => `
+        <div class="info-item">
+          <label>${field.label}</label>
+          <value style="white-space: pre-wrap;">${renderField(details[field.key])}</value>
+        </div>
+      `
+    )
+    .join('');
+}
