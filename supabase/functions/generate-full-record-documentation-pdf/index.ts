@@ -444,29 +444,10 @@ async function handleRequest(req: Request): Promise<Response> {
 
     console.log(`Generating PDF for record: ${record_id}`);
 
-    // Fetch the IP record with all related details
+    // Fetch the IP record
     const { data: record, error: recordError } = await supabase
       .from("ip_records")
-      .select(
-        `
-        id,
-        reference_number,
-        status,
-        current_stage,
-        created_at,
-        updated_at,
-        title,
-        category,
-        abstract,
-        applicant_id,
-        supervisor_id,
-        evaluator_id,
-        applicant:profiles!applicant_id(id, full_name, email, department_id),
-        supervisor:profiles!supervisor_id(id, full_name, email),
-        evaluator:profiles!evaluator_id(id, full_name, email),
-        record_details(*)
-      `
-      )
+      .select("*")
       .eq("id", record_id)
       .single();
 
@@ -478,8 +459,13 @@ async function handleRequest(req: Request): Promise<Response> {
       );
     }
 
-    // Extract details from the related record_details table
-    const details = record.record_details?.[0] || {};
+    // Fetch record details separately
+    const { data: detailsData } = await supabase
+      .from("record_details")
+      .select("*")
+      .eq("record_id", record_id);
+
+    const details = detailsData?.[0] || {};
 
     // Generate HTML content with complete styling
     const htmlContent = generateHTMLContent(record, details);
