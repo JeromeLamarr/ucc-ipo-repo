@@ -3,3 +3,49 @@ For all designs I ask you to make, have them be beautiful, not cookie cutter. Ma
 By default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.
 
 Use icons from lucide-react for logos.
+
+## Project Structure
+
+This project includes a complete PDF generation system:
+
+### Frontend
+- React/Vite application with PDF download functionality
+- "Download PDF" button uses Node.js server (primary) → Edge Function fallback
+- Shared HTML template ensures PDF matches "Download HTML" output
+
+### Backend Components
+1. **Node.js PDF Server** (port 3000)
+   - Location: /server directory
+   - Uses Playwright for Chromium PDF generation
+   - Validates JWT, enforces admin-only access
+   - Deployment options: Vercel, Docker, VPS
+
+2. **Supabase Edge Function** (optional proxy)
+   - Location: /supabase/functions/generate-full-record-documentation-pdf
+   - Acts as optional proxy to Node server
+   - Fallback when Node server unavailable
+
+### Deployment Automation
+- **Master Deployer**: deploy/00-deploy-master.sh (interactive menu)
+- **Individual Scripts**: deploy/01-05-deploy-*.sh (specific deployment methods)
+- **Preparation Scripts**: prepare-deployment.sh/.bat (environment verification)
+- **Configuration Templates**: *.env.template files with all required variables
+
+### Documentation
+- START_DEPLOYMENT_HERE.md - Begin here for deployment
+- DEPLOYMENT_PLAYBOOK.md - Step-by-step deployment guide
+- PRODUCTION_PDF_DEPLOYMENT.md - Technical architecture reference
+- PDF_GENERATION_QUICK_REFERENCE.md - Emergency troubleshooting
+
+### Key Files to Know
+- src/lib/sharedHTMLTemplate.ts - HTML/CSS template (shared by frontend & server)
+- server/src/utils/pdfGenerator.ts - Playwright PDF generation logic
+- server/src/middleware/auth.ts - JWT validation & admin enforcement
+- supabase/functions/.../index.ts - Edge Function proxy
+
+### For Updates
+Always maintain compatibility between:
+1. Frontend PDF download logic (src/utils/generateFullRecordPDF.ts)
+2. Shared HTML template (src/lib/sharedHTMLTemplate.ts)
+3. Server HTML generator (server/src/utils/htmlGenerator.ts)
+4. CSS styling for print/PDF rendering
