@@ -51,11 +51,8 @@ export function FullRecordDocumentationModal({
   const handleDownloadPDF = async () => {
     try {
       setPdfLoading(true);
-      const url = await generateAndDownloadFullRecordPDF(record.id);
-      await downloadPDFFromURL(
-        url,
-        `UCC_IPO_Record_${record.reference_number || record.id}.pdf`
-      );
+      const { url, fileName } = await generateAndDownloadFullRecordPDF(record.id);
+      await downloadPDFFromURL(url, fileName);
     } catch (err: any) {
       alert(`Failed to download PDF: ${err.message}`);
       console.error('PDF download error:', err);

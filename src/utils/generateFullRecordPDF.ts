@@ -11,7 +11,7 @@ const NODE_PDF_SERVER_URL = import.meta.env.VITE_NODE_PDF_SERVER_URL ||
                               ? 'http://localhost:3000'
                               : undefined);
 
-export async function generateAndDownloadFullRecordPDF(recordId: string): Promise<string> {
+export async function generateAndDownloadFullRecordPDF(recordId: string): Promise<{ url: string; fileName: string }> {
   try {
     // Get current user session for auth header
     const {
@@ -46,7 +46,7 @@ export async function generateAndDownloadFullRecordPDF(recordId: string): Promis
             throw new Error(data?.error || 'Failed to generate PDF');
           }
           console.log('[PDF] Successfully generated via Node server');
-          return data.url;
+          return { url: data.url, fileName: data.fileName || 'document.pdf' };
         }
       } catch (nodeError: any) {
         console.warn('[PDF] Node server error (falling back to Edge Function):', nodeError.message);
@@ -77,7 +77,7 @@ export async function generateAndDownloadFullRecordPDF(recordId: string): Promis
     }
 
     console.log('[PDF] Successfully generated via Edge Function');
-    return data.url;
+    return { url: data.url, fileName: data.fileName || 'document.html' };
   } catch (err: any) {
     console.error('Error generating full record PDF:', err);
     throw err;
@@ -88,9 +88,19 @@ export async function downloadPDFFromURL(url: string, fileName: string): Promise
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error(`Failed to download PDF: ${response.statusText}`);
+      throw new Error(`Failed to download file: ${response.statusText}`);
     }
 
+    const contentType = response.headers.get('content-type');
+
+    // If it's HTML, open in new tab for printing instead of downloading
+    if (contentType?.includes('text/html')) {
+      console.log('[PDF] Opening HTML file in new tab for printing');
+      window.open(url, '_blank');
+      return;
+    }
+
+    // Otherwise download as PDF
     const blob = await response.blob();
     const blobUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -101,7 +111,7 @@ export async function downloadPDFFromURL(url: string, fileName: string): Promise
     document.body.removeChild(link);
     window.URL.revokeObjectURL(blobUrl);
   } catch (err: any) {
-    console.error('Error downloading PDF:', err);
+    console.error('Error downloading file:', err);
     throw err;
   }
 }
