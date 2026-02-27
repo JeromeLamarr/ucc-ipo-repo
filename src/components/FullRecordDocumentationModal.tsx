@@ -58,7 +58,7 @@ export function FullRecordDocumentationModal({
       }
 
       // Dynamically import html2pdf
-      const html2pdf = (await import('html2pdf.js')).default;
+      const html2pdf = (await import('html2pdf.js/dist/html2pdf.bundle.min')).default;
 
       const element = contentRef.current;
       const opt = {
