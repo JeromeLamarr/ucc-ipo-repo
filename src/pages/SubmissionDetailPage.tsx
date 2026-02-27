@@ -28,6 +28,7 @@ import { MaterialsSubmissionForm } from '../components/MaterialsSubmissionForm';
 import { MaterialsView } from '../components/MaterialsView';
 import { RevisionBanner } from '../components/RevisionBanner';
 import { EditSubmissionModal } from '../components/EditSubmissionModal';
+import { GenerateDocumentationButton } from '../components/GenerateDocumentationButton';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -1222,6 +1223,10 @@ export function SubmissionDetailPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Admin Actions</h2>
           <div className="space-y-4">
+            <GenerateDocumentationButton
+              recordId={record.id}
+              adminEmail={profile.email}
+            />
             <MaterialsRequestAction
               ipRecordId={record.id}
               applicantEmail={record.applicant?.email || ''}
