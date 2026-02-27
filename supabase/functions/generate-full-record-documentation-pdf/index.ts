@@ -437,6 +437,10 @@ Deno.serve(async (req: Request) => {
     }
 
     // Fetch IP record with related data
+    console.log("[generate-full-record-documentation-pdf] Fetching record", {
+      recordId: record_id,
+    });
+
     const { data: recordData, error: recordError } = await supabase
       .from("ip_records")
       .select(
@@ -449,13 +453,36 @@ Deno.serve(async (req: Request) => {
         current_stage,
         created_at,
         details,
-        applicant:applicant_id (id, full_name, email, department_id)
+        applicant_id
       `
       )
       .eq("id", record_id)
       .single();
 
-    if (recordError || !recordData) {
+    if (recordError) {
+      console.error("[generate-full-record-documentation-pdf] Record fetch error", {
+        error: recordError.message,
+        code: recordError.code,
+      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Record fetch failed: ${recordError.message}`,
+        }),
+        {
+          status: 400,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    if (!recordData) {
+      console.error("[generate-full-record-documentation-pdf] Record not found", {
+        recordId: record_id,
+      });
       return new Response(
         JSON.stringify({
           success: false,
@@ -471,13 +498,37 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Fetch applicant data separately if applicant_id exists
+    let applicant = null;
+    if (recordData.applicant_id) {
+      const { data: applicantData, error: applicantError } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, department_id")
+        .eq("id", recordData.applicant_id)
+        .single();
+
+      if (applicantError) {
+        console.warn("[generate-full-record-documentation-pdf] Applicant fetch warning", {
+          error: applicantError.message,
+        });
+      } else {
+        applicant = applicantData;
+      }
+    }
+
+    // Add applicant to recordData for consistency
+    const recordWithApplicant = {
+      ...recordData,
+      applicant,
+    };
+
     console.log("[generate-full-record-documentation-pdf] Generating PDF for record", {
       recordId: record_id,
-      referenceNumber: recordData.reference_number,
+      referenceNumber: recordWithApplicant.reference_number,
     });
 
     // Generate PDF
-    const pdfBuffer = await generateDocumentationPDF(recordData, recordData.details || {});
+    const pdfBuffer = await generateDocumentationPDF(recordWithApplicant, recordWithApplicant.details || {});
 
     // Upload to Supabase Storage
     const now = new Date();
@@ -501,9 +552,22 @@ Deno.serve(async (req: Request) => {
     if (uploadError) {
       console.error("[generate-full-record-documentation-pdf] Storage upload error", {
         filePath,
-        error: uploadError.message,
+        errorMessage: uploadError.message,
+        errorStatus: (uploadError as any).status,
       });
-      throw uploadError;
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Storage upload failed: ${uploadError.message}`,
+        }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     // Get signed URL
@@ -514,9 +578,23 @@ Deno.serve(async (req: Request) => {
     if (urlError || !urlData) {
       console.error(
         "[generate-full-record-documentation-pdf] Failed to create signed URL",
-        urlError
+        {
+          error: urlError?.message,
+        }
       );
-      throw urlError;
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Failed to create download link: ${urlError?.message || "Unknown error"}`,
+        }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     console.log("[generate-full-record-documentation-pdf] PDF generation successful", {
