@@ -355,67 +355,6 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get auth header
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Missing authorization header",
-        }),
-        {
-          status: 401,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-
-    // Verify user is authenticated and is admin
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !userData?.user) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Unauthorized",
-        }),
-        {
-          status: 401,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-
-    // Check if user is admin
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userData.user.id)
-      .single();
-
-    if (profileError || !profileData || profileData.role !== "admin") {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Admin access required",
-        }),
-        {
-          status: 403,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-
     // Parse request body
     const body = await req.json() as DocumentRequest;
     const { record_id } = body;
