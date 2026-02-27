@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { X, Download, FileText, FileJson } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
+import { Document, Packer, Paragraph, HeadingLevel } from 'docx';
 import type { RecordDocumentationData } from '../utils/fetchFullRecordDocumentation';
 
 interface FullRecordDocumentationModalProps {
@@ -57,9 +59,6 @@ export function FullRecordDocumentationModal({
         return;
       }
 
-      // Dynamically import html2pdf
-      const html2pdf = (await import('html2pdf.js/dist/html2pdf.bundle.min')).default;
-
       const element = contentRef.current;
       const opt = {
         margin: 10,
@@ -98,9 +97,6 @@ export function FullRecordDocumentationModal({
         alert('Documentation content not found. Please try again.');
         return;
       }
-
-      // Dynamically import docx library
-      const { Document, Packer, Paragraph, HeadingLevel, BorderStyle, convertInchesToTwip } = await import('docx');
 
       // Build document sections from record data
       const sections = [
