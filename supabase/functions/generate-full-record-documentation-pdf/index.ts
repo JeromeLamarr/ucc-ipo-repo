@@ -1,6 +1,32 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { chromium } from "npm:playwright@latest";
+
+/**
+ * =============================================================================
+ * PDF GENERATION EDGE FUNCTION - PROXY ONLY
+ * =============================================================================
+ * 
+ * ⚠️ CRITICAL: This Edge Function is a PROXY ONLY
+ * 
+ * It does NOT attempt to generate PDFs itself!
+ * Reason: Deno (Edge Function runtime) cannot run Chromium/Playwright
+ * Error if attempted:
+ *   "browserType.launch: Executable doesn't exist at /home/deno/..."
+ * 
+ * SOLUTION: Forward to Node.js server that supports Chromium
+ * 
+ * Deployment:
+ * 1. Set NODE_PDF_SERVER_URL env var on this Edge Function
+ * 2. Frontend calls this function (OR calls Node server directly)
+ * 3. Edge Function proxies to Node server
+ * 4. Node server generates PDF and returns signed URL
+ * 5. Frontend downloads PDF
+ * 
+ * Configuration Required:
+ * - NODE_PDF_SERVER_URL: https://your-node-pdf-server.com
+ *   (or http://localhost:3000 for local development)
+ * 
+ * =============================================================================
+ */
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,427 +38,14 @@ interface DocumentRequest {
   record_id: string;
 }
 
-// HTML template generator with the same styling as frontend
-function generateHTMLContent(record: any, details: any, adminEmail?: string): string {
-  const renderField = (val: any): string => {
-    if (val === undefined || val === null || val === "" || val === 0) {
-      return "—";
-    }
-    if (Array.isArray(val)) {
-      return val.length === 0 ? "—" : val.join(", ");
-    }
-    return String(val);
-  };
-
-  const tableHTML = (rows: any[]): string => {
-    return rows
-      .map(
-        (row) => `
-      <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd;">${renderField(row.name)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd;">${renderField(row.affiliation)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd;">${renderField(row.email)}</td>
-      </tr>
-    `
-      )
-      .join("");
-  };
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>UCC IPO — Full Record Documentation</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f9fafb;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    .container {
-      background-color: white;
-      padding: 40px;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    h1 {
-      color: #1f2937;
-      border-bottom: 3px solid #2563eb;
-      padding-bottom: 15px;
-      margin-bottom: 30px;
-    }
-    h2 {
-      color: #1f2937;
-      margin-top: 30px;
-      margin-bottom: 15px;
-      font-size: 18px;
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 10px;
-    }
-    h3 {
-      color: #1f2937;
-      font-size: 16px;
-      margin-top: 15px;
-      margin-bottom: 10px;
-    }
-    .section {
-      margin-bottom: 30px;
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-    .info-item {
-      padding: 10px;
-      background-color: #f3f4f6;
-      border-radius: 4px;
-    }
-    .info-item label {
-      font-weight: 600;
-      color: #6b7280;
-      font-size: 12px;
-      display: block;
-      margin-bottom: 5px;
-    }
-    .info-item value {
-      color: #1f2937;
-      display: block;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 15px 0;
-    }
-    th {
-      background-color: #f3f4f6;
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-      color: #374151;
-      border-bottom: 2px solid #d1d5db;
-    }
-    td {
-      padding: 10px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    pre {
-      background-color: #f3f4f6;
-      padding: 15px;
-      border-radius: 4px;
-      overflow-x: auto;
-      font-size: 12px;
-    }
-    .empty {
-      color: #9ca3af;
-      font-style: italic;
-    }
-    footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e5e7eb;
-      color: #6b7280;
-      font-size: 12px;
-    }
-    @page {
-      size: A4;
-      margin: 16mm;
-    }
-    @media print {
-      body {
-        padding: 0;
-        background-color: white;
-      }
-      .container {
-        box-shadow: none;
-        padding: 0;
-        background-color: white;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>UCC IPO — Full Record Documentation</h1>
-    
-    <div class="section">
-      <div class="info-grid">
-        <div class="info-item">
-          <label>Tracking Number</label>
-          <value>${renderField(record.reference_number)}</value>
-        </div>
-        <div class="info-item">
-          <label>Record ID</label>
-          <value style="font-family: monospace;">${record.id}</value>
-        </div>
-        <div class="info-item">
-          <label>Status</label>
-          <value>${record.status}</value>
-        </div>
-        <div class="info-item">
-          <label>Current Stage</label>
-          <value>${record.current_stage}</value>
-        </div>
-        <div class="info-item">
-          <label>Created</label>
-          <value>${new Date(record.created_at).toLocaleString()}</value>
-        </div>
-        <div class="info-item">
-          <label>Updated</label>
-          <value>${new Date(record.updated_at).toLocaleString()}</value>
-        </div>
-      </div>
-    </div>
-
-    <h2>Applicant Information</h2>
-    <div class="section">
-      ${
-        record.applicant
-          ? `
-        <div class="info-grid">
-          <div class="info-item">
-            <label>Name</label>
-            <value>${renderField(record.applicant.full_name)}</value>
-          </div>
-          <div class="info-item">
-            <label>Email</label>
-            <value>${renderField(record.applicant.email)}</value>
-          </div>
-          <div class="info-item">
-            <label>Department ID</label>
-            <value>${renderField(record.applicant.department_id)}</value>
-          </div>
-        </div>
-      `
-          : '<p class="empty">Applicant data not available</p>'
-      }
-    </div>
-
-    ${
-      record.supervisor || record.evaluator
-        ? `
-    <h2>Assigned Reviewers</h2>
-    <div class="section">
-      <div class="info-grid">
-        ${
-          record.supervisor
-            ? `
-        <div class="info-item" style="background-color: #dbeafe;">
-          <label>Supervisor</label>
-          <value>${record.supervisor.full_name}</value>
-          <value style="font-size: 12px; color: #6b7280;">${record.supervisor.email}</value>
-        </div>
-        `
-            : ''
-        }
-        ${
-          record.evaluator
-            ? `
-        <div class="info-item" style="background-color: #dcfce7;">
-          <label>Evaluator</label>
-          <value>${record.evaluator.full_name}</value>
-          <value style="font-size: 12px; color: #6b7280;">${record.evaluator.email}</value>
-        </div>
-        `
-            : ''
-        }
-      </div>
-    </div>
-    `
-        : ''
-    }
-
-    <h2>Record Overview</h2>
-    <div class="section">
-      <div class="info-grid">
-        <div class="info-item">
-          <label>Title</label>
-          <value>${renderField(record.title)}</value>
-        </div>
-        <div class="info-item">
-          <label>Category</label>
-          <value>${renderField(record.category)}</value>
-        </div>
-      </div>
-      <div class="info-item">
-        <label>Abstract</label>
-        <value style="white-space: pre-wrap;">${renderField(record.abstract)}</value>
-      </div>
-    </div>
-
-    <h2>Technical Narrative</h2>
-    <div class="section">
-      ${[
-        { key: 'description', label: 'Description' },
-        { key: 'technicalField', label: 'Technical Field' },
-        { key: 'backgroundArt', label: 'Background Art' },
-        { key: 'problemStatement', label: 'Problem Statement' },
-        { key: 'solution', label: 'Solution' },
-        { key: 'advantages', label: 'Advantages' },
-        { key: 'implementation', label: 'Implementation' },
-      ]
-        .map(
-          (field) => `
-        <div class="info-item">
-          <label>${field.label}</label>
-          <value style="white-space: pre-wrap;">${renderField(details[field.key])}</value>
-        </div>
-      `
-        )
-        .join('')}
-    </div>
-
-    <h2>Inventors / Collaborators / Co-Creators</h2>
-    <div class="section">
-      <h3>Inventors</h3>
-      ${
-        (details.inventors || []).length === 0
-          ? '<p class="empty">—</p>'
-          : `
-        <table>
-          <thead><tr><th>Name</th><th>Affiliation</th><th>Email</th></tr></thead>
-          <tbody>${tableHTML(details.inventors || [])}</tbody>
-        </table>
-      `
-      }
-
-      <h3>Collaborators</h3>
-      ${
-        (details.collaborators || []).length === 0
-          ? '<p class="empty">—</p>'
-          : `
-        <table>
-          <thead><tr><th>Name</th><th>Affiliation</th><th>Email</th></tr></thead>
-          <tbody>${tableHTML(details.collaborators || [])}</tbody>
-        </table>
-      `
-      }
-
-      <h3>Co-Creators</h3>
-      ${
-        (details.coCreators || []).length === 0
-          ? '<p class="empty">—</p>'
-          : `
-        <table>
-          <thead><tr><th>Name</th><th>Affiliation</th><th>Email</th></tr></thead>
-          <tbody>${tableHTML(details.coCreators || [])}</tbody>
-        </table>
-      `
-      }
-    </div>
-
-    <h2>Prior Art / Keywords / Publications</h2>
-    <div class="section">
-      <div class="info-item">
-        <label>Prior Art</label>
-        <value style="white-space: pre-wrap;">${renderField(details.priorArt)}</value>
-      </div>
-      <div class="info-item">
-        <label>Keywords</label>
-        <value>${(details.keywords || []).length === 0 ? '—' : (details.keywords || []).join(', ')}</value>
-      </div>
-      <div class="info-item">
-        <label>Related Publications</label>
-        <value style="white-space: pre-wrap;">${renderField(details.relatedPublications)}</value>
-      </div>
-    </div>
-
-    <h2>Commercial Information</h2>
-    <div class="section">
-      ${[
-        { key: 'commercialPotential', label: 'Commercial Potential' },
-        { key: 'targetMarket', label: 'Target Market' },
-        { key: 'competitiveAdvantage', label: 'Competitive Advantage' },
-        { key: 'estimatedValue', label: 'Estimated Value' },
-        { key: 'funding', label: 'Funding' },
-      ]
-        .map(
-          (field) => `
-        <div class="info-item">
-          <label>${field.label}</label>
-          <value style="white-space: pre-wrap;">${renderField(details[field.key])}</value>
-        </div>
-      `
-        )
-        .join('')}
-    </div>
-
-    ${
-      details.evaluationScore
-        ? `
-    <h2>Evaluation</h2>
-    <div class="section">
-      <pre>${JSON.stringify(details.evaluationScore, null, 2)}</pre>
-    </div>
-    `
-        : ''
-    }
-
-    <footer>
-      <p>Generated: ${new Date().toLocaleString()}</p>
-      ${adminEmail ? `<p>Admin: ${adminEmail}</p>` : ''}
-    </footer>
-  </div>
-</body>
-</html>
-  `;
-}
-
-async function generatePDFFromHTML(htmlContent: string): Promise<Buffer> {
-  let browser;
-  try {
-    browser = await chromium.launch();
-    const context = await browser.createBrowserContext();
-    const page = await context.newPage();
-
-    // Set HTML content
-    await page.setContent(htmlContent, { waitUntil: "networkidle" });
-
-    // Emulate print media for proper CSS rendering
-    await page.emulateMedia({ media: "print" });
-
-    // Generate PDF with proper options for styling preservation
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      preferCSSPageSize: true,
-      margin: {
-        top: "16mm",
-        right: "16mm",
-        bottom: "16mm",
-        left: "16mm",
-      },
-    });
-
-    await context.close();
-
-    return Buffer.from(pdfBuffer);
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
-  }
-}
-
 async function handleRequest(req: Request): Promise<Response> {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!
-    );
-
+    // Parse request body
     const { record_id } = (await req.json()) as DocumentRequest;
 
     if (!record_id) {
@@ -442,91 +55,115 @@ async function handleRequest(req: Request): Promise<Response> {
       );
     }
 
-    console.log(`Generating PDF for record: ${record_id}`);
+    console.log(`[Edge Proxy] PDF request for record: ${record_id}`);
 
-    // Fetch the IP record
-    const { data: record, error: recordError } = await supabase
-      .from("ip_records")
-      .select("*")
-      .eq("id", record_id)
-      .single();
-
-    if (recordError || !record) {
-      console.error("Record fetch error:", recordError);
+    // Extract authorization header (required for admin validation)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: "Record not found", details: recordError }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Missing authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Fetch record details separately
-    const { data: detailsData } = await supabase
-      .from("record_details")
-      .select("*")
-      .eq("record_id", record_id);
+    // Get Node server URL from environment
+    const nodeServerURL = Deno.env.get("NODE_PDF_SERVER_URL");
 
-    const details = detailsData?.[0] || {};
+    if (!nodeServerURL) {
+      // Return helpful error message
+      console.error(
+        `[Edge Proxy] ERROR: NODE_PDF_SERVER_URL not configured\n` +
+        `Set environment variable NODE_PDF_SERVER_URL on this Edge Function`
+      );
 
-    // Generate HTML content with complete styling
-    const htmlContent = generateHTMLContent(record, details);
+      return new Response(
+        JSON.stringify({
+          error: "PDF generation service not configured",
+          details: {
+            reason: "NODE_PDF_SERVER_URL environment variable not found on Edge Function",
+            solution: "Configure NODE_PDF_SERVER_URL in Edge Function settings",
+            alternative: "Call Node.js server directly: POST /api/generate-full-record-pdf with same headers",
+          },
+        }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Convert HTML to PDF using Playwright with CSS rendering
-    console.log("Converting HTML to PDF using Playwright...");
-    const pdfBuffer = await generatePDFFromHTML(htmlContent);
+    // Forward request to Node server
+    console.log(`[Edge Proxy] Forwarding to Node server: ${nodeServerURL}`);
 
-    // Upload to storage
-    const fileName = `full-record-docs/${new Date().getFullYear()}/${String(
-      new Date().getMonth() + 1
-    ).padStart(2, "0")}/${record.reference_number || record.id}.pdf`;
-
-    console.log(`Uploading PDF to storage: ${fileName}`);
-
-    const { error: uploadError } = await supabase.storage
-      .from("certificates")
-      .upload(fileName, pdfBuffer, {
-        contentType: "application/pdf",
-        upsert: true,
+    try {
+      const nodeResponse = await fetch(`${nodeServerURL}/api/generate-full-record-pdf`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+          "User-Agent": "Supabase-Edge-Function",
+        },
+        body: JSON.stringify({ record_id }),
       });
 
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
+      const nodeData = await nodeResponse.json();
+
+      if (!nodeResponse.ok) {
+        console.error(`[Edge Proxy] Node server returned error:`, {
+          status: nodeResponse.status,
+          error: nodeData.error,
+        });
+
+        // Forward error from Node server as-is
+        return new Response(JSON.stringify(nodeData), {
+          status: nodeResponse.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Success! Return response from Node server
+      console.log(`[Edge Proxy] Successfully forwarded response from Node server`);
+      return new Response(JSON.stringify(nodeData), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (proxyError: any) {
+      console.error(`[Edge Proxy] Failed to connect to Node server`, {
+        url: nodeServerURL,
+        error: proxyError.message,
+      });
+
       return new Response(
-        JSON.stringify({ error: "Failed to upload PDF", details: uploadError }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: "Failed to connect to PDF generation server",
+          details: {
+            server_url: nodeServerURL,
+            error_message: proxyError.message,
+            possible_causes: [
+              "Node server is down or unreachable",
+              "Network connectivity issue",
+              "Invalid NODE_PDF_SERVER_URL",
+            ],
+            troubleshooting: [
+              "Check Node server is running: curl " + nodeServerURL + "/health",
+              "Verify NODE_PDF_SERVER_URL is correct",
+              "Check network connectivity to Node server",
+            ],
+          },
+        }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Generate signed URL (valid for 1 hour)
-    const { data: signedURL, error: urlError } = await supabase.storage
-      .from("certificates")
-      .createSignedUrl(fileName, 3600);
-
-    if (urlError || !signedURL) {
-      console.error("URL generation error:", urlError);
-      return new Response(
-        JSON.stringify({ error: "Failed to generate download URL", details: urlError }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("PDF generated and uploaded successfully");
-
+  } catch (error) {
+    console.error("[Edge Proxy] Unexpected error:", error);
     return new Response(
       JSON.stringify({
-        success: true,
-        url: signedURL.signedUrl,
-        fileName: `UCC_IPO_Record_${record.reference_number || record.id}.pdf`,
+        error: "Internal server error",
+        details: String(error),
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    console.error("Function error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error", details: String(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 }
+
+Deno.serve(handleRequest);
 
 Deno.serve(handleRequest);
 

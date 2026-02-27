@@ -1,82 +1,159 @@
 /**
- * @deprecated Use src/lib/sharedHTMLTemplate.ts instead
- * This file is kept for backward compatibility.
+ * SHARED HTML Template for Full Record Documentation
  * 
- * The shared template is now in src/lib/sharedHTMLTemplate.ts
- * so both frontend and Node server use the exact same HTML.
+ * Used by:
+ * - Frontend: Download HTML button
+ * - Node Server: PDF generation (Playwright)
+ * 
+ * This ensures PDF output matches HTML download exactly.
  */
 
-import type { RecordDocumentationData } from './fetchFullRecordDocumentation';
-import { generateHTMLContent as sharedGenerateHTMLContent, type DetailData } from '../lib/sharedHTMLTemplate';
-
-/**
- * ⚠️ DEPRECATED - USE src/lib/sharedHTMLTemplate.ts
- * This wrapper is for backward compatibility only.
- */
-export function generateHTMLContent(
-  record: RecordDocumentationData,
-  details: any,
-  adminEmail?: string
-): string {
-  // Convert RecordDocumentationData to shared format
-  const sharedRecord = {
-    id: record.id,
-    reference_number: record.reference_number,
-    status: record.status,
-    current_stage: record.current_stage,
-    created_at: record.created_at,
-    updated_at: record.updated_at,
-    title: record.title,
-    category: record.category,
-    abstract: record.abstract,
-    applicant: record.applicant,
-    supervisor: record.supervisor,
-    evaluator: record.evaluator,
+export interface RecordData {
+  id: string;
+  reference_number: string;
+  status: string;
+  current_stage: string;
+  created_at: string;
+  updated_at: string;
+  title: string;
+  category: string;
+  abstract: string;
+  applicant?: {
+    full_name: string;
+    email: string;
+    department_id: string;
   };
-
-  return sharedGenerateHTMLContent(sharedRecord, details, adminEmail);
+  supervisor?: {
+    full_name: string;
+    email: string;
+  };
+  evaluator?: {
+    full_name: string;
+    email: string;
+  };
 }
 
-/**
- * DEPRECATED: Old implementation kept for reference only
- * ============================================================
- */
-function generateHTMLContent_DEPRECATED(
-  record: RecordDocumentationData,
-  details: any,
-  adminEmail?: string
-): string {
-  const renderField = (val: any) => {
-    if (val === undefined || val === null || val === '' || val === 0) {
-      return '—';
-    }
-    if (Array.isArray(val)) {
-      return val.length === 0 ? '—' : val.join(', ');
-    }
-    return String(val);
-  };
+export interface DetailData {
+  description?: string;
+  technicalField?: string;
+  backgroundArt?: string;
+  problemStatement?: string;
+  solution?: string;
+  advantages?: string;
+  implementation?: string;
+  inventors?: Array<{ name: string; affiliation: string; email: string }>;
+  collaborators?: Array<{ name: string; affiliation: string; email: string }>;
+  coCreators?: Array<{ name: string; affiliation: string; email: string }>;
+  priorArt?: string;
+  keywords?: string[];
+  relatedPublications?: string;
+  commercialPotential?: string;
+  targetMarket?: string;
+  competitiveAdvantage?: string;
+  estimatedValue?: string;
+  funding?: string;
+  evaluationScore?: any;
+}
 
-  const tableHTML = (rows: any[]) => {
-    return rows
-      .map(
-        (row) => `
+function renderField(val: any): string {
+  if (val === undefined || val === null || val === '' || val === 0) {
+    return '—';
+  }
+  if (Array.isArray(val)) {
+    return val.length === 0 ? '—' : val.join(', ');
+  }
+  return String(val);
+}
+
+function tableHTML(rows: any[]): string {
+  return rows
+    .map(
+      (row) => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #ddd;">${renderField(row.name)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #ddd;">${renderField(row.affiliation)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #ddd;">${renderField(row.email)}</td>
       </tr>
     `
-      )
-      .join('');
-  };
+    )
+    .join('');
+}
 
+function generateTechnicalNarrativeFields(details: DetailData): string {
+  const fields = [
+    { key: 'description', label: 'Description' },
+    { key: 'technicalField', label: 'Technical Field' },
+    { key: 'backgroundArt', label: 'Background Art' },
+    { key: 'problemStatement', label: 'Problem Statement' },
+    { key: 'solution', label: 'Solution' },
+    { key: 'advantages', label: 'Advantages' },
+    { key: 'implementation', label: 'Implementation' },
+  ];
+
+  return fields
+    .map(
+      (field) => `
+        <div class="info-item">
+          <label>${field.label}</label>
+          <value style="white-space: pre-wrap;">${renderField((details as any)[field.key])}</value>
+        </div>
+      `
+    )
+    .join('');
+}
+
+function generateCommercialFields(details: DetailData): string {
+  const fields = [
+    { key: 'commercialPotential', label: 'Commercial Potential' },
+    { key: 'targetMarket', label: 'Target Market' },
+    { key: 'competitiveAdvantage', label: 'Competitive Advantage' },
+    { key: 'estimatedValue', label: 'Estimated Value' },
+    { key: 'funding', label: 'Funding' },
+  ];
+
+  return fields
+    .map(
+      (field) => `
+        <div class="info-item">
+          <label>${field.label}</label>
+          <value style="white-space: pre-wrap;">${renderField((details as any)[field.key])}</value>
+        </div>
+      `
+    )
+    .join('');
+}
+
+/**
+ * Generate HTML for full record documentation
+ * 
+ * This HTML is used for:
+ * 1. Download HTML (browser) - Shows in browser as-is
+ * 2. Download PDF (server) - Rendered by Playwright using CSS media queries
+ * 
+ * CSS Includes:
+ * - Print-ready styles with proper color preservation
+ * - Media queries for PDF rendering (@media print)
+ * - Grid layouts for info cards
+ * - Table styles for inventors/collaborators
+ * - Color-accurate styling (-webkit-print-color-adjust: exact)
+ */
+export function generateHTMLContent(record: RecordData, details: DetailData, adminEmail?: string): string {
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UCC IPO — Full Record Documentation</title>
   <style>
+    /* ==================== PRINT COLOR PRESERVATION ==================== */
+    html, body {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+
+    /* ==================== BASE STYLES ==================== */
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       line-height: 1.6;
@@ -86,18 +163,23 @@ function generateHTMLContent_DEPRECATED(
       padding: 20px;
       background-color: #f9fafb;
     }
+
     .container {
       background-color: white;
       padding: 40px;
       border-radius: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
+
+    /* ==================== HEADINGS ==================== */
     h1 {
       color: #1f2937;
       border-bottom: 3px solid #2563eb;
       padding-bottom: 15px;
       margin-bottom: 30px;
+      font-size: 28px;
     }
+
     h2 {
       color: #1f2937;
       margin-top: 30px;
@@ -106,20 +188,32 @@ function generateHTMLContent_DEPRECATED(
       border-bottom: 1px solid #e5e7eb;
       padding-bottom: 10px;
     }
+
+    h3 {
+      color: #1f2937;
+      font-size: 16px;
+      margin-top: 15px;
+      margin-bottom: 10px;
+    }
+
+    /* ==================== SECTIONS & GRIDS ==================== */
     .section {
       margin-bottom: 30px;
     }
+
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 20px;
       margin-bottom: 20px;
     }
+
     .info-item {
       padding: 10px;
       background-color: #f3f4f6;
       border-radius: 4px;
     }
+
     .info-item label {
       font-weight: 600;
       color: #6b7280;
@@ -127,15 +221,20 @@ function generateHTMLContent_DEPRECATED(
       display: block;
       margin-bottom: 5px;
     }
+
     .info-item value {
       color: #1f2937;
       display: block;
+      font-size: 14px;
     }
+
+    /* ==================== TABLES ==================== */
     table {
       width: 100%;
       border-collapse: collapse;
       margin: 15px 0;
     }
+
     th {
       background-color: #f3f4f6;
       padding: 12px;
@@ -144,10 +243,13 @@ function generateHTMLContent_DEPRECATED(
       color: #374151;
       border-bottom: 2px solid #d1d5db;
     }
+
     td {
       padding: 10px;
       border-bottom: 1px solid #e5e7eb;
     }
+
+    /* ==================== CODE & PREFORMATTED ==================== */
     pre {
       background-color: #f3f4f6;
       padding: 15px;
@@ -155,10 +257,18 @@ function generateHTMLContent_DEPRECATED(
       overflow-x: auto;
       font-size: 12px;
     }
+
+    code {
+      font-family: "Courier New", monospace;
+      font-size: 12px;
+    }
+
+    /* ==================== UTILITY CLASSES ==================== */
     .empty {
       color: #9ca3af;
       font-style: italic;
     }
+
     footer {
       margin-top: 40px;
       padding-top: 20px;
@@ -166,14 +276,37 @@ function generateHTMLContent_DEPRECATED(
       color: #6b7280;
       font-size: 12px;
     }
+
+    /* ==================== PAGE BREAKS & PRINT ==================== */
+    @page {
+      size: A4;
+      margin: 16mm;
+    }
+
     @media print {
       body {
         padding: 0;
         background-color: white;
       }
+
       .container {
         box-shadow: none;
         padding: 0;
+        background-color: white;
+        border-radius: 0;
+      }
+
+      /* Prevent page breaks within info-items */
+      .info-item {
+        page-break-inside: avoid;
+      }
+
+      table {
+        page-break-inside: avoid;
+      }
+
+      .section {
+        page-break-inside: avoid;
       }
     }
   </style>
@@ -182,6 +315,7 @@ function generateHTMLContent_DEPRECATED(
   <div class="container">
     <h1>UCC IPO — Full Record Documentation</h1>
     
+    <!-- Record Header Info -->
     <div class="section">
       <div class="info-grid">
         <div class="info-item">
@@ -211,6 +345,7 @@ function generateHTMLContent_DEPRECATED(
       </div>
     </div>
 
+    <!-- Applicant Information -->
     <h2>Applicant Information</h2>
     <div class="section">
       ${
@@ -235,6 +370,7 @@ function generateHTMLContent_DEPRECATED(
       }
     </div>
 
+    <!-- Assigned Reviewers -->
     ${
       record.supervisor || record.evaluator
         ? `
@@ -269,6 +405,7 @@ function generateHTMLContent_DEPRECATED(
         : ''
     }
 
+    <!-- Record Overview -->
     <h2>Record Overview</h2>
     <div class="section">
       <div class="info-grid">
@@ -287,14 +424,16 @@ function generateHTMLContent_DEPRECATED(
       </div>
     </div>
 
+    <!-- Technical Narrative -->
     <h2>Technical Narrative</h2>
     <div class="section">
-      ${generateTechnicalNarrativeFields(details, renderField)}
+      ${generateTechnicalNarrativeFields(details)}
     </div>
 
+    <!-- Inventors / Collaborators / Co-Creators -->
     <h2>Inventors / Collaborators / Co-Creators</h2>
     <div class="section">
-      <h3 style="font-size: 16px; margin-top: 15px;">Inventors</h3>
+      <h3>Inventors</h3>
       ${
         (details.inventors || []).length === 0
           ? '<p class="empty">—</p>'
@@ -306,7 +445,7 @@ function generateHTMLContent_DEPRECATED(
       `
       }
 
-      <h3 style="font-size: 16px; margin-top: 15px;">Collaborators</h3>
+      <h3>Collaborators</h3>
       ${
         (details.collaborators || []).length === 0
           ? '<p class="empty">—</p>'
@@ -318,7 +457,7 @@ function generateHTMLContent_DEPRECATED(
       `
       }
 
-      <h3 style="font-size: 16px; margin-top: 15px;">Co-Creators</h3>
+      <h3>Co-Creators</h3>
       ${
         (details.coCreators || []).length === 0
           ? '<p class="empty">—</p>'
@@ -331,6 +470,7 @@ function generateHTMLContent_DEPRECATED(
       }
     </div>
 
+    <!-- Prior Art / Keywords / Publications -->
     <h2>Prior Art / Keywords / Publications</h2>
     <div class="section">
       <div class="info-item">
@@ -347,11 +487,13 @@ function generateHTMLContent_DEPRECATED(
       </div>
     </div>
 
+    <!-- Commercial Information -->
     <h2>Commercial Information</h2>
     <div class="section">
-      ${generateCommercialFields(details, renderField)}
+      ${generateCommercialFields(details)}
     </div>
 
+    <!-- Evaluation Score -->
     ${
       details.evaluationScore
         ? `
@@ -363,6 +505,7 @@ function generateHTMLContent_DEPRECATED(
         : ''
     }
 
+    <!-- Footer -->
     <footer>
       <p>Generated: ${new Date().toLocaleString()}</p>
       ${adminEmail ? `<p>Admin: ${adminEmail}</p>` : ''}
@@ -371,48 +514,4 @@ function generateHTMLContent_DEPRECATED(
 </body>
 </html>
   `;
-}
-
-function generateTechnicalNarrativeFields(details: any, renderField: (val: any) => string): string {
-  const fields = [
-    { key: 'description', label: 'Description' },
-    { key: 'technicalField', label: 'Technical Field' },
-    { key: 'backgroundArt', label: 'Background Art' },
-    { key: 'problemStatement', label: 'Problem Statement' },
-    { key: 'solution', label: 'Solution' },
-    { key: 'advantages', label: 'Advantages' },
-    { key: 'implementation', label: 'Implementation' },
-  ];
-
-  return fields
-    .map(
-      (field) => `
-        <div class="info-item">
-          <label>${field.label}</label>
-          <value style="white-space: pre-wrap;">${renderField(details[field.key])}</value>
-        </div>
-      `
-    )
-    .join('');
-}
-
-function generateCommercialFields(details: any, renderField: (val: any) => string): string {
-  const fields = [
-    { key: 'commercialPotential', label: 'Commercial Potential' },
-    { key: 'targetMarket', label: 'Target Market' },
-    { key: 'competitiveAdvantage', label: 'Competitive Advantage' },
-    { key: 'estimatedValue', label: 'Estimated Value' },
-    { key: 'funding', label: 'Funding' },
-  ];
-
-  return fields
-    .map(
-      (field) => `
-        <div class="info-item">
-          <label>${field.label}</label>
-          <value style="white-space: pre-wrap;">${renderField(details[field.key])}</value>
-        </div>
-      `
-    )
-    .join('');
 }
