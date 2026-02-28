@@ -130,9 +130,11 @@ router.post(
 
       res.json({
         success: true,
+        type: 'pdf',
         url: signedURL.signedUrl,
         path: fileName,
         fileName: `UCC_IPO_Record_${record.reference_number || record.id}.pdf`,
+        contentType: 'application/pdf',
       });
     } catch (error: any) {
       console.error('[PDF Generation] Function error:', error);

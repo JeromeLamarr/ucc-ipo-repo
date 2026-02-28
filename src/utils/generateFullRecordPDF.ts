@@ -1,17 +1,20 @@
 import { supabase } from '../lib/supabase';
 
 /**
- * PDF generation endpoints:
- * 1. Primary: Node.js server (recommended, has Chromium support)
- * 2. Fallback: Supabase Edge Function (may have limitations)
+ * PDF Generation Strategy:
+ * 
+ * 1. Call Supabase Edge Function endpoint (single source of truth)
+ * 2. Edge Function checks NODE_PDF_SERVER_URL:
+ *    - If set: proxies to Node server → returns real PDF URL
+ *    - If not set: returns HTML for print-to-PDF fallback
+ * 3. Frontend checks response:
+ *    - If PDF response: downloads directly
+ *    - If HTML response: opens in new tab for manual printing
+ * 
+ * This simplifies frontend logic and centralizes configuration.
  */
 
-const NODE_PDF_SERVER_URL = import.meta.env.VITE_NODE_PDF_SERVER_URL || 
-                            (typeof window !== 'undefined' && window.location.origin.includes('localhost') 
-                              ? 'http://localhost:3000'
-                              : undefined);
-
-export async function generateAndDownloadFullRecordPDF(recordId: string): Promise<{ url: string; fileName: string }> {
+export async function generateAndDownloadFullRecordPDF(recordId: string): Promise<{ url: string; fileName: string; type: 'pdf' | 'html' }> {
   try {
     // Get current user session for auth header
     const {
@@ -23,39 +26,9 @@ export async function generateAndDownloadFullRecordPDF(recordId: string): Promis
       throw new Error('Not authenticated. Please log in.');
     }
 
-    // Try Node server first (primary method with full Chromium support)
-    if (NODE_PDF_SERVER_URL) {
-      console.log('[PDF] Attempting to generate PDF via Node server:', NODE_PDF_SERVER_URL);
-      try {
-        const response = await fetch(`${NODE_PDF_SERVER_URL}/api/generate-full-record-pdf`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ record_id: recordId }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          console.warn('[PDF] Node server error, falling back to Edge Function:', data);
-          // Fall through to Edge Function
-        } else {
-          if (!data?.success) {
-            throw new Error(data?.error || 'Failed to generate PDF');
-          }
-          console.log('[PDF] Successfully generated via Node server');
-          return { url: data.url, fileName: data.fileName || 'document.pdf' };
-        }
-      } catch (nodeError: any) {
-        console.warn('[PDF] Node server error (falling back to Edge Function):', nodeError.message);
-        // Fall through to Edge Function
-      }
-    }
-
-    // Fallback: Call edge function
-    console.log('[PDF] Using Edge Function for PDF generation');
+    console.log('[PDF] Calling Edge Function for PDF generation');
+    
+    // Call Edge Function (proxies to Node if configured)
     const { data, error } = await supabase.functions.invoke(
       'generate-full-record-documentation-pdf',
       {
@@ -69,38 +42,42 @@ export async function generateAndDownloadFullRecordPDF(recordId: string): Promis
     );
 
     if (error) {
-      throw new Error(error.message || 'Failed to generate PDF');
+      throw new Error(error.message || 'Failed to generate document');
     }
 
     if (!data?.success) {
-      throw new Error(data?.error || 'Failed to generate PDF');
+      throw new Error(data?.error || 'Failed to generate document');
     }
 
-    console.log('[PDF] Successfully generated via Edge Function');
-    return { url: data.url, fileName: data.fileName || 'document.html' };
+    const isPDF = data.type === 'pdf' || data.url?.endsWith('.pdf');
+    console.log(`[PDF] Successfully generated via Edge Function (type: ${isPDF ? 'PDF' : 'HTML'})`);
+    
+    return {
+      url: data.url,
+      fileName: data.fileName || (isPDF ? 'document.pdf' : 'document.html'),
+      type: isPDF ? 'pdf' : 'html'
+    };
   } catch (err: any) {
-    console.error('Error generating full record PDF:', err);
+    console.error('Error generating document:', err);
     throw err;
   }
 }
 
-export async function downloadPDFFromURL(url: string, fileName: string): Promise<void> {
+export async function downloadPDFFromURL(url: string, fileName: string, type: 'pdf' | 'html' = 'pdf'): Promise<void> {
   try {
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to download file: ${response.statusText}`);
     }
 
-    const contentType = response.headers.get('content-type');
-
-    // If it's HTML, open in new tab for printing instead of downloading
-    if (contentType?.includes('text/html')) {
-      console.log('[PDF] Opening HTML file in new tab for printing');
+    // If it's HTML, open in new tab for manual printing
+    if (type === 'html') {
+      console.log('[PDF] Opening HTML in new tab for manual print → save as PDF');
       window.open(url, '_blank');
       return;
     }
 
-    // Otherwise download as PDF
+    // Download as PDF
     const blob = await response.blob();
     const blobUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');

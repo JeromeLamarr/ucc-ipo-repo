@@ -56,13 +56,13 @@ app.use((err: any, req: Request, res: Response) => {
 });
 
 // ==================== SERVER STARTUP ====================
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║   PDF Generation Server (UCC IPO)                     ║
 ╚════════════════════════════════════════════════════════╝
 
-✅ Server running on port ${port}
+✅ Server running on port ${port} (listening on 0.0.0.0)
 📝 Environment: ${nodeEnv}
 
 📊 Endpoints:
