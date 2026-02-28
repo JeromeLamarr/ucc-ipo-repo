@@ -1,9 +1,12 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import pdfRoutes from './routes/pdf';
+import path from 'path';
 
-dotenv.config();
+// Load environment variables from .env file (must be FIRST before any other imports)
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+import pdfRoutes from './routes/pdf';
 
 const app: Express = express();
 const port = process.env.PORT || 3000;

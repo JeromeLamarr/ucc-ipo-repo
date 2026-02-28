@@ -1,11 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+let supabase: SupabaseClient | null = null;
 
-// Using service key to verify JWTs and check admin role
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+/**
+ * Get or create Supabase client (lazy-loaded to ensure env vars are ready)
+ */
+function getSupabaseClient(): SupabaseClient {
+  if (!supabase) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables');
+    }
+
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
+  }
+  return supabase;
+}
 
 interface AuthRequest extends Request {
   user?: {
@@ -33,10 +46,11 @@ export async function verifyAuth(
     const token = authHeader.substring(7);
 
     // Verify JWT with Supabase
+    const client = getSupabaseClient();
     const {
       data: { user },
       error,
-    } = await supabase.auth.getUser(token);
+    } = await client.auth.getUser(token);
 
     if (error || !user) {
       res.status(401).json({ error: 'Invalid or expired token' });
@@ -44,7 +58,8 @@ export async function verifyAuth(
     }
 
     // Get user metadata to check if admin
-    const { data: userData, error: userError } = await supabase
+    const client = getSupabaseClient();
+    const { data: userData, error: userError } = await client
       .from('users')
       .select('role, email')
       .eq('id', user.id)

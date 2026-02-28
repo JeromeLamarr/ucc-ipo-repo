@@ -1,14 +1,29 @@
 import { Router, Request, Response } from 'express';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { verifyAuth } from '../middleware/auth';
-import { generateHTMLContent } from '../utils/htmlGenerator';
+import { generateHTMLContent } from '../lib/sharedHTMLTemplate';
 import { generatePDFFromHTML } from '../utils/pdfGenerator';
 
 const router = Router();
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+let supabase: SupabaseClient | null = null;
+
+/**
+ * Get or create Supabase client (lazy-loaded to ensure env vars are ready)
+ */
+function getSupabaseClient(): SupabaseClient {
+  if (!supabase) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables');
+    }
+
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
+  }
+  return supabase;
+}
 
 interface AuthRequest extends Request {
   user?: {
@@ -46,7 +61,8 @@ router.post(
       console.log(`[PDF Generation] Starting for record: ${record_id}, user: ${req.user?.email}`);
 
       // Fetch the IP record
-      const { data: record, error: recordError } = await supabase
+      const client = getSupabaseClient();
+      const { data: record, error: recordError } = await client
         .from('ip_records')
         .select(
           `
@@ -70,7 +86,7 @@ router.post(
       }
 
       // Fetch record details
-      const { data: detailsData, error: detailsError } = await supabase
+      const { data: detailsData, error: detailsError } = await client
         .from('record_details')
         .select('*')
         .eq('record_id', record_id);
@@ -96,7 +112,7 @@ router.post(
 
       console.log(`[PDF Generation] Uploading PDF to storage: ${fileName}`);
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await client.storage
         .from('certificates')
         .upload(fileName, pdfBuffer, {
           contentType: 'application/pdf',
@@ -113,7 +129,7 @@ router.post(
       }
 
       // Generate signed URL (valid for 1 hour)
-      const { data: signedURL, error: urlError } = await supabase.storage
+      const { data: signedURL, error: urlError } = await client.storage
         .from('certificates')
         .createSignedUrl(fileName, 3600);
 
