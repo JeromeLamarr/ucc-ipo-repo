@@ -84,17 +84,8 @@ router.post(
         return;
       }
 
-      // Fetch record details
-      const { data: detailsData, error: detailsError } = await client
-        .from('record_details')
-        .select('*')
-        .eq('record_id', record_id);
-
-      if (detailsError) {
-        console.error(`[PDF Generation] Details fetch error:`, detailsError);
-      }
-
-      const details = detailsData?.[0] || {};
+      // Details are stored in the ip_records.details JSONB column (no separate table)
+      const details = (record as any).details || {};
 
       // Generate HTML content
       console.log(`[PDF Generation] Generating HTML for record: ${record_id}`);
