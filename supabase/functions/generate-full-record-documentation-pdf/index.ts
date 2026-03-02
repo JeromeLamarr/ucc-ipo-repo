@@ -22,7 +22,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
  * 5. Frontend downloads PDF
  * 
  * Configuration Required:
- * - NODE_PDF_SERVER_URL: https://your-node-pdf-server.com
+ * - NODE_PDF_SERVER_URL: https://server-ioe6muddm-jeromelamarr0409-gmailcoms-projects.vercel.app
  *   (or http://localhost:3000 for local development)
  * 
  * =============================================================================
