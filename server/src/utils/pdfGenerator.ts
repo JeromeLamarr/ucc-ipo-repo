@@ -19,8 +19,7 @@ export async function generatePDFFromHTML(htmlContent: string): Promise<Buffer> 
       headless: true,
     });
 
-    const context = await browser.createBrowserContext();
-    const page = await context.newPage();
+    const page = await browser.newPage();
 
     // Set HTML content with network idle wait
     console.log('[PDF] Setting page content...');
@@ -45,7 +44,7 @@ export async function generatePDFFromHTML(htmlContent: string): Promise<Buffer> 
       },
     });
 
-    await context.close();
+    await page.close();
     console.log('[PDF] PDF generated successfully');
 
     return Buffer.from(pdfBuffer);

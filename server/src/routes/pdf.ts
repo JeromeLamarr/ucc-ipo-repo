@@ -99,7 +99,7 @@ router.post(
 
       // Generate HTML content
       console.log(`[PDF Generation] Generating HTML for record: ${record_id}`);
-      const htmlContent = generateHTMLContent(record, details, req.user?.email);
+      const htmlContent = generateHTMLContent(record as any, details as any, req.user?.email);
 
       // Convert HTML to PDF using Playwright
       console.log(`[PDF Generation] Converting HTML to PDF using Playwright...`);
