@@ -45,8 +45,10 @@ export async function verifyAuth(
 
     const token = authHeader.substring(7);
 
-    // Verify JWT with Supabase
+    // Get Supabase client (lazy-loaded)
     const client = getSupabaseClient();
+
+    // Verify JWT with Supabase
     const {
       data: { user },
       error,
@@ -58,7 +60,6 @@ export async function verifyAuth(
     }
 
     // Get user metadata to check if admin
-    const client = getSupabaseClient();
     const { data: userData, error: userError } = await client
       .from('users')
       .select('role, email')

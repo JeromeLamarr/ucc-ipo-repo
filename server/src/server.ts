@@ -1,10 +1,10 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import path from 'path';
 
 // Load environment variables from .env file (must be FIRST before any other imports)
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// dotenv.config() automatically looks for .env in the current working directory
+dotenv.config();
 
 import pdfRoutes from './routes/pdf';
 
