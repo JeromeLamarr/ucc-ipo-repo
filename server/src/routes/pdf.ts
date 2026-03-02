@@ -66,11 +66,10 @@ router.post(
         .from('ip_records')
         .select(
           `
-          id, reference_number, status, current_stage, created_at, updated_at,
-          title, category, abstract,
-          applicant:applicants(full_name, email, department_id),
-          supervisor:users!ip_records_supervisor_id_fkey(full_name, email),
-          evaluator:users!ip_records_evaluator_id_fkey(full_name, email)
+          *,
+          applicant:users!applicant_id(id, email, full_name, department_id),
+          supervisor:users!supervisor_id(id, email, full_name),
+          evaluator:users!evaluator_id(id, email, full_name)
         `
         )
         .eq('id', record_id)
