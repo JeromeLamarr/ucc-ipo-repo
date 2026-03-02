@@ -1,32 +1,34 @@
-FROM node:18-alpine
+FROM mcr.microsoft.com/playwright:v1.40.0-jammy
 
 WORKDIR /app
 
-# Install dependencies
-COPY server/package*.json ./
+# Copy package files and install ALL dependencies (including dev for tsc)
+COPY package*.json ./
+RUN npm install
 
-RUN npm ci --production
+# Copy source files
+COPY tsconfig.json ./
+COPY src/ ./src/
 
-# Copy application code
-COPY server/src ./src
-COPY src/lib/sharedHTMLTemplate.ts ./lib/sharedHTMLTemplate.ts
+# Build TypeScript
+RUN npm run build
 
-# Create lib directory structure
-RUN mkdir -p lib && true
+# Remove dev dependencies
+RUN npm prune --omit=dev
 
-# Install Playwright (for PDF generation)
-RUN npx playwright install
+# Install Playwright Chromium browser
+RUN npx playwright install chromium
 
 # Expose port
 EXPOSE 3000
 
-# Set environment variables (can be overridden at runtime)
+# Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) process.exit(1)})"
 
 # Start application
-CMD ["npm", "start"]
+CMD ["node", "dist/server.js"]

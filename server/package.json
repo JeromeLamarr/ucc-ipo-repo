@@ -1,7 +1,6 @@
 {
   "name": "ucc-ipo-pdf-generator",
   "version": "1.0.0",
-  "type": "module",
   "description": "Node.js server for PDF generation with Chromium support",
   "main": "dist/server.js",
   "scripts": {
