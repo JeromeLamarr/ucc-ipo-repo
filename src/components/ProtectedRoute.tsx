@@ -54,9 +54,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/pending-approval" replace />;
   }
 
-  // Check role permissions if specified
+  // Check role permissions if specified.
+  // Redirect to /dashboard so the user lands on their actual home page
+  // rather than an error screen — they are authenticated, just on the wrong path.
   if (allowedRoles && !allowedRoles.includes(profile.role)) {
-    return <Navigate to="/unauthorized" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

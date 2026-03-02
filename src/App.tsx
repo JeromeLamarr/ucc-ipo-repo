@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from '@contexts/AuthContext';
+import { AuthProvider } from '@contexts/AuthContext';
 import { ProtectedRoute } from '@components/ProtectedRoute';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import { DashboardLayout } from '@components/DashboardLayout';
@@ -8,77 +8,42 @@ import { LoginPage } from '@pages/LoginPage';
 import { RegisterPage } from '@pages/RegisterPage';
 import { AuthCallbackPage } from '@pages/AuthCallbackPage';
 import { CMSPageRenderer } from '@pages/CMSPageRenderer';
-import { CMSPageEditor } from '@pages/CMSPageEditor';
-import { ApplicantDashboard } from '@pages/ApplicantDashboard';
-import { NewSubmissionPage } from '@pages/NewSubmissionPage';
-import { SupervisorDashboard } from '@pages/SupervisorDashboard';
-import { EvaluatorDashboard } from '@pages/EvaluatorDashboard';
-import { AdminDashboard } from '@pages/AdminDashboard';
-import { AdminBrandingSettingsPage } from '@pages/AdminBrandingSettingsPage';
-import { UserManagement } from '@pages/UserManagement';
-import { PublicPagesManagement } from '@pages/PublicPagesManagement';
-import { PageSectionsManagement } from '@pages/PageSectionsManagement';
-import { SubmissionDetailPage } from '@pages/SubmissionDetailPage';
-import { AllRecordsPage } from '@pages/AllRecordsPage';
-import { DeletedArchivePage } from '@pages/DeletedArchivePage';
-import { LegacyRecordsPage } from '@pages/LegacyRecordsPage';
-import { AddLegacyRecordPage } from '@pages/AddLegacyRecordPage';
-import { LegacyRecordDetailPage } from '@pages/LegacyRecordDetailPage';
-import { AssignmentManagementPage } from '@pages/AssignmentManagementPage';
-import { DepartmentManagementPage } from '@pages/DepartmentManagementPage';
-import { AdminSLAManagement } from '@pages/AdminSLAManagement';
-import { SettingsPage } from '@pages/SettingsPage';
 import { CertificateVerifyPage } from '@pages/CertificateVerifyPage';
 import { DisclosureVerifyPage } from '@pages/DisclosureVerifyPage';
 import { PendingApprovalPage } from '@pages/PendingApprovalPage';
 import { ForgotPasswordPage } from '@pages/ForgotPasswordPage';
 import { useEffect } from 'react';
 import { ensureHomeCMSPageExists } from '@lib/cmsSetup';
+import { dashboardRouteConfigs } from './dashboard/dashboardRouteConfig';
 
+/**
+ * Config-driven dashboard router.
+ *
+ * Every route in dashboardRouteConfigs is registered here and wrapped with
+ * ProtectedRoute so that allowedRoles is enforced at the route level —
+ * not just via conditional sidebar rendering.
+ *
+ * To add, remove, or restrict a dashboard route:
+ *   → Edit src/dashboard/dashboardRouteConfig.tsx — do NOT touch this function.
+ */
 function DashboardRouter() {
-  const { profile } = useAuth();
-
-  if (!profile) {
-    return <div>Loading...</div>;
-  }
-
-  const getDashboardComponent = () => {
-    switch (profile.role) {
-      case 'supervisor':
-        return <SupervisorDashboard />;
-      case 'evaluator':
-        return <EvaluatorDashboard />;
-      case 'admin':
-        return <AdminDashboard />;
-      default:
-        return <ApplicantDashboard />;
-    }
-  };
-
   return (
     <DashboardLayout>
       <Routes>
-        <Route path="/" element={getDashboardComponent()} />
-        <Route path="submit" element={<NewSubmissionPage />} />
-        <Route path="submissions" element={<ApplicantDashboard />} />
-        <Route path="submissions/:id" element={<SubmissionDetailPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="branding" element={<AdminBrandingSettingsPage />} />
-        <Route path="review" element={<SupervisorDashboard />} />
-        <Route path="evaluations" element={<EvaluatorDashboard />} />
-        <Route path="users" element={<UserManagement />} />
-        <Route path="public-pages" element={<PublicPagesManagement />} />
-        <Route path="public-pages/:slug/edit" element={<CMSPageEditor />} />
-        <Route path="public-pages/:pageId" element={<PageSectionsManagement />} />
-        <Route path="records" element={<AllRecordsPage />} />
-        <Route path="deleted-records" element={<DeletedArchivePage />} />
-        <Route path="legacy-records" element={<LegacyRecordsPage />} />
-        <Route path="legacy-records/new" element={<AddLegacyRecordPage />} />
-        <Route path="legacy-records/:id" element={<LegacyRecordDetailPage />} />
-        <Route path="assignments" element={<AssignmentManagementPage />} />
-        <Route path="departments" element={<DepartmentManagementPage />} />
-        <Route path="sla-policies" element={<AdminSLAManagement />} />
-        <Route path="analytics" element={<AdminDashboard />} />
+        {dashboardRouteConfigs.map((route) => {
+          const Component = route.component;
+          return (
+            <Route
+              key={route.path}
+              path={route.path}
+              element={
+                <ProtectedRoute allowedRoles={route.allowedRoles}>
+                  <Component />
+                </ProtectedRoute>
+              }
+            />
+          );
+        })}
       </Routes>
     </DashboardLayout>
   );

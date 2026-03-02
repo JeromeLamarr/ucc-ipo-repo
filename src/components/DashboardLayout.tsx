@@ -5,127 +5,24 @@ import { useBranding } from '../hooks/useBranding';
 import { NotificationCenter } from './NotificationCenter';
 import {
   GraduationCap,
-  LayoutDashboard,
-  FileText,
-  Users,
-  Settings,
   LogOut,
   Menu,
   X,
-  User as UserIcon,
-  ClipboardList,
-  Star,
-  PieChart,
-  UserCheck,
-  Archive,
-  Globe,
-  Clock
 } from 'lucide-react';
-import type { UserRole } from '../lib/database.types';
+import {
+  dashboardRouteConfigs,
+  navHref,
+  type DashboardRouteConfig,
+  type NavConfig,
+} from '../dashboard/dashboardRouteConfig';
+import { filterNavRoutesByRole } from '../dashboard/roleAccess';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-interface NavItem {
-  label: string;
-  path: string;
-  icon: typeof LayoutDashboard;
-  roles: UserRole[];
-}
-
-const navItems: NavItem[] = [
-  {
-    label: 'Dashboard',
-    path: '/dashboard',
-    icon: LayoutDashboard,
-    roles: ['applicant', 'supervisor', 'evaluator', 'admin'],
-  },
-  {
-    label: 'My Submissions',
-    path: '/dashboard/submissions',
-    icon: FileText,
-    roles: ['applicant'],
-  },
-  {
-    label: 'New Submission',
-    path: '/dashboard/submit',
-    icon: ClipboardList,
-    roles: ['applicant'],
-  },
-  {
-    label: 'Review Queue',
-    path: '/dashboard/review',
-    icon: ClipboardList,
-    roles: ['supervisor'],
-  },
-  {
-    label: 'Evaluations',
-    path: '/dashboard/evaluations',
-    icon: Star,
-    roles: ['evaluator'],
-  },
-  {
-    label: 'Users',
-    path: '/dashboard/users',
-    icon: Users,
-    roles: ['admin'],
-  },
-  {
-    label: 'Public Pages',
-    path: '/dashboard/public-pages',
-    icon: Globe,
-    roles: ['admin'],
-  },
-  {
-    label: 'All Records',
-    path: '/dashboard/records',
-    icon: FileText,
-    roles: ['admin'],
-  },
-  {
-    label: 'Legacy Records',
-    path: '/dashboard/legacy-records',
-    icon: Archive,
-    roles: ['admin'],
-  },
-  {
-    label: 'Deleted Archive',
-    path: '/dashboard/deleted-records',
-    icon: Archive,
-    roles: ['admin'],
-  },
-  {
-    label: 'Assignments',
-    path: '/dashboard/assignments',
-    icon: UserCheck,
-    roles: ['admin'],
-  },
-  {
-    label: 'Departments',
-    path: '/dashboard/departments',
-    icon: Settings,
-    roles: ['admin'],
-  },
-  {
-    label: 'SLA Policies',
-    path: '/dashboard/sla-policies',
-    icon: Clock,
-    roles: ['admin'],
-  },
-  {
-    label: 'Analytics',
-    path: '/dashboard/analytics',
-    icon: PieChart,
-    roles: ['admin'],
-  },
-  {
-    label: 'Settings',
-    path: '/dashboard/settings',
-    icon: Settings,
-    roles: ['applicant', 'supervisor', 'evaluator', 'admin'],
-  },
-];
+/** Narrows config to entries that are guaranteed to have nav metadata. */
+type NavRoute = DashboardRouteConfig & { nav: NavConfig };
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { profile, signOut } = useAuth();
@@ -139,9 +36,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     navigate('/login');
   };
 
-  const filteredNavItems = navItems.filter((item) =>
-    profile ? item.roles.includes(profile.role) : false
-  );
+  // Build nav items from the single source-of-truth route config.
+  // filterNavRoutesByRole returns only routes with nav metadata that the
+  // current user's role is allowed to see, sorted by nav.order.
+  const filteredNavItems = (profile
+    ? (filterNavRoutesByRole(profile.role, dashboardRouteConfigs) as NavRoute[])
+    : []);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -195,12 +95,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <nav className="h-full flex flex-col p-4 space-y-2">
           <div className="flex-1 space-y-1">
             {filteredNavItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.path);
+              const Icon = item.nav.icon;
+              const href = navHref(item.path);
+              const active = isActive(href);
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
+                  to={href}
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
                     active
@@ -209,8 +110,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   }`}
                   style={active ? { background: `linear-gradient(135deg, ${primaryColor}, #6366f1)`, boxShadow: `0 8px 16px ${primaryColor}33` } : {}}
                 >
-                  <Icon className={`h-5 w-5 transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />
-                  <span>{item.label}</span>
+                  {Icon && <Icon className={`h-5 w-5 transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />}
+                  <span>{item.nav.label}</span>
                 </Link>
               );
             })}
