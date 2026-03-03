@@ -17,9 +17,11 @@ import {
   History,
   ListChecks
 } from 'lucide-react';
-import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { Pagination } from '../components/Pagination';
 import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
+import { PageHeader } from '../components/dashboard/ui/PageHeader';
+import { StatCard } from '../components/dashboard/ui/StatCard';
+import { StatusPill } from '../components/dashboard/ui/StatusPill';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -568,53 +570,43 @@ export function SupervisorDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
+      <div className="space-y-6">
+        <div className="h-9 w-72 bg-gray-100 rounded-lg animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Supervisor Review Queue</h1>
-        <p className="text-gray-600 mt-1">Review and approve IP submissions assigned to you</p>
-      </div>
+      <PageHeader
+        title="Supervisor Review Queue"
+        subtitle="Review and approve IP submissions assigned to you"
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: 'linear-gradient(135deg, #fbbf2408, #fcd34d08)', borderColor: '#fbbf2440' }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pending Review</p>
-              <p className="text-3xl font-bold mt-1" style={{ color: '#fbbf24' }}>
-                {records.filter((r) => r.status === 'waiting_supervisor').length}
-              </p>
-            </div>
-            <ClipboardList className="h-12 w-12 opacity-20" style={{ color: '#fbbf24' }} />
-          </div>
-        </div>
-
-        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Needs Revision</p>
-              <p className="text-3xl font-bold mt-1" style={{ color: '#f59918' }}>
-                {records.filter((r) => r.status === 'supervisor_revision').length}
-              </p>
-            </div>
-            <AlertCircle className="h-12 w-12 opacity-20" style={{ color: '#f59918' }} />
-          </div>
-        </div>
-
-        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Reviewed Total</p>
-              <p className="text-3xl font-bold mt-1" style={{ color: primaryColor }}>{historyRecords.length}</p>
-            </div>
-            <History className="h-12 w-12 opacity-20" style={{ color: primaryColor }} />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Pending Review"
+          value={records.filter((r) => r.status === 'waiting_supervisor').length}
+          icon={ClipboardList}
+          iconColor="from-yellow-400 to-amber-500"
+        />
+        <StatCard
+          label="Needs Revision"
+          value={records.filter((r) => r.status === 'supervisor_revision').length}
+          icon={AlertCircle}
+          iconColor="from-orange-400 to-orange-600"
+        />
+        <StatCard
+          label="Reviewed Total"
+          value={historyRecords.length}
+          icon={History}
+          iconColor="from-blue-500 to-indigo-600"
+        />
       </div>
 
       <div className="rounded-xl shadow-sm border border-gray-200" style={{ background: 'white' }}>
@@ -753,17 +745,7 @@ export function SupervisorDashboard() {
                             </span>
                           </div>
                         </div>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            getStatusColor(record.status)
-                          }`}
-                        >
-                          {record.status === 'waiting_evaluation'
-                            ? 'Approved - In Evaluation'
-                            : record.status === 'rejected'
-                            ? 'Rejected'
-                            : getStatusLabel(record.status)}
-                        </span>
+                        <StatusPill status={record.status} size="sm" />
                       </div>
 
                       <div className="mb-4">
@@ -842,7 +824,7 @@ export function SupervisorDashboard() {
                   </div>
                   <div>
                     <span className="font-semibold text-blue-700">Status:</span>
-                    <span className="text-blue-900 ml-2">{getStatusLabel(selectedRecord.status)}</span>
+                    <StatusPill status={selectedRecord.status} size="sm" />
                   </div>
                   <div>
                     <span className="font-semibold text-blue-700">Reference:</span>

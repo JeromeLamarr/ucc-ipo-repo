@@ -18,9 +18,11 @@ import {
   History,
   ListChecks
 } from 'lucide-react';
-import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { Pagination } from '../components/Pagination';
 import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
+import { PageHeader } from '../components/dashboard/ui/PageHeader';
+import { StatCard } from '../components/dashboard/ui/StatCard';
+import { StatusPill } from '../components/dashboard/ui/StatusPill';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -530,8 +532,13 @@ export function EvaluatorDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
+      <div className="space-y-6">
+        <div className="h-9 w-64 bg-gray-100 rounded-lg animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -541,45 +548,30 @@ export function EvaluatorDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Evaluator Dashboard</h1>
-        <p className="text-gray-600 mt-1">Evaluate IP submissions assigned to your category</p>
-      </div>
+      <PageHeader
+        title="Evaluator Dashboard"
+        subtitle="Evaluate IP submissions assigned to your category"
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pending Evaluation</p>
-              <p className="text-3xl font-bold mt-1" style={{ color: primaryColor }}>
-                {records.filter((r) => r.status === 'waiting_evaluation').length}
-              </p>
-            </div>
-            <Star className="h-12 w-12 opacity-20" style={{ color: primaryColor }} />
-          </div>
-        </div>
-
-        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Needs Revision</p>
-              <p className="text-3xl font-bold mt-1" style={{ color: '#f59918' }}>
-                {records.filter((r) => r.status === 'evaluator_revision').length}
-              </p>
-            </div>
-            <AlertCircle className="h-12 w-12 opacity-20" style={{ color: '#f59918' }} />
-          </div>
-        </div>
-
-        <div className="p-6 rounded-xl shadow-sm border border-gray-200" style={{ background: 'linear-gradient(135deg, #22c55e08, #16a34a08)', borderColor: '#22c55e40' }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Evaluated Total</p>
-              <p className="text-3xl font-bold mt-1" style={{ color: '#22c55e' }}>{historyRecords.length}</p>
-            </div>
-            <History className="h-12 w-12 text-green-600 opacity-20" />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          label="Pending Evaluation"
+          value={records.filter((r) => r.status === 'waiting_evaluation').length}
+          icon={Star}
+          iconColor="from-purple-500 to-violet-600"
+        />
+        <StatCard
+          label="Needs Revision"
+          value={records.filter((r) => r.status === 'evaluator_revision').length}
+          icon={AlertCircle}
+          iconColor="from-orange-400 to-orange-600"
+        />
+        <StatCard
+          label="Evaluated Total"
+          value={historyRecords.length}
+          icon={History}
+          iconColor="from-green-500 to-emerald-600"
+        />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -711,9 +703,7 @@ export function EvaluatorDashboard() {
                             </span>
                           </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(record.status)}`}>
-                          {getStatusLabel(record.status)}
-                        </span>
+                        <StatusPill status={record.status} size="sm" />
                       </div>
 
                       <div className="mb-4">
@@ -792,7 +782,7 @@ export function EvaluatorDashboard() {
                   </div>
                   <div>
                     <span className="font-semibold text-purple-700">Status:</span>
-                    <span className="text-purple-900 ml-2">{getStatusLabel(selectedRecord.status)}</span>
+                    <StatusPill status={selectedRecord.status} size="sm" />
                   </div>
                   <div>
                     <span className="font-semibold text-purple-700">Reference:</span>
