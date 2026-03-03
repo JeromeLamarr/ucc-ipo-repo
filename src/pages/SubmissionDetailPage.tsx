@@ -26,8 +26,7 @@ import { MaterialsView } from '../components/MaterialsView';
 import { RevisionBanner } from '../components/RevisionBanner';
 import { EditSubmissionModal } from '../components/EditSubmissionModal';
 import { GenerateDocumentationButton } from '../components/GenerateDocumentationButton';
-import { StatusPill } from '../components/dashboard/ui/StatusPill';
-import { DashboardCard } from '../components/dashboard/ui/DashboardCard';
+import { StatusPill, DashboardCard } from '../components/dashboard/ui';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {

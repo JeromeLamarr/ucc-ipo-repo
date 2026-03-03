@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { FileText, Search, Filter, Eye, Download, Plus, Award, Trash2, MoreVertical } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { Pagination } from '../components/Pagination';
+import { PageHeader, StatusPill } from '../components/dashboard/ui';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -177,29 +178,28 @@ export function AllRecordsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="space-y-6">
+        <div className="h-9 w-56 bg-gray-100 rounded-lg animate-pulse" />
+        <div className="h-64 bg-gray-100 rounded-2xl animate-pulse" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">All IP Records</h1>
-          <p className="text-gray-600 mt-1 text-sm lg:text-base">
-            Viewing {filteredRecords.length} workflow records and {filteredDrafts.length} drafts
-          </p>
-        </div>
-        <button
-          onClick={exportToCSV}
-          className="flex items-center justify-center gap-2 px-4 lg:px-6 py-2 lg:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm lg:text-base"
-        >
-          <Download className="h-4 w-4 lg:h-5 lg:w-5" />
-          Export CSV
-        </button>
-      </div>
+      <PageHeader
+        title="All IP Records"
+        subtitle={`Viewing ${filteredRecords.length} workflow records and ${filteredDrafts.length} drafts`}
+        actions={
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </button>
+        }
+      />
 
       {/* DRAFT SUBMISSIONS SECTION */}
       {filteredDrafts.length > 0 && (
@@ -443,13 +443,7 @@ export function AllRecordsPage() {
                       <div className="text-sm text-gray-900 capitalize">{record.category}</div>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          getStatusColor(record.status)
-                        }`}
-                      >
-                        {getStatusLabel(record.status)}
-                      </span>
+                      <StatusPill status={record.status} size="sm" />
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 hidden xl:table-cell">
                       {record.supervisor?.full_name || '-'}
@@ -504,13 +498,7 @@ export function AllRecordsPage() {
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                         {record.category}
                       </span>
-                      <span
-                        className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          getStatusColor(record.status)
-                        }`}
-                      >
-                        {getStatusLabel(record.status)}
-                      </span>
+                      <StatusPill status={record.status} size="sm" />
                     </div>
                   </div>
                 </div>

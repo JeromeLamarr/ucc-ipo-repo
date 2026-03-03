@@ -19,9 +19,7 @@ import {
 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
-import { PageHeader } from '../components/dashboard/ui/PageHeader';
-import { StatCard } from '../components/dashboard/ui/StatCard';
-import { StatusPill } from '../components/dashboard/ui/StatusPill';
+import { PageHeader, StatCard, StatusPill } from '../components/dashboard/ui';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {

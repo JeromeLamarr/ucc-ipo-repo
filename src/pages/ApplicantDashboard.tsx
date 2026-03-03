@@ -3,16 +3,16 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranding } from '../hooks/useBranding';
-import { FileText, Clock, CheckCircle, XCircle, Plus, Edit, AlertCircle, Trash2 } from 'lucide-react';
-import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
+import { FileText, Clock, CheckCircle, Plus, Edit, AlertCircle, Trash2 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
+import { PageHeader, StatCard, StatusPill, DashboardCard } from '../components/dashboard/ui';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'];
 
 export function ApplicantDashboard() {
   const { profile } = useAuth();
-  const { primaryColor } = useBranding();
+  const { primaryColor: _primaryColor } = useBranding();
   const [records, setRecords] = useState<IpRecord[]>([]);
   const [drafts, setDrafts] = useState<IpRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,8 +164,14 @@ export function ApplicantDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
+      <div className="space-y-8">
+        <div className="h-10 w-64 bg-gray-100 rounded-lg animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+        <div className="h-64 bg-gray-100 rounded-2xl animate-pulse" />
       </div>
     );
   }
@@ -174,164 +180,106 @@ export function ApplicantDashboard() {
     <div className="space-y-8">
       {/* Pending Approval Banner */}
       {profile && profile.is_approved === false && (
-        <div className="bg-amber-50 border-2 border-amber-200 border-dotted rounded-xl p-6 md:p-8">
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-6 w-6 md:h-8 md:w-8" style={{ color: '#d97706' }} />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg md:text-xl font-bold text-amber-900 mb-2">Account Under Review</h3>
-              <p className="text-amber-800 mb-4">Your account is currently pending approval from the University IP Office. This typically takes 1-2 business days.</p>
-              <p className="text-sm text-amber-700">Once approved, you'll receive an email confirmation and will be able to access all features of the system, including submitting intellectual property disclosures.</p>
+        <div className="bg-amber-50 border-2 border-amber-200 border-dashed rounded-2xl p-5">
+          <div className="flex gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-amber-900">Account Under Review</p>
+              <p className="text-sm text-amber-800 mt-0.5">
+                Your account is pending approval from the IP Office. Once approved you'll be able to submit disclosures.
+              </p>
             </div>
           </div>
         </div>
       )}
 
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between md:items-center gap-6">
-        <div>
-          <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-3">Welcome, {profile?.full_name}</h1>
-          <p className="text-lg text-gray-600 font-medium">Manage your intellectual property submissions</p>
-        </div>
-        {profile && profile.is_approved === false ? (
-          <div className="relative group">
+      <PageHeader
+        title={`Welcome, ${profile?.full_name ?? ''}`}
+        subtitle="Manage your intellectual property submissions"
+        actions={
+          profile && profile.is_approved === false ? (
             <button
               disabled
-              className="flex items-center gap-2 px-8 py-4 text-gray-400 bg-gray-100 rounded-xl shadow-lg cursor-not-allowed opacity-60 w-fit"
+              title="Available after account approval"
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-gray-400 bg-gray-100 rounded-xl cursor-not-allowed"
             >
-              <Plus className="h-6 w-6" />
+              <Plus className="h-4 w-4" />
               New Submission
             </button>
-            <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-sm rounded py-2 px-3 whitespace-nowrap">
-              Available after account approval
-            </div>
-          </div>
-        ) : (
-          <Link
-            to="/dashboard/submit"
-            className="flex items-center gap-2 px-8 py-4 text-white rounded-xl hover:font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 w-fit"
-            style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)` }}
-          >
-            <Plus className="h-6 w-6" />
-            New Submission
-          </Link>
-        )}
-      </div>
+          ) : (
+            <Link
+              to="/dashboard/submit"
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              New Submission
+            </Link>
+          )
+        }
+      />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}, #6366f1)` }}>
-              <FileText className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: primaryColor, backgroundColor: `${primaryColor}20` }}>Total</span>
-          </div>
-          <p className="text-sm text-gray-600 font-medium">Submissions</p>
-          <p className="text-4xl font-black text-gray-900 mt-2">{stats.total}</p>
-        </div>
-
-        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #f59918, #d97706)' }}>
-              <FileText className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#f59918', backgroundColor: '#f5991820' }}>Drafts</span>
-          </div>
-          <p className="text-sm text-gray-600 font-medium">Draft Saves</p>
-          <p className="text-4xl font-black mt-2" style={{ color: '#f59918' }}>{stats.drafts}</p>
-        </div>
-
-        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: 'linear-gradient(135deg, #fbbf2408, #fcd34d08)', borderColor: '#fbbf2440' }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #fbbf24, #fcd34d)' }}>
-              <Clock className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#fbbf24', backgroundColor: '#fbbf2420' }}>In Review</span>
-          </div>
-          <p className="text-sm text-gray-600 font-medium">Pending</p>
-          <p className="text-4xl font-black mt-2" style={{ color: '#fbbf24' }}>{stats.pending}</p>
-        </div>
-
-        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: 'linear-gradient(135deg, #22c55e08, #16a34a08)', borderColor: '#22c55e40' }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}>
-              <CheckCircle className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#22c55e', backgroundColor: '#22c55e20' }}>Approved</span>
-          </div>
-          <p className="text-sm text-gray-600 font-medium">Approved</p>
-          <p className="text-4xl font-black mt-2" style={{ color: '#22c55e' }}>{stats.approved}</p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Submissions" value={stats.total} icon={FileText} iconColor="from-blue-500 to-indigo-600" />
+        <StatCard label="Draft Saves" value={stats.drafts} icon={FileText} iconColor="from-amber-500 to-orange-600" />
+        <StatCard label="Pending Review" value={stats.pending} icon={Clock} iconColor="from-yellow-400 to-amber-500" />
+        <StatCard label="Approved" value={stats.approved} icon={CheckCircle} iconColor="from-green-500 to-emerald-600" />
       </div>
 
       {/* Draft Submissions Section */}
       {drafts.length > 0 && (
-        <div className="rounded-2xl border shadow-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
-          <div className="p-6 border-b" style={{ borderBottomColor: '#f5991840', background: 'linear-gradient(to right, #f5991808, #d97706108)' }}>
-            <h2 className="text-2xl font-bold text-gray-900">Draft Submissions ({drafts.length})</h2>
-            <p className="text-sm text-gray-600 mt-2 font-medium">Auto-saved drafts waiting to be completed and submitted</p>
-          </div>
+        <DashboardCard
+          title={`Draft Submissions (${drafts.length})`}
+          noPadding
+        >
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead style={{ background: 'linear-gradient(to right, #f5991820, #d97706120)', borderBottomColor: '#f5991840' }} className="border-b">
+              <thead className="bg-amber-50 border-b border-amber-100">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Title</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Progress</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Last Saved</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+                  {['Title', 'Category', 'Progress', 'Last Saved', 'Actions'].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {paginatedDrafts.map((draft) => (
-                  <tr key={draft.id} className="hover:bg-amber-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {draft.title || <span className="text-gray-500 italic">Untitled Draft</span>}
-                      </div>
+                  <tr key={draft.id} className="hover:bg-amber-50/40 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-medium text-gray-900">
+                        {draft.title || <span className="text-gray-400 italic">Untitled Draft</span>}
+                      </p>
                       {draft.abstract && (
-                        <p className="text-xs text-gray-600 mt-1 line-clamp-1">{draft.abstract}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{draft.abstract}</p>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900 capitalize">{draft.category}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-gray-700 capitalize whitespace-nowrap">{draft.category}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="w-24 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-amber-600 h-2 rounded-full"
-                            style={{ width: `${((draft.current_step || 1) / 6) * 100}%` }}
-                          ></div>
+                        <div className="w-20 bg-gray-200 rounded-full h-1.5">
+                          <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${((draft.current_step || 1) / 6) * 100}%` }} />
                         </div>
-                        <span className="text-xs font-medium text-gray-600">
-                          {draft.current_step || 1}/6
-                        </span>
+                        <span className="text-xs text-gray-500">{draft.current_step || 1}/6</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDateTime(draft.updated_at)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{formatDateTime(draft.updated_at)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <Link
                           to="/dashboard/submit"
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium text-xs"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
                         >
-                          <Edit className="h-3.5 w-3.5" />
+                          <Edit className="h-3 w-3" />
                           Continue
                         </Link>
                         <button
                           type="button"
                           onClick={() => deleteDraft(draft.id)}
                           disabled={deletingDraftId === draft.id}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium text-xs disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                          title="Delete draft"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-lg transition-colors disabled:opacity-50"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          {deletingDraftId === draft.id ? 'Deleting...' : ''}
+                          <Trash2 className="h-3 w-3" />
+                          {deletingDraftId === draft.id ? 'Deleting…' : 'Delete'}
                         </button>
                       </div>
                     </td>
@@ -340,115 +288,83 @@ export function ApplicantDashboard() {
               </tbody>
             </table>
           </div>
-
           {draftsTotalPages > 1 && (
             <Pagination
               currentPage={draftsCurrentPage}
               totalPages={draftsTotalPages}
               onPageChange={setDraftsCurrentPage}
               itemsPerPage={draftsItemsPerPage}
-              onItemsPerPageChange={(count) => {
-                setDraftsItemsPerPage(count);
-                setDraftsCurrentPage(1);
-              }}
+              onItemsPerPageChange={(count) => { setDraftsItemsPerPage(count); setDraftsCurrentPage(1); }}
               totalItems={drafts.length}
             />
           )}
-        </div>
+        </DashboardCard>
       )}
 
       {/* Submitted Records Section */}
-      <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl border border-blue-200/40 shadow-lg overflow-hidden">
-        <div className="p-6 border-b border-blue-200/40 bg-gradient-to-r from-blue-50/50 to-indigo-50/30">
-          <h2 className="text-2xl font-bold text-gray-900">Recent Submissions</h2>
-        </div>
+      <DashboardCard title="Recent Submissions" noPadding>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-100/30 to-indigo-100/30 border-b border-blue-200/40">
+            <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Title
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Submitted
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                {['Title', 'Category', 'Status', 'Submitted', 'Actions'].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-100">
               {records.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg font-medium">No submissions yet</p>
-                    <p className="text-sm mt-1">Get started by creating your first IP submission</p>
-                    <Link
-                      to="/dashboard/submit"
-                      className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Create Submission
-                    </Link>
+                  <td colSpan={5}>
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <FileText className="h-10 w-10 text-gray-300 mb-3" />
+                      <p className="text-sm font-medium text-gray-500">No submissions yet</p>
+                      <p className="text-xs text-gray-400 mt-1">Get started by creating your first IP submission</p>
+                      <Link
+                        to="/dashboard/submit"
+                        className="inline-flex items-center gap-2 mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create Submission
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 paginatedRecords.map((record) => (
-                  <tr key={record.id} className={`hover:bg-gray-50 ${needsRevision(record.status) ? 'bg-orange-50 border-l-4 border-orange-500' : ''}`}>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <Link
-                          to={`/dashboard/submissions/${record.id}`}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                        >
-                          {record.title}
-                        </Link>
-                        {needsRevision(record.status) && (
-                          <div className="flex items-center gap-1 mt-1 text-xs text-orange-700">
-                            <AlertCircle className="h-3 w-3" />
-                            <span>{getRevisionMessage(record)}</span>
-                          </div>
-                        )}
-                      </div>
+                  <tr
+                    key={record.id}
+                    className={`hover:bg-gray-50 transition-colors ${needsRevision(record.status) ? 'border-l-4 border-orange-400 bg-orange-50/30' : ''}`}
+                  >
+                    <td className="px-4 py-3">
+                      <Link to={`/dashboard/submissions/${record.id}`} className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                        {record.title}
+                      </Link>
+                      {needsRevision(record.status) && (
+                        <div className="flex items-center gap-1 mt-0.5 text-xs text-orange-700">
+                          <AlertCircle className="h-3 w-3" />
+                          <span>{getRevisionMessage(record)}</span>
+                        </div>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 capitalize">{record.category}</div>
+                    <td className="px-4 py-3 text-sm text-gray-700 capitalize whitespace-nowrap">{record.category}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <StatusPill status={record.status} size="sm" />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          getStatusColor(record.status)
-                        }`}
-                      >
-                        {getStatusLabel(record.status)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(record.created_at)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{formatDate(record.created_at)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         {needsRevision(record.status) && (
                           <Link
                             to={`/dashboard/submissions/${record.id}`}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3 w-3" />
                             Revise
                           </Link>
                         )}
-                        <Link
-                          to={`/dashboard/submissions/${record.id}`}
-                          className="text-blue-600 hover:text-blue-700 font-medium"
-                        >
-                          View Details
+                        <Link to={`/dashboard/submissions/${record.id}`} className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                          View
                         </Link>
                       </div>
                     </td>
@@ -458,21 +374,17 @@ export function ApplicantDashboard() {
             </tbody>
           </table>
         </div>
-
         {recordsTotalPages > 1 && (
           <Pagination
             currentPage={recordsCurrentPage}
             totalPages={recordsTotalPages}
             onPageChange={setRecordsCurrentPage}
             itemsPerPage={recordsItemsPerPage}
-            onItemsPerPageChange={(count) => {
-              setRecordsItemsPerPage(count);
-              setRecordsCurrentPage(1);
-            }}
+            onItemsPerPageChange={(count) => { setRecordsItemsPerPage(count); setRecordsCurrentPage(1); }}
             totalItems={records.length}
           />
         )}
-      </div>
+      </DashboardCard>
     </div>
   );
 }
