@@ -60,11 +60,10 @@ export async function verifyAuth(
     }
 
     // Get user metadata to check if admin
-    // Note: users table uses auth_user_id to reference auth.users.id
     const { data: userData, error: userError } = await client
       .from('users')
       .select('role, email')
-      .eq('auth_user_id', user.id)
+      .eq('id', user.id)
       .single();
 
     if (userError || !userData) {

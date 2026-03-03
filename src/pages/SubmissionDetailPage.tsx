@@ -8,14 +8,17 @@ import {
   Upload,
   Download,
   Calendar,
+  Clock,
   User,
   Tag,
   AlertCircle,
+  CheckCircle,
   MessageSquare,
   Edit,
   Save,
   X,
 } from 'lucide-react';
+import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
 import { CompletionButton } from '../components/CompletionButton';
 import { CertificateManager } from '../components/CertificateManager';
@@ -26,7 +29,6 @@ import { MaterialsView } from '../components/MaterialsView';
 import { RevisionBanner } from '../components/RevisionBanner';
 import { EditSubmissionModal } from '../components/EditSubmissionModal';
 import { GenerateDocumentationButton } from '../components/GenerateDocumentationButton';
-import { StatusPill, DashboardCard } from '../components/dashboard/ui';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -844,13 +846,20 @@ export function SubmissionDetailPage() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
+  const getStatusIcon = (status: string) => {
+    if (status.includes('approved') || status === 'ready_for_filing') {
+      return <CheckCircle className="h-5 w-5" />;
+    }
+    if (status.includes('revision') || status === 'rejected') {
+      return <AlertCircle className="h-5 w-5" />;
+    }
+    return <Clock className="h-5 w-5" />;
+  };
+
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 w-32 bg-gray-100 rounded-lg animate-pulse" />
-        <div className="h-48 bg-gray-100 rounded-2xl animate-pulse" />
-        <div className="h-32 bg-gray-100 rounded-2xl animate-pulse" />
-        <div className="h-64 bg-gray-100 rounded-2xl animate-pulse" />
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -930,7 +939,7 @@ export function SubmissionDetailPage() {
         )}
       </div>
 
-      <DashboardCard>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex justify-between items-start mb-6">
           <div className="flex-1">
             {editMode ? (
@@ -959,8 +968,9 @@ export function SubmissionDetailPage() {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <StatusPill status={record.status} />
+          <div className={`px-4 py-2 rounded-lg font-semibold flex items-center gap-2 ${getStatusColor(record.status)}`}>
+            {getStatusIcon(record.status)}
+            <span>{getStatusLabel(record.status)}</span>
           </div>
         </div>
 
@@ -1159,7 +1169,7 @@ export function SubmissionDetailPage() {
             </div>
           )}
         </div>
-      </DashboardCard>
+      </div>
 
       <ProcessTrackingWizard
         ipRecordId={record.id}
@@ -1191,7 +1201,8 @@ export function SubmissionDetailPage() {
 
       {/* Display submitted materials to both applicant and admin */}
       {presentationMaterials && presentationMaterials.status === 'submitted' && (
-        <DashboardCard title="Submitted Materials">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Submitted Materials</h2>
           <p className="text-sm text-gray-600 mb-4">
             Submitted on {presentationMaterials.materials_submitted_at ? new Date(presentationMaterials.materials_submitted_at).toLocaleString() : 'Unknown date'}
           </p>
@@ -1205,11 +1216,12 @@ export function SubmissionDetailPage() {
             paperFileSize={presentationMaterials.paper_file_size}
             userRole={profile?.role === 'admin' ? 'admin' : 'applicant'}
           />
-        </DashboardCard>
+        </div>
       )}
 
       {profile?.role === 'admin' && (
-        <DashboardCard title="Admin Actions">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Admin Actions</h2>
           <div className="space-y-4">
             <GenerateDocumentationButton
               recordId={record.id}
@@ -1235,7 +1247,7 @@ export function SubmissionDetailPage() {
               onComplete={() => fetchSubmissionDetails()}
             />
           </div>
-        </DashboardCard>
+        </div>
       )}
 
       <CertificateManager
@@ -1260,11 +1272,11 @@ export function SubmissionDetailPage() {
         applicantEmail={record.applicant?.email || ''}
       />
 
-      <DashboardCard
-        title="Documents"
-        titleActions={
-          profile?.role === 'applicant' && record.applicant_id === profile.id ? (
-            <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer text-sm font-medium">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900">Documents</h2>
+          {profile?.role === 'applicant' && record.applicant_id === profile.id && (
+            <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer">
               <Upload className="h-4 w-4" />
               {uploading ? 'Uploading...' : 'Upload Document'}
               <input
@@ -1274,9 +1286,8 @@ export function SubmissionDetailPage() {
                 className="hidden"
               />
             </label>
-          ) : undefined
-        }
-      >
+          )}
+        </div>
 
         {documents.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
@@ -1310,10 +1321,11 @@ export function SubmissionDetailPage() {
             ))}
           </div>
         )}
-      </DashboardCard>
+      </div>
 
       {evaluations.length > 0 && (
-        <DashboardCard title="Evaluations">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Evaluations</h2>
           <div className="space-y-6">
             {evaluations.map((evaluation) => (
               <div key={evaluation.id} className="border-l-4 border-blue-500 pl-4">
@@ -1395,7 +1407,7 @@ export function SubmissionDetailPage() {
               </div>
             ))}
           </div>
-        </DashboardCard>
+        </div>
       )}
 
       {/* Edit Submission Modal */}

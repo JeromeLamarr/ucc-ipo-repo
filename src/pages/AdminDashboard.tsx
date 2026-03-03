@@ -1,19 +1,16 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
 import { Users, FileText, TrendingUp, Activity } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { AdminPendingApplicants } from '../components/AdminPendingApplicants';
-import { PageHeader, StatCard, DashboardCard } from '../components/dashboard/ui';
 import type { Database } from '../lib/database.types';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _User = Database['public']['Tables']['users']['Row'];
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _IpRecord = Database['public']['Tables']['ip_records']['Row'];
+type User = Database['public']['Tables']['users']['Row'];
+type IpRecord = Database['public']['Tables']['ip_records']['Row'];
 
 export function AdminDashboard() {
-  const { primaryColor: _primaryColor } = useBranding();
+  const { primaryColor } = useBranding();
   const [stats, setStats] = useState({
     totalUsers: 0,
     applicants: 0,
@@ -116,143 +113,208 @@ export function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div className="h-10 w-48 bg-gray-100 rounded-lg animate-pulse" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
-          ))}
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Admin Dashboard"
-        subtitle="System overview and real-time analytics"
-      />
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-3">Admin Dashboard</h1>
+        <p className="text-lg text-gray-600 font-medium">System overview and real-time analytics</p>
+      </div>
 
       {/* Pending Applicants Section - HIGH PRIORITY */}
       <AdminPendingApplicants />
 
       {/* Stats Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Users"
-          value={stats.totalUsers}
-          icon={Users}
-          iconColor="from-blue-500 to-indigo-600"
-          description={`${stats.applicants} applicants Â· ${stats.supervisors} supervisors Â· ${stats.evaluators} evaluators`}
-        />
-        <StatCard
-          label="Total Submissions"
-          value={stats.totalSubmissions}
-          icon={FileText}
-          iconColor="from-emerald-500 to-teal-600"
-          description="All categories combined"
-        />
-        <StatCard
-          label="Pending Review"
-          value={stats.pending}
-          icon={Activity}
-          iconColor="from-amber-500 to-orange-600"
-          description="Awaiting approval"
-        />
-        <StatCard
-          label="Approved"
-          value={stats.approved}
-          icon={TrendingUp}
-          iconColor="from-green-500 to-emerald-600"
-          description="Ready for filing"
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}, #6366f1)` }}>
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: primaryColor, backgroundColor: `${primaryColor}20` }}>Active</span>
+          </div>
+          <p className="text-sm text-gray-600 font-medium">Total Users</p>
+          <p className="text-4xl font-black text-gray-900 mt-2">{stats.totalUsers}</p>
+          <p className="text-xs text-gray-500 mt-2 leading-relaxed">
+            {stats.applicants} applicants, {stats.supervisors} supervisors, {stats.evaluators} evaluators
+          </p>
+        </div>
+
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: `linear-gradient(135deg, #10b98108, #34d39908)`, borderColor: '#10b98140' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #10b981, #34d399)' }}>
+              <FileText className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#10b981', backgroundColor: '#10b98120' }}>Submitted</span>
+          </div>
+          <p className="text-sm text-gray-600 font-medium">Total Submissions</p>
+          <p className="text-4xl font-black text-gray-900 mt-2">{stats.totalSubmissions}</p>
+          <p className="text-xs text-gray-500 mt-2">All categories combined</p>
+        </div>
+
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #f59918, #d97706)' }}>
+              <Activity className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#f59918', backgroundColor: '#f5991820' }}>In Review</span>
+          </div>
+          <p className="text-sm text-gray-600 font-medium">Pending Review</p>
+          <p className="text-4xl font-black mt-2" style={{ color: '#f59918' }}>{stats.pending}</p>
+          <p className="text-xs text-gray-500 mt-2">Awaiting approval</p>
+        </div>
+
+        <div className="group p-6 rounded-2xl border shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300" style={{ background: 'linear-gradient(135deg, #22c55e08, #16a34a08)', borderColor: '#22c55e40' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-xl group-hover:shadow-lg transition-all duration-300" style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}>
+              <TrendingUp className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ color: '#22c55e', backgroundColor: '#22c55e20' }}>Approved</span>
+          </div>
+          <p className="text-sm text-gray-600 font-medium">Approved</p>
+          <p className="text-4xl font-black mt-2" style={{ color: '#22c55e' }}>{stats.approved}</p>
+          <p className="text-xs text-gray-500 mt-2">Ready for filing</p>
+        </div>
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DashboardCard title="Submissions by Category">
-          <div className="space-y-4">
+        <div className="rounded-2xl border shadow-lg p-6 hover:shadow-xl transition-shadow duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Submissions by Category</h2>
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }}></div>
+          </div>
+          <div className="space-y-5">
             {categoryStats.map(({ category, count }) => (
               <div key={category}>
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className="text-sm font-medium text-gray-700 capitalize">{category}</span>
-                  <span className="text-sm font-semibold text-blue-600">{count}</span>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-semibold text-gray-700 capitalize">{category}</span>
+                  <span className="text-sm font-bold px-2 py-1 rounded-lg" style={{ color: primaryColor, backgroundColor: `${primaryColor}20` }}>{count}</span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-gradient-to-r from-gray-200/50 to-gray-200 rounded-full h-2.5 overflow-hidden shadow-sm">
                   <div
-                    className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600"
-                    style={{ width: `${stats.totalSubmissions ? (count / stats.totalSubmissions) * 100 : 0}%` }}
+                    className="h-2.5 rounded-full shadow-md"
+                    style={{
+                      width: `${(count / stats.totalSubmissions) * 100}%`,
+                      background: `linear-gradient(to right, ${primaryColor}, #6366f1)`
+                    }}
                   />
                 </div>
               </div>
             ))}
-            {categoryStats.length === 0 && (
-              <p className="text-sm text-gray-400 text-center py-6">No submissions yet</p>
-            )}
           </div>
-        </DashboardCard>
+        </div>
 
-        <DashboardCard title="Status Distribution">
-          <div className="space-y-4">
-            {[
-              { label: 'Pending', value: stats.pending, color: 'from-amber-500 to-yellow-600', textColor: 'text-amber-600', bg: 'bg-amber-100' },
-              { label: 'Approved', value: stats.approved, color: 'from-green-500 to-emerald-600', textColor: 'text-green-600', bg: 'bg-green-100' },
-              { label: 'Rejected', value: stats.rejected, color: 'from-red-500 to-pink-600', textColor: 'text-red-600', bg: 'bg-red-100' },
-            ].map(({ label, value, color, textColor, bg }) => (
-              <div key={label}>
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className="text-sm font-medium text-gray-700">{label}</span>
-                  <span className={`text-sm font-semibold px-2 py-0.5 rounded-lg ${textColor} ${bg}`}>{value}</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-2 rounded-full bg-gradient-to-r ${color}`}
-                    style={{ width: `${stats.totalSubmissions ? (value / stats.totalSubmissions) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+        <div className="bg-gradient-to-br from-white to-indigo-50/30 rounded-2xl border border-indigo-200/40 shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Status Distribution</h2>
+            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
           </div>
-        </DashboardCard>
+          <div className="space-y-5">
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-semibold text-gray-700">Pending</span>
+                <span className="text-sm font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded-lg">{stats.pending}</span>
+              </div>
+              <div className="w-full bg-gradient-to-r from-gray-200/50 to-gray-200 rounded-full h-2.5 overflow-hidden shadow-sm">
+                <div
+                  className="h-2.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-600 shadow-md"
+                  style={{
+                    width: `${(stats.pending / stats.totalSubmissions) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-semibold text-gray-700">Approved</span>
+                <span className="text-sm font-bold text-green-600 bg-green-100 px-2 py-1 rounded-lg">{stats.approved}</span>
+              </div>
+              <div className="w-full bg-gradient-to-r from-gray-200/50 to-gray-200 rounded-full h-2.5 overflow-hidden shadow-sm">
+                <div
+                  className="h-2.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 shadow-md"
+                  style={{
+                    width: `${(stats.approved / stats.totalSubmissions) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm font-semibold text-gray-700">Rejected</span>
+                <span className="text-sm font-bold text-red-600 bg-red-100 px-2 py-1 rounded-lg">{stats.rejected}</span>
+              </div>
+              <div className="w-full bg-gradient-to-r from-gray-200/50 to-gray-200 rounded-full h-2.5 overflow-hidden shadow-sm">
+                <div
+                  className="h-2.5 rounded-full bg-gradient-to-r from-red-500 to-pink-600 shadow-md"
+                  style={{
+                    width: `${(stats.rejected / stats.totalSubmissions) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Recent Activity */}
-      <DashboardCard title="Recent Activity" noPadding>
-        {recentActivity.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <Activity className="h-10 w-10 text-gray-300 mb-3" />
-            <p className="text-sm text-gray-400">No recent activity</p>
+      <div className="rounded-2xl border shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #9333ea08)`, borderColor: `${primaryColor}40` }}>
+        <div className="p-6 border-b" style={{ borderBottomColor: `${primaryColor}40`, background: `linear-gradient(to right, ${primaryColor}08, #9333ea08)` }}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-gray-900">Recent Activity</h2>
+            {recentActivity.length > 0 && <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }}></div>}
           </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {paginatedActivity.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
-                <div className="flex-shrink-0 p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl mt-0.5">
-                  <Activity className="h-4 w-4 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900">
-                    <span className="font-semibold text-blue-600">{activity.user?.full_name || 'System'}</span>{' '}
-                    <span className="text-gray-600">{formatAction(activity.action)}</span>
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">{formatDate(activity.created_at)}</p>
+        </div>
+        <div style={{ borderColor: `${primaryColor}30` }} className="divide-y">
+          {recentActivity.length === 0 ? (
+            <div className="p-12 text-center">
+              <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No recent activity</p>
+            </div>
+          ) : (
+            paginatedActivity.map((activity) => (
+              <div key={activity.id} className="p-5 hover:transition-colors duration-200 group" style={{ _hover: { background: `linear-gradient(to right, ${primaryColor}08, #9333ea08)` } }}>
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 p-2.5 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl group-hover:shadow-lg transition-all duration-300">
+                    <Activity className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-900 font-medium">
+                      <span className="text-blue-600 font-bold">
+                        {activity.user?.full_name || 'System'}
+                      </span>{' '}
+                      <span className="text-gray-700">{formatAction(activity.action)}</span>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1.5 font-medium">{formatDate(activity.created_at)}</p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
+
         {totalPages > 1 && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
             itemsPerPage={itemsPerPage}
-            onItemsPerPageChange={(count) => { setItemsPerPage(count); setCurrentPage(1); }}
+            onItemsPerPageChange={(count) => {
+              setItemsPerPage(count);
+              setCurrentPage(1);
+            }}
             totalItems={recentActivity.length}
           />
         )}
-      </DashboardCard>
+      </div>
     </div>
   );
 }

@@ -66,10 +66,11 @@ router.post(
         .from('ip_records')
         .select(
           `
-          *,
-          applicant:users!applicant_id(id, email, full_name, department_id),
-          supervisor:users!supervisor_id(id, email, full_name),
-          evaluator:users!evaluator_id(id, email, full_name)
+          id, reference_number, status, current_stage, created_at, updated_at,
+          title, category, abstract,
+          applicant:applicants(full_name, email, department_id),
+          supervisor:users!ip_records_supervisor_id_fkey(full_name, email),
+          evaluator:users!ip_records_evaluator_id_fkey(full_name, email)
         `
         )
         .eq('id', record_id)
@@ -84,8 +85,17 @@ router.post(
         return;
       }
 
-      // Details are stored in the ip_records.details JSONB column (no separate table)
-      const details = (record as any).details || {};
+      // Fetch record details
+      const { data: detailsData, error: detailsError } = await client
+        .from('record_details')
+        .select('*')
+        .eq('record_id', record_id);
+
+      if (detailsError) {
+        console.error(`[PDF Generation] Details fetch error:`, detailsError);
+      }
+
+      const details = detailsData?.[0] || {};
 
       // Generate HTML content
       console.log(`[PDF Generation] Generating HTML for record: ${record_id}`);
