@@ -9,6 +9,9 @@ export const DEFAULT_BRANDING: BrandingData = {
   site_name: 'University of Caloocan City Intellectual Property Office',
   logo_url: null,
   primary_color: '#2563EB',
+  secondary_color: '#6366F1',
+  gradient_style: 'primary-secondary',
+  favicon_url: null,
   updated_at: new Date().toISOString(),
 };
 
@@ -160,7 +163,7 @@ export async function fetchBrandingData(): Promise<BrandingData> {
     console.log('[fetchBrandingData] Fetching branding data from site_settings table...');
     const { data, error } = await supabase
       .from('site_settings')
-      .select('id, site_name, logo_url, primary_color, updated_at')
+      .select('id, site_name, logo_url, primary_color, secondary_color, gradient_style, favicon_url, updated_at')
       .eq('id', 1)
       .single();
 

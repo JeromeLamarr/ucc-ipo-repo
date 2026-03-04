@@ -70,7 +70,7 @@ export function PublicNavigation() {
               navigate('/');
               setMobileMenuOpen(false);
             }}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0 max-w-[40%] flex-shrink"
           >
             {logoPath ? (
               <img 
@@ -81,7 +81,7 @@ export function PublicNavigation() {
             ) : (
               <GraduationCap className="h-8 w-8" style={{ color: primaryColor }} />
             )}
-            <span className="text-lg font-bold text-gray-900 hidden sm:inline max-w-xs truncate">
+            <span className="text-lg font-bold text-gray-900 hidden sm:block truncate">
               {siteName}
             </span>
           </button>

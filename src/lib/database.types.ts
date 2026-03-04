@@ -511,22 +511,101 @@ export interface Database {
         Row: {
           id: number;
           site_name: string;
-          logo_path: string | null;
-          primary_color: string;
+          logo_url: string | null;
+          primary_color: string | null;
+          secondary_color: string | null;
+          gradient_style: string | null;
+          favicon_url: string | null;
           updated_at: string;
         };
         Insert: {
           id?: number;
           site_name: string;
-          logo_path?: string | null;
-          primary_color?: string;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          secondary_color?: string | null;
+          gradient_style?: string | null;
+          favicon_url?: string | null;
           updated_at?: string;
         };
         Update: {
           id?: number;
           site_name?: string;
-          logo_path?: string | null;
-          primary_color?: string;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          secondary_color?: string | null;
+          gradient_style?: string | null;
+          favicon_url?: string | null;
+          updated_at?: string;
+        };
+      };
+      site_footer_settings: {
+        Row: {
+          id: number;
+          about_text: string | null;
+          contact_email: string | null;
+          contact_phone: string | null;
+          contact_address: string | null;
+          copyright_text: string | null;
+          show_quick_links: boolean;
+          show_support: boolean;
+          show_contact: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          about_text?: string | null;
+          contact_email?: string | null;
+          contact_phone?: string | null;
+          contact_address?: string | null;
+          copyright_text?: string | null;
+          show_quick_links?: boolean;
+          show_support?: boolean;
+          show_contact?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          about_text?: string | null;
+          contact_email?: string | null;
+          contact_phone?: string | null;
+          contact_address?: string | null;
+          copyright_text?: string | null;
+          show_quick_links?: boolean;
+          show_support?: boolean;
+          show_contact?: boolean;
+          updated_at?: string;
+        };
+      };
+      site_footer_links: {
+        Row: {
+          id: string;
+          group_name: 'quick' | 'support' | 'social';
+          label: string;
+          url: string;
+          sort_order: number;
+          is_enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_name: 'quick' | 'support' | 'social';
+          label: string;
+          url: string;
+          sort_order?: number;
+          is_enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          group_name?: 'quick' | 'support' | 'social';
+          label?: string;
+          url?: string;
+          sort_order?: number;
+          is_enabled?: boolean;
+          created_at?: string;
           updated_at?: string;
         };
       };
