@@ -268,15 +268,12 @@ export function AdminBrandingSettingsPage() {
       setFooterSaving(true);
       setFooterError(null);
       setFooterSuccess(false);
-      const result = await updateFooterSettings(footerSettings);
-      if (result) {
-        setFooterSettings(result);
-        setFooterSuccess(true);
-        setHasFooterChanges(false);
-        setTimeout(() => setFooterSuccess(false), 3000);
-      } else {
-        setFooterError('Failed to save footer settings');
-      }
+      const snapshot = { ...footerSettings };
+      const result = await updateFooterSettings(snapshot);
+      setFooterSettings(result);
+      setFooterSuccess(true);
+      setHasFooterChanges(false);
+      setTimeout(() => setFooterSuccess(false), 3000);
     } catch (err) {
       setFooterError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

@@ -39,14 +39,15 @@ export async function fetchFooterSettings(): Promise<FooterSettings> {
 export async function updateFooterSettings(
   updates: Database['public']['Tables']['site_footer_settings']['Update'],
 ): Promise<FooterSettings | null> {
-  const { id: _id, ...fields } = updates as any;
+  const { id: _id, updated_at: _ts, ...fields } = updates as any;
   const payload = { ...fields, updated_at: new Date().toISOString() };
 
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from('site_footer_settings' as any)
     .update(payload as any)
     .eq('id', 1)
-    .select();
+    .select()
+    .returns<FooterSettings[]>();
 
   if (error) {
     const isTableMissing =
@@ -55,19 +56,20 @@ export async function updateFooterSettings(
       error.message?.includes('relation');
 
     if (isTableMissing) {
-      console.warn('[updateFooterSettings] Table not found — run migration. Returning local data.');
+      console.warn('[updateFooterSettings] Table not found — run migration.');
       return { ...DEFAULT_FOOTER_SETTINGS, ...updates } as FooterSettings;
     }
 
-    console.error('[updateFooterSettings] Error:', error.code, error.message, error.details, error.hint);
-    return null;
+    console.error('[updateFooterSettings] DB error:', error.code, error.message);
+    throw new Error(error.message || 'Failed to save footer settings');
   }
 
-  if (data && (data as any[]).length > 0) {
-    return (data as any[])[0] as FooterSettings;
+  if (!data || (data as any[]).length === 0) {
+    console.error('[updateFooterSettings] No rows updated — RLS may be blocking. count:', count);
+    throw new Error('No rows were updated. You may not have permission to update footer settings.');
   }
 
-  return { ...DEFAULT_FOOTER_SETTINGS, ...updates, updated_at: payload.updated_at } as FooterSettings;
+  return (data as any[])[0] as FooterSettings;
 }
 
 // ── Links CRUD ─────────────────────────────────────────────────────────────
