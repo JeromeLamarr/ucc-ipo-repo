@@ -35,6 +35,7 @@ import { CertificateVerifyPage } from '@pages/CertificateVerifyPage';
 import { DisclosureVerifyPage } from '@pages/DisclosureVerifyPage';
 import { PendingApprovalPage } from '@pages/PendingApprovalPage';
 import { ForgotPasswordPage } from '@pages/ForgotPasswordPage';
+import DebugOGPage from '@pages/DebugOGPage';
 import { useEffect } from 'react';
 import { ensureHomeCMSPageExists } from '@lib/cmsSetup';
 
@@ -113,6 +114,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/debug/og" element={<DebugOGPage />} />
           <Route path="/pages/:slug" element={<CMSPageRenderer />} />
           <Route
             path="/dashboard/*"
