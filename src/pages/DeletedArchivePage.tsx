@@ -156,7 +156,7 @@ export function DeletedArchivePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Deleted Archive</h1>
         <p className="text-gray-600 mt-1">
@@ -185,36 +185,34 @@ export function DeletedArchivePage() {
       </div>
 
       {/* DELETED DRAFT SUBMISSIONS SECTION */}
-      {filteredDeletedDrafts.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Deleted Drafts ({filteredDeletedDrafts.length})</h2>
-            <p className="text-gray-600 text-sm mt-1">Deleted draft submissions</p>
-          </div>
+      <div className="bg-white rounded-xl shadow-sm border border-red-200 p-4 lg:p-6">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900">Deleted Drafts ({filteredDeletedDrafts.length})</h2>
+          <p className="text-gray-600 text-sm mt-1">Deleted draft submissions</p>
+        </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-red-50">
+        {/* Desktop table */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-red-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicant</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deleted</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {paginatedDeletedDrafts.length === 0 ? (
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Applicant
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Deleted
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>No deleted drafts found</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedDeletedDrafts.map((record) => (
+              ) : (
+                paginatedDeletedDrafts.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">{record.title}</div>
@@ -232,22 +230,14 @@ export function DeletedArchivePage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() =>
-                            setConfirmAction({ type: 'restore', id: record.id, title: record.title })
-                          }
+                          onClick={() => setConfirmAction({ type: 'restore', id: record.id, title: record.title })}
                           className="text-green-600 hover:text-green-700 font-medium inline-flex items-center gap-1"
                         >
                           <RotateCcw className="h-4 w-4" />
                           Restore
                         </button>
                         <button
-                          onClick={() =>
-                            setConfirmAction({
-                              type: 'delete_forever',
-                              id: record.id,
-                              title: record.title,
-                            })
-                          }
+                          onClick={() => setConfirmAction({ type: 'delete_forever', id: record.id, title: record.title })}
                           className="text-red-600 hover:text-red-700 font-medium inline-flex items-center gap-1"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -256,156 +246,238 @@ export function DeletedArchivePage() {
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {draftsTotalPages > 1 && (
-            <Pagination
-              currentPage={draftsCurrentPage}
-              totalPages={draftsTotalPages}
-              onPageChange={setDraftsCurrentPage}
-              itemsPerPage={draftsItemsPerPage}
-              onItemsPerPageChange={(count) => {
-                setDraftsItemsPerPage(count);
-                setDraftsCurrentPage(1);
-              }}
-              totalItems={filteredDeletedDrafts.length}
-            />
+        {/* Mobile cards */}
+        <div className="lg:hidden space-y-4">
+          {paginatedDeletedDrafts.length === 0 ? (
+            <div className="py-12 text-center text-gray-500">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No deleted drafts found</p>
+            </div>
+          ) : (
+            paginatedDeletedDrafts.map((record) => (
+              <div key={record.id} className="bg-white rounded-xl border border-red-200 p-4 space-y-3">
+                <div className="font-medium text-gray-900">{record.title}</div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <div className="text-gray-500">Applicant</div>
+                    <div className="font-medium text-gray-900">{record.applicant?.full_name || '-'}</div>
+                    <div className="text-xs text-gray-400">{record.applicant?.email}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Category</div>
+                    <div className="font-medium text-gray-900 capitalize">{record.category}</div>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="text-gray-500">Deleted</div>
+                    <div className="font-medium text-gray-900">{record.deleted_at ? formatDate(record.deleted_at) : '-'}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setConfirmAction({ type: 'restore', id: record.id, title: record.title })}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm border border-green-200 text-green-600 rounded-lg hover:bg-green-50 transition"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Restore
+                  </button>
+                  <button
+                    onClick={() => setConfirmAction({ type: 'delete_forever', id: record.id, title: record.title })}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Forever
+                  </button>
+                </div>
+              </div>
+            ))
           )}
         </div>
-      )}
+
+        <Pagination
+          currentPage={draftsCurrentPage}
+          totalPages={draftsTotalPages}
+          onPageChange={setDraftsCurrentPage}
+          itemsPerPage={draftsItemsPerPage}
+          onItemsPerPageChange={(count) => {
+            setDraftsItemsPerPage(count);
+            setDraftsCurrentPage(1);
+          }}
+          totalItems={filteredDeletedDrafts.length}
+        />
+      </div>
 
       {/* DELETED WORKFLOW IP RECORDS SECTION */}
-      {filteredDeletedWorkflow.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Deleted Workflow Records ({filteredDeletedWorkflow.length})
-            </h2>
-            <p className="text-gray-600 text-sm mt-1">Deleted IP submissions in the evaluation workflow</p>
-          </div>
+      <div className="bg-white rounded-xl shadow-sm border border-red-200 p-4 lg:p-6">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900">
+            Deleted Workflow Records ({filteredDeletedWorkflow.length})
+          </h2>
+          <p className="text-gray-600 text-sm mt-1">Deleted IP submissions in the evaluation workflow</p>
+        </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-red-50">
+        {/* Desktop table */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-red-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicant</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supervisor</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluator</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deleted</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {paginatedDeletedWorkflow.length === 0 ? (
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Applicant
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Supervisor
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Evaluator
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Deleted
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>No deleted workflow records found</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedDeletedWorkflow.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                      <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                      <p>No deleted workflow records found</p>
+              ) : (
+                paginatedDeletedWorkflow.map((record) => (
+                  <tr key={record.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">{record.title}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">{record.applicant?.full_name}</div>
+                      <div className="text-xs text-gray-500">{record.applicant?.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 capitalize">{record.category}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          getStatusColor(record.status as IpStatus)
+                        }`}
+                      >
+                        {getStatusLabel(record.status as IpStatus)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {record.supervisor?.full_name || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {record.evaluator?.full_name || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {record.deleted_at ? formatDate(record.deleted_at) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setConfirmAction({ type: 'restore', id: record.id, title: record.title })}
+                          className="text-green-600 hover:text-green-700 font-medium inline-flex items-center gap-1"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Restore
+                        </button>
+                        <button
+                          onClick={() => setConfirmAction({ type: 'delete_forever', id: record.id, title: record.title })}
+                          className="text-red-600 hover:text-red-700 font-medium inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete Forever
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  paginatedDeletedWorkflow.map((record) => (
-                    <tr key={record.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{record.title}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{record.applicant?.full_name}</div>
-                        <div className="text-xs text-gray-500">{record.applicant?.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 capitalize">{record.category}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            getStatusColor(record.status as IpStatus)
-                          }`}
-                        >
-                          {getStatusLabel(record.status as IpStatus)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {record.supervisor?.full_name || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {record.evaluator?.full_name || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {record.deleted_at ? formatDate(record.deleted_at) : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() =>
-                              setConfirmAction({ type: 'restore', id: record.id, title: record.title })
-                            }
-                            className="text-green-600 hover:text-green-700 font-medium inline-flex items-center gap-1"
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                            Restore
-                          </button>
-                          <button
-                            onClick={() =>
-                              setConfirmAction({
-                                type: 'delete_forever',
-                                id: record.id,
-                                title: record.title,
-                              })
-                            }
-                            className="text-red-600 hover:text-red-700 font-medium inline-flex items-center gap-1"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Delete Forever
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {workflowTotalPages > 1 && (
-            <Pagination
-              currentPage={workflowCurrentPage}
-              totalPages={workflowTotalPages}
-              onPageChange={setWorkflowCurrentPage}
-              itemsPerPage={workflowItemsPerPage}
-              onItemsPerPageChange={(count) => {
-                setWorkflowItemsPerPage(count);
-                setWorkflowCurrentPage(1);
-              }}
-              totalItems={filteredDeletedWorkflow.length}
-            />
+        {/* Mobile cards */}
+        <div className="lg:hidden space-y-4">
+          {paginatedDeletedWorkflow.length === 0 ? (
+            <div className="py-12 text-center text-gray-500">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No deleted workflow records found</p>
+            </div>
+          ) : (
+            paginatedDeletedWorkflow.map((record) => (
+              <div key={record.id} className="bg-white rounded-xl border border-red-200 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="font-medium text-gray-900">{record.title}</div>
+                  <span
+                    className={`px-2 py-1 text-xs font-semibold rounded-full shrink-0 ${
+                      getStatusColor(record.status as IpStatus)
+                    }`}
+                  >
+                    {getStatusLabel(record.status as IpStatus)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <div className="text-gray-500">Applicant</div>
+                    <div className="font-medium text-gray-900">{record.applicant?.full_name || '-'}</div>
+                    <div className="text-xs text-gray-400">{record.applicant?.email}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Category</div>
+                    <div className="font-medium text-gray-900 capitalize">{record.category}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Supervisor</div>
+                    <div className="font-medium text-gray-900">{record.supervisor?.full_name || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Evaluator</div>
+                    <div className="font-medium text-gray-900">{record.evaluator?.full_name || '-'}</div>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="text-gray-500">Deleted</div>
+                    <div className="font-medium text-gray-900">{record.deleted_at ? formatDate(record.deleted_at) : '-'}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setConfirmAction({ type: 'restore', id: record.id, title: record.title })}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm border border-green-200 text-green-600 rounded-lg hover:bg-green-50 transition"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Restore
+                  </button>
+                  <button
+                    onClick={() => setConfirmAction({ type: 'delete_forever', id: record.id, title: record.title })}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Forever
+                  </button>
+                </div>
+              </div>
+            ))
           )}
         </div>
-      )}
 
-      {/* Empty State */}
+        <Pagination
+          currentPage={workflowCurrentPage}
+          totalPages={workflowTotalPages}
+          onPageChange={setWorkflowCurrentPage}
+          itemsPerPage={workflowItemsPerPage}
+          onItemsPerPageChange={(count) => {
+            setWorkflowItemsPerPage(count);
+            setWorkflowCurrentPage(1);
+          }}
+          totalItems={filteredDeletedWorkflow.length}
+        />
+      </div>
+
+      {/* Global Empty State — only when nothing exists at all */}
       {deletedDrafts.length === 0 && deletedWorkflow.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
           <FileText className="h-16 w-16 mx-auto mb-4 text-gray-300" />
