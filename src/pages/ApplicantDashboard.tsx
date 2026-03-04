@@ -586,6 +586,9 @@ export function ApplicantDashboard() {
           )}
         </div>
 
+        {recordsTotalPages > 1 && (
+          <Pagination
+            currentPage={recordsCurrentPage}
             totalPages={recordsTotalPages}
             onPageChange={setRecordsCurrentPage}
             itemsPerPage={recordsItemsPerPage}
