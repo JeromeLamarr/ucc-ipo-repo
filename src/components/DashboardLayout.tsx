@@ -129,7 +129,7 @@ const navItems: NavItem[] = [
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { profile, signOut } = useAuth();
-  const { siteName, logoPath, primaryColor } = useBranding();
+  const { siteName, logoPath, primaryColor, secondaryColor } = useBranding();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -164,7 +164,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   className="h-8 w-8 object-contain"
                 />
               ) : (
-                <div className="p-2 rounded-lg" style={{ background: `linear-gradient(135deg, ${primaryColor}, #6366f1)` }}>
+                <div className="p-2 rounded-lg" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
                   <GraduationCap className="h-6 w-6 text-white" />
                 </div>
               )}
@@ -179,7 +179,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="text-sm font-bold text-gray-900">{profile?.full_name}</div>
                 <div className="text-xs text-gray-500 capitalize font-medium">{profile?.role}</div>
               </div>
-              <div className="h-10 w-10 rounded-full text-white font-bold flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, ${primaryColor}, #6366f1)` }}>
+              <div className="h-10 w-10 rounded-full text-white font-bold flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}>
                 {profile?.full_name.charAt(0).toUpperCase()}
               </div>
             </div>
@@ -207,7 +207,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       ? 'text-white font-semibold shadow-lg'
                       : 'text-gray-700 hover:bg-gradient-to-r hover:from-blue-100/50 hover:to-indigo-100/30 hover:text-blue-700'
                   }`}
-                  style={active ? { background: `linear-gradient(135deg, ${primaryColor}, #6366f1)`, boxShadow: `0 8px 16px ${primaryColor}33` } : {}}
+                  style={active ? { background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, boxShadow: `0 8px 16px ${primaryColor}33` } : {}}
                 >
                   <Icon className={`h-5 w-5 transition-transform duration-200 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />
                   <span>{item.label}</span>
