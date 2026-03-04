@@ -5,12 +5,7 @@ import { useBranding } from '../hooks/useBranding';
 import {
   Star,
   CheckCircle,
-  XCircle,
-  AlertCircle,
-  ClipboardCheck,
   Eye,
-  FileText,
-  Download,
   Users,
   Calendar,
   Tag,
@@ -21,7 +16,7 @@ import {
 } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { Pagination } from '../components/Pagination';
-import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
+import { RecordDetailsView } from '../components/records/RecordDetailsView';
 import type { Database } from '../lib/database.types';
 
 type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
@@ -785,185 +780,38 @@ export function EvaluatorEvaluationsPage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-purple-900 mb-3">{selectedRecord.title}</h2>
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-semibold text-purple-700">Applicant:</span>
-                    <span className="text-purple-900 ml-2">{selectedRecord.applicant?.full_name}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-purple-700">Email:</span>
-                    <span className="text-purple-900 ml-2">{selectedRecord.applicant?.email}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-purple-700">Category:</span>
-                    <span className="text-purple-900 ml-2 capitalize">{selectedRecord.category}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-purple-700">Submitted:</span>
-                    <span className="text-purple-900 ml-2">{formatDate(selectedRecord.created_at)}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-purple-700">Status:</span>
-                    <span className="text-purple-900 ml-2">{getStatusLabel(selectedRecord.status)}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-purple-700">Reference:</span>
-                    <span className="text-purple-900 ml-2 font-mono text-xs">{selectedRecord.reference_number}</span>
-                  </div>
-                  {selectedRecord.supervisor && (
-                    <div>
-                      <span className="font-semibold text-purple-700">Supervisor:</span>
-                      <span className="text-purple-900 ml-2">{selectedRecord.supervisor.full_name}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <ProcessTrackingWizard
-                ipRecordId={selectedRecord.id}
-                currentStatus={selectedRecord.status}
-                currentStage={selectedRecord.current_stage}
+            <div className="p-6">
+              <RecordDetailsView
+                record={selectedRecord as any}
+                documents={documents}
+                getDepartmentName={getDepartmentName}
+                formatDate={formatDate}
+                formatFileSize={formatFileSize}
+                getDocTypeLabel={getDocTypeLabel}
+                onDownloadDocument={downloadDocument as any}
+                showSupervisorField={true}
+                renderActions={
+                  ['evaluator_approved', 'rejected', 'completed', 'preparing_legal', 'ready_for_filing'].includes(
+                    selectedRecord.status
+                  ) ? (
+                    <button
+                      disabled
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-400 text-white rounded-lg font-medium transition-colors cursor-not-allowed"
+                    >
+                      <CheckCircle className="h-5 w-5" />
+                      Done Evaluating
+                    </button>
+                  ) : (
+                    <button
+                      onClick={openEvaluationModal}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
+                    >
+                      <Star className="h-5 w-5" />
+                      Start Evaluation
+                    </button>
+                  )
+                }
               />
-
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h4 className="text-lg font-bold text-gray-900 mb-3">Abstract</h4>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedRecord.abstract}</p>
-              </div>
-
-              {selectedRecord.details && typeof selectedRecord.details === 'object' && (
-                <>
-                  {'description' in selectedRecord.details && selectedRecord.details.description && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <h4 className="text-lg font-bold text-gray-900 mb-3">Description</h4>
-                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {String(selectedRecord.details.description)}
-                      </p>
-                    </div>
-                  )}
-
-                  {'technicalField' in selectedRecord.details && selectedRecord.details.technicalField && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <h4 className="text-lg font-bold text-gray-900 mb-3">Technical Field</h4>
-                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {String(selectedRecord.details.technicalField)}
-                      </p>
-                    </div>
-                  )}
-
-                  {'backgroundArt' in selectedRecord.details && selectedRecord.details.backgroundArt && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <h4 className="text-lg font-bold text-gray-900 mb-3">Background Art</h4>
-                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {String(selectedRecord.details.backgroundArt)}
-                      </p>
-                    </div>
-                  )}
-
-                  {'problemStatement' in selectedRecord.details && selectedRecord.details.problemStatement && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <h4 className="text-lg font-bold text-gray-900 mb-3">Problem Statement</h4>
-                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {String(selectedRecord.details.problemStatement)}
-                      </p>
-                    </div>
-                  )}
-
-                  {'solution' in selectedRecord.details && selectedRecord.details.solution && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <h4 className="text-lg font-bold text-gray-900 mb-3">Solution</h4>
-                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {String(selectedRecord.details.solution)}
-                      </p>
-                    </div>
-                  )}
-
-                  {'advantages' in selectedRecord.details && selectedRecord.details.advantages && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <h4 className="text-lg font-bold text-gray-900 mb-3">Advantages</h4>
-                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {String(selectedRecord.details.advantages)}
-                      </p>
-                    </div>
-                  )}
-
-                  {'inventors' in selectedRecord.details && Array.isArray(selectedRecord.details.inventors) && (
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <h4 className="text-lg font-bold text-gray-900 mb-3">Inventors</h4>
-                      <div className="space-y-3">
-                        {selectedRecord.details.inventors.map((inv: any, idx: number) => (
-                          <div key={idx} className="border-l-4 border-purple-500 pl-4 py-2">
-                            <p className="font-semibold text-gray-900">{inv.name}</p>
-                            {inv.affiliation && (
-                              <p className="text-sm text-gray-600">Affiliation: {getDepartmentName(inv.affiliation)}</p>
-                            )}
-                            {inv.contribution && (
-                              <p className="text-sm text-gray-600">Contribution: {inv.contribution}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h4 className="text-lg font-bold text-gray-900 mb-4">Documents ({documents.length})</h4>
-                {documents.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No documents uploaded</p>
-                ) : (
-                  <div className="space-y-3">
-                    {documents.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-3 flex-1">
-                          <FileText className="h-8 w-8 text-purple-600" />
-                          <div>
-                            <p className="font-medium text-gray-900">{doc.file_name}</p>
-                            <p className="text-sm text-gray-600">
-                              {getDocTypeLabel(doc.doc_type)} • {formatFileSize(doc.size_bytes)} • {formatDate(doc.created_at)}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => downloadDocument(doc)}
-                          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
-                        >
-                          <Download className="h-4 w-4" />
-                          Download
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-6 border-t border-gray-200 sticky bottom-0 bg-white">
-                {['evaluator_approved', 'rejected', 'completed', 'preparing_legal', 'ready_for_filing'].includes(
-                  selectedRecord.status
-                ) ? (
-                  <button
-                    disabled
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-400 text-white rounded-lg font-medium transition-colors cursor-not-allowed"
-                  >
-                    <CheckCircle className="h-5 w-5" />
-                    Done Evaluating
-                  </button>
-                ) : (
-                  <button
-                    onClick={openEvaluationModal}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
-                  >
-                    <Star className="h-5 w-5" />
-                    Start Evaluation
-                  </button>
-                )}
-              </div>
             </div>
           </div>
         </div>

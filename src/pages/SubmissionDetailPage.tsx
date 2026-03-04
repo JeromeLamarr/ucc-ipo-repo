@@ -1272,7 +1272,7 @@ export function SubmissionDetailPage() {
         applicantEmail={record.applicant?.email || ''}
       />
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-900">Documents</h2>
           {profile?.role === 'applicant' && record.applicant_id === profile.id && (
@@ -1290,32 +1290,33 @@ export function SubmissionDetailPage() {
         </div>
 
         {documents.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>No documents uploaded yet</p>
+          <div className="text-center py-10 text-gray-400">
+            <FileText className="h-10 w-10 mx-auto mb-3" />
+            <p className="text-sm">No documents uploaded yet</p>
           </div>
         ) : (
           <div className="space-y-3">
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100"
+                className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <div className="font-medium text-gray-900">{doc.file_name}</div>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <FileText className="h-7 w-7 text-blue-600 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-900 truncate">{doc.file_name}</div>
                     <div className="text-sm text-gray-500">
-                      {doc.size_bytes && formatFileSize(doc.size_bytes)} • {formatDate(doc.created_at)}
+                      {doc.size_bytes ? formatFileSize(doc.size_bytes) : '—'} • {formatDate(doc.created_at)}
                     </div>
                   </div>
                 </div>
-                <button 
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                <button
+                  className="shrink-0 flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors ml-3"
                   title="Download document"
                   aria-label={`Download ${doc.file_name}`}
                 >
-                  <Download className="h-5 w-5" />
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Download</span>
                 </button>
               </div>
             ))}
