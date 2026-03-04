@@ -13,6 +13,9 @@ import {
   ChevronDown,
   ChevronRight,
   Settings,
+  Monitor,
+  Tablet,
+  Smartphone,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
@@ -24,12 +27,15 @@ import {
   getDefaultContent,
 } from '../components/cms/sectionRegistry';
 import type { CmsSection } from '../components/cms/sectionRegistry';
+import { SectionStyleEditor } from '../components/cms/SectionStyleEditor';
+import type { SectionStyle } from '../components/cms/cmsStyles';
 import type { Database } from '../lib/database.types';
 
 type CMSPage = Database['public']['Tables']['cms_pages']['Row'];
 
 interface SectionWithContent extends CmsSection {
   content: Record<string, any>;
+  style?: SectionStyle | null;
 }
 
 export function CMSPageEditor() {
@@ -45,6 +51,7 @@ export function CMSPageEditor() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewWidth, setPreviewWidth] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [addingSection, setAddingSection] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -206,6 +213,17 @@ export function CMSPageEditor() {
       showMsg('Section saved');
     } catch (err: any) {
       showMsg(err.message || 'Failed to save section', true);
+    }
+  };
+
+  const handleUpdateStyle = async (sectionId: string, newStyle: SectionStyle) => {
+    try {
+      const styleValue = Object.keys(newStyle).length === 0 ? null : newStyle;
+      const { error } = await supabase.from('cms_sections').update({ style: styleValue } as any).eq('id', sectionId);
+      if (error) throw error;
+      setSections(prev => prev.map(s => s.id === sectionId ? { ...s, style: styleValue } : s));
+    } catch (err: any) {
+      showMsg(err.message || 'Failed to save style', true);
     }
   };
 
@@ -405,6 +423,7 @@ export function CMSPageEditor() {
                   onDelete={() => handleDeleteSection(section.id)}
                   onDuplicate={() => handleDuplicateSection(section)}
                   onSave={newContent => handleUpdateContent(section.id, newContent)}
+                  onSaveStyle={newStyle => handleUpdateStyle(section.id, newStyle)}
                 />
               ))
             )}
@@ -415,18 +434,46 @@ export function CMSPageEditor() {
           <div className="xl:col-span-2">
             <div className="sticky top-4">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
-                  <Eye size={14} className="text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">Live Preview</span>
+                <div className="px-4 py-2.5 border-b border-gray-200 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Eye size={14} className="text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Preview</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {([
+                      { id: 'desktop', Icon: Monitor, title: 'Desktop' },
+                      { id: 'tablet', Icon: Tablet, title: 'Tablet (768px)' },
+                      { id: 'mobile', Icon: Smartphone, title: 'Mobile (375px)' },
+                    ] as const).map(({ id, Icon, title }) => (
+                      <button
+                        key={id}
+                        onClick={() => setPreviewWidth(id)}
+                        title={title}
+                        className={`p-1.5 rounded transition-colors ${previewWidth === id ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600'}`}
+                      >
+                        <Icon size={14} />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="overflow-y-auto max-h-[calc(100vh-200px)] bg-white">
+                <div className="overflow-y-auto max-h-[calc(100vh-200px)] bg-gray-100">
                   {sections.length === 0 ? (
                     <div className="p-8 text-center text-gray-400 text-sm">
                       Add sections to see the preview
                     </div>
                   ) : (
-                    <div className="transform scale-75 origin-top-left w-[133%]">
-                      <CmsPageRenderer page={page as any} sections={sections} branding={branding} />
+                    <div className="p-2">
+                      <div
+                        className="bg-white mx-auto overflow-hidden shadow-sm"
+                        style={{
+                          width: previewWidth === 'mobile' ? 375 : previewWidth === 'tablet' ? 768 : '100%',
+                          transform: previewWidth === 'mobile' ? 'scale(0.7)' : previewWidth === 'tablet' ? 'scale(0.55)' : 'scale(0.72)',
+                          transformOrigin: 'top left',
+                          height: previewWidth === 'mobile' ? undefined : undefined,
+                        }}
+                      >
+                        <CmsPageRenderer page={page as any} sections={sections} branding={branding} />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -450,6 +497,7 @@ interface SectionCardProps {
   onDelete: () => void;
   onDuplicate: () => void;
   onSave: (content: Record<string, any>) => void;
+  onSaveStyle: (style: SectionStyle) => void;
 }
 
 function SectionCard({
@@ -463,6 +511,7 @@ function SectionCard({
   onDelete,
   onDuplicate,
   onSave,
+  onSaveStyle,
 }: SectionCardProps) {
   const validation = validateSection(section);
   const typeInfo = supportedSectionTypes.find(t => t.value === section.section_type);
@@ -546,6 +595,7 @@ function SectionCard({
             section={section}
             primaryColor={primaryColor}
             onSave={onSave}
+            onSaveStyle={onSaveStyle}
           />
         </div>
       )}
@@ -557,9 +607,10 @@ interface SectionContentEditorProps {
   section: SectionWithContent;
   primaryColor: string;
   onSave: (content: Record<string, any>) => void;
+  onSaveStyle: (style: SectionStyle) => void;
 }
 
-function SectionContentEditor({ section, primaryColor, onSave }: SectionContentEditorProps) {
+function SectionContentEditor({ section, primaryColor, onSave, onSaveStyle }: SectionContentEditorProps) {
   const [content, setContent] = useState<Record<string, any>>({ ...section.content });
   const [dirty, setDirty] = useState(false);
 
@@ -614,8 +665,22 @@ function SectionContentEditor({ section, primaryColor, onSave }: SectionContentE
 
   return (
     <div>
-      <div className="p-4">{renderEditor()}</div>
-      <div className="flex justify-end gap-3 px-4 py-3 bg-gray-50 border-t border-gray-100 rounded-b-xl">
+      <div className="p-4 space-y-4">
+        {renderEditor()}
+        <SectionStyleEditor
+          style={section.style as SectionStyle | null}
+          onChange={onSaveStyle}
+        />
+      </div>
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-100 rounded-b-xl">
+        {dirty ? (
+          <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+            Unsaved changes
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">All changes saved</span>
+        )}
         <button
           onClick={handleSave}
           disabled={!dirty}
@@ -716,7 +781,7 @@ function FeaturesEditor({ content, update }: { content: Record<string, any>; upd
     update('features', next);
   };
 
-  const addFeature = () => update('features', [...features, { title: `Feature ${features.length + 1}`, description: '', icon: '', icon_bg_color: 'bg-blue-100', icon_color: 'text-blue-600' }]);
+  const addFeature = () => update('features', [...features, { title: `Feature ${features.length + 1}`, subtitle: '', description: '', icon: '', icon_bg_color: 'bg-blue-100', icon_color: 'text-blue-600' }]);
   const removeFeature = (i: number) => update('features', features.filter((_: any, idx: number) => idx !== i));
 
   return (
@@ -733,6 +798,11 @@ function FeaturesEditor({ content, update }: { content: Record<string, any>; upd
             <FieldRow label="Title">
               <TextInput value={f.title} onChange={v => updateFeature(i, 'title', v)} />
             </FieldRow>
+            <FieldRow label="Subtitle (optional)">
+              <TextInput value={f.subtitle || ''} onChange={v => updateFeature(i, 'subtitle', v)} placeholder="Short tagline" />
+            </FieldRow>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <FieldRow label="Icon name">
               <TextInput value={f.icon} onChange={v => updateFeature(i, 'icon', v)} placeholder="Shield, Star, Zap…" />
             </FieldRow>
@@ -1150,6 +1220,12 @@ function CTAEditor({ content, update }: { content: Record<string, any>; update: 
           <TextInput value={content.background_color || '#2563EB'} onChange={v => update('background_color', v)} placeholder="#2563EB" />
         </div>
       </FieldRow>
+      <MediaDropzone
+        label="Background Image (optional, overrides color)"
+        value={content.background_image || ''}
+        onChange={v => update('background_image', v)}
+        folder="cta"
+      />
     </div>
   );
 }

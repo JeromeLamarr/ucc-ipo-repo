@@ -14,12 +14,15 @@ import {
   Workflow,
   ExternalLink,
 } from 'lucide-react';
+import { sectionStyleToClasses } from './cmsStyles';
+import type { SectionStyle } from './cmsStyles';
 
 export interface CmsSection {
   id: string;
   section_type: string;
   content: Record<string, any>;
   order_index: number;
+  style?: Record<string, any> | null;
 }
 
 export interface CmsBranding {
@@ -113,7 +116,7 @@ export function getDefaultContent(sectionType: string): Record<string, any> {
     case 'features':
       return {
         features: [
-          { title: 'Feature 1', description: 'Description', icon_bg_color: 'bg-blue-100', icon_color: 'text-blue-600' },
+          { title: 'Feature 1', subtitle: '', description: 'Description', icon_bg_color: 'bg-blue-100', icon_color: 'text-blue-600' },
         ],
       };
     case 'showcase':
@@ -243,7 +246,7 @@ function CMSButton({
   );
 }
 
-function HeroSection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+function HeroSection({ content, branding, sectionStyle: _ss }: { content: Record<string, any>; branding: CmsBranding; sectionStyle?: SectionStyle | null }) {
   const headline = content.headline || 'Welcome';
   const highlight = content.headline_highlight || '';
   const subheadline = content.subheadline || '';
@@ -330,7 +333,7 @@ function HeroSection({ content, branding }: { content: Record<string, any>; bran
   );
 }
 
-function FeaturesSection({ content }: { content: Record<string, any>; branding: CmsBranding }) {
+function FeaturesSection({ content, sectionStyle: _ss }: { content: Record<string, any>; branding: CmsBranding; sectionStyle?: SectionStyle | null }) {
   const features = Array.isArray(content.features) ? content.features : [];
   if (features.length === 0) return null;
 
@@ -345,7 +348,8 @@ function FeaturesSection({ content }: { content: Record<string, any>; branding: 
                 <span className={f.icon_color || 'text-blue-600'}>{getIconComponent(f.icon)}</span>
               </div>
             )}
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">{f.title || `Feature ${i + 1}`}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">{f.title || `Feature ${i + 1}`}</h3>
+            {f.subtitle && <p className="text-sm font-medium text-gray-500 mb-2">{f.subtitle}</p>}
             {f.description && <p className="text-gray-600 text-sm leading-relaxed">{f.description}</p>}
           </div>
         ))}
@@ -354,7 +358,7 @@ function FeaturesSection({ content }: { content: Record<string, any>; branding: 
   );
 }
 
-function ShowcaseSection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+function ShowcaseSection({ content, branding, sectionStyle: _ss }: { content: Record<string, any>; branding: CmsBranding; sectionStyle?: SectionStyle | null }) {
   const items = Array.isArray(content.items) ? content.items : [];
   if (items.length === 0) {
     if (import.meta.env.DEV) console.warn('ShowcaseSection: no items in content', content);
@@ -438,7 +442,7 @@ function ShowcaseSection({ content, branding }: { content: Record<string, any>; 
   );
 }
 
-function StepsSection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+function StepsSection({ content, branding, sectionStyle: _ss }: { content: Record<string, any>; branding: CmsBranding; sectionStyle?: SectionStyle | null }) {
   const steps = Array.isArray(content.steps) ? content.steps : [];
   if (steps.length === 0) return null;
 
@@ -471,7 +475,7 @@ function StepsSection({ content, branding }: { content: Record<string, any>; bra
   );
 }
 
-function CategoriesSection({ content }: { content: Record<string, any> }) {
+function CategoriesSection({ content, sectionStyle: _ss }: { content: Record<string, any>; sectionStyle?: SectionStyle | null }) {
   const categories = Array.isArray(content.categories) ? content.categories : [];
   if (categories.length === 0) return null;
 
@@ -489,8 +493,9 @@ function CategoriesSection({ content }: { content: Record<string, any> }) {
   );
 }
 
-function CTASection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+function CTASection({ content, branding, sectionStyle: _ss }: { content: Record<string, any>; branding: CmsBranding; sectionStyle?: SectionStyle | null }) {
   const bg = content.background_color || branding.primaryColor;
+  const bgImage = content.background_image || null;
   const heading = content.heading || '';
   const desc = content.description || '';
   const button: CMSButtonType | null = content.button || (content.button_text ? {
@@ -500,9 +505,14 @@ function CTASection({ content, branding }: { content: Record<string, any>; brand
 
   if (!heading && !desc && !button) return null;
 
+  const wrapperStyle: React.CSSProperties = bgImage
+    ? { backgroundImage: `url('${bgImage}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { backgroundColor: bg };
+
   return (
-    <div className="py-16 text-center text-white" style={{ backgroundColor: bg }}>
-      <div className="max-w-3xl mx-auto px-4">
+    <div className="relative py-16 text-center text-white" style={wrapperStyle}>
+      {bgImage && <div className="absolute inset-0 bg-black/40" />}
+      <div className="relative max-w-3xl mx-auto px-4">
         {heading && <h2 className="text-3xl sm:text-4xl font-bold mb-4">{heading}</h2>}
         {desc && <p className="text-lg mb-8 opacity-90">{desc}</p>}
         {button && <CMSButton button={button} bgColor="white" textColor="text-gray-900" />}
@@ -511,7 +521,7 @@ function CTASection({ content, branding }: { content: Record<string, any>; brand
   );
 }
 
-function GallerySection({ content }: { content: Record<string, any> }) {
+function GallerySection({ content, sectionStyle: _ss }: { content: Record<string, any>; sectionStyle?: SectionStyle | null }) {
   const images = Array.isArray(content.images) ? content.images : [];
   if (images.length === 0) return null;
 
@@ -549,10 +559,11 @@ function GallerySection({ content }: { content: Record<string, any> }) {
   );
 }
 
-function TextSectionRenderer({ content }: { content: Record<string, any> }) {
+function TextSectionRenderer({ content, sectionStyle }: { content: Record<string, any>; sectionStyle?: SectionStyle | null }) {
   const title = content.section_title || '';
   const body = content.body_content || '';
-  const alignment = content.text_alignment === 'center' ? 'text-center' : 'text-left';
+  const resolvedAlign = sectionStyle?.align ?? (content.text_alignment === 'center' ? 'center' : 'left');
+  const alignment = resolvedAlign === 'center' ? 'text-center' : resolvedAlign === 'right' ? 'text-right' : 'text-left';
   const maxWidthMap: Record<string, string> = { narrow: 'max-w-2xl', normal: 'max-w-4xl', wide: 'max-w-6xl', full: 'max-w-none' };
   const maxWidth = maxWidthMap[content.max_width] || 'max-w-4xl';
   const bgMap: Record<string, string> = {
@@ -635,7 +646,7 @@ function TextSectionRenderer({ content }: { content: Record<string, any> }) {
   );
 }
 
-function TabsSection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+function TabsSection({ content, branding, sectionStyle: _ss }: { content: Record<string, any>; branding: CmsBranding; sectionStyle?: SectionStyle | null }) {
   const [active, setActive] = useState(0);
   const tabs = Array.isArray(content.tabs) ? content.tabs : [];
   if (tabs.length === 0) return null;
@@ -704,27 +715,44 @@ export function renderCmsSection(section: CmsSection, branding: CmsBranding): Re
   }
 
   const content = typeof section.content === 'object' ? section.content : {};
+  const sectionStyle = section.style as SectionStyle | null | undefined;
+  const styleClasses = sectionStyleToClasses(sectionStyle);
 
-  switch (section.section_type) {
-    case 'hero':
-      return <HeroSection content={content} branding={branding} />;
-    case 'features':
-      return <FeaturesSection content={content} branding={branding} />;
-    case 'showcase':
-      return <ShowcaseSection content={content} branding={branding} />;
-    case 'steps':
-      return <StepsSection content={content} branding={branding} />;
-    case 'categories':
-      return <CategoriesSection content={content} />;
-    case 'text-section':
-      return <TextSectionRenderer content={content} />;
-    case 'cta':
-      return <CTASection content={content} branding={branding} />;
-    case 'gallery':
-      return <GallerySection content={content} />;
-    case 'tabs':
-      return <TabsSection content={content} branding={branding} />;
-    default:
-      return <UnknownSection sectionType={section.section_type} />;
-  }
+  const hasPrimaryBg = sectionStyle?.background === 'primary';
+
+  const inner = (() => {
+    switch (section.section_type) {
+      case 'hero':
+        return <HeroSection content={content} branding={branding} sectionStyle={sectionStyle} />;
+      case 'features':
+        return <FeaturesSection content={content} branding={branding} sectionStyle={sectionStyle} />;
+      case 'showcase':
+        return <ShowcaseSection content={content} branding={branding} sectionStyle={sectionStyle} />;
+      case 'steps':
+        return <StepsSection content={content} branding={branding} sectionStyle={sectionStyle} />;
+      case 'categories':
+        return <CategoriesSection content={content} sectionStyle={sectionStyle} />;
+      case 'text-section':
+        return <TextSectionRenderer content={content} sectionStyle={sectionStyle} />;
+      case 'cta':
+        return <CTASection content={content} branding={branding} sectionStyle={sectionStyle} />;
+      case 'gallery':
+        return <GallerySection content={content} sectionStyle={sectionStyle} />;
+      case 'tabs':
+        return <TabsSection content={content} branding={branding} sectionStyle={sectionStyle} />;
+      default:
+        return <UnknownSection sectionType={section.section_type} />;
+    }
+  })();
+
+  if (!sectionStyle || Object.keys(sectionStyle).length === 0) return inner;
+
+  return (
+    <div
+      className={styleClasses.wrapper}
+      style={hasPrimaryBg ? { backgroundColor: branding.primaryColor } : undefined}
+    >
+      {inner}
+    </div>
+  );
 }
