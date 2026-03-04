@@ -10,6 +10,7 @@ import { AuthCallbackPage } from '@pages/AuthCallbackPage';
 import { CMSPageRenderer } from '@pages/CMSPageRenderer';
 import { CMSPageEditor } from '@pages/CMSPageEditor';
 import { ApplicantDashboard } from '@pages/ApplicantDashboard';
+import { MySubmissionsPage } from '@pages/MySubmissionsPage';
 import { NewSubmissionPage } from '@pages/NewSubmissionPage';
 import { SupervisorDashboard } from '@pages/SupervisorDashboard';
 import { EvaluatorDashboard } from '@pages/EvaluatorDashboard';
@@ -60,7 +61,7 @@ function DashboardRouter() {
       <Routes>
         <Route path="/" element={getDashboardComponent()} />
         <Route path="submit" element={<NewSubmissionPage />} />
-        <Route path="submissions" element={<ApplicantDashboard />} />
+        <Route path="submissions" element={<MySubmissionsPage />} />
         <Route path="submissions/:id" element={<SubmissionDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="branding" element={<AdminBrandingSettingsPage />} />
