@@ -39,12 +39,13 @@ export async function fetchFooterSettings(): Promise<FooterSettings> {
 export async function updateFooterSettings(
   updates: Database['public']['Tables']['site_footer_settings']['Update'],
 ): Promise<FooterSettings | null> {
-  const payload = { ...updates, id: 1, updated_at: new Date().toISOString() };
+  const { id: _id, ...fields } = updates as any;
+  const payload = { ...fields, updated_at: new Date().toISOString() };
 
-  // Try UPSERT so a missing seed row is created automatically
   const { data, error } = await supabase
     .from('site_footer_settings' as any)
-    .upsert(payload as any)
+    .update(payload as any)
+    .eq('id', 1)
     .select()
     .single();
 
@@ -52,8 +53,6 @@ export async function updateFooterSettings(
     return data as FooterSettings;
   }
 
-  // If the table doesn't exist yet (migration not run), return the payload
-  // so the UI treats the save as successful without crashing
   if (error) {
     const isTableMissing =
       error.code === '42P01' ||
