@@ -840,6 +840,28 @@ export function SubmissionDetailPage() {
     });
   };
 
+  const downloadDocument = async (doc: Document) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('ip-documents')
+        .download(doc.file_path);
+
+      if (error) throw error;
+
+      const url = window.URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Failed to download document');
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -1311,6 +1333,7 @@ export function SubmissionDetailPage() {
                   </div>
                 </div>
                 <button
+                  onClick={() => downloadDocument(doc)}
                   className="shrink-0 flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors ml-3"
                   title="Download document"
                   aria-label={`Download ${doc.file_name}`}
