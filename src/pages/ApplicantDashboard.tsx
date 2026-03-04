@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranding } from '../hooks/useBranding';
-import { FileText, Clock, CheckCircle, XCircle, Plus, Edit, AlertCircle, Trash2, Eye } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, Plus, CreditCard as Edit, AlertCircle, Trash2, Eye } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
