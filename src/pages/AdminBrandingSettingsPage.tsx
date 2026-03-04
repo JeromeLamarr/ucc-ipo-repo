@@ -7,6 +7,7 @@ import {
   fetchFooterLinks,
   upsertFooterLink,
   deleteFooterLink,
+  checkMigrationApplied,
   DEFAULT_FOOTER_SETTINGS,
   type FooterSettings,
   type FooterLink,
@@ -14,7 +15,7 @@ import {
 } from '../services/footerService';
 import { Card, CardHeader, CardContent, CardFooter } from '../components/Card';
 import { Button } from '../components/Button';
-import { AlertCircle, CheckCircle, Loader, Upload, X, Eye, Plus, Trash2, GraduationCap, Link2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader, Upload, X, Eye, Plus, Trash2, GraduationCap, Link2, TriangleAlert } from 'lucide-react';
 import { getBrandGradient, type GradientStyle } from '../utils/brandStyles';
 
 // ── Option lists ────────────────────────────────────────────────────────────
@@ -117,6 +118,12 @@ export function AdminBrandingSettingsPage() {
   const [hasBrandingChanges, setHasBrandingChanges] = useState(false);
   const [showLogoModal, setShowLogoModal] = useState(false);
 
+  // ── Migration status ──
+  const [migrationStatus, setMigrationStatus] = useState<{
+    brandingColumnsReady: boolean;
+    footerTablesReady: boolean;
+  } | null>(null);
+
   // ── Footer form ──
   const [footerSettings, setFooterSettings] = useState<FooterSettings>(DEFAULT_FOOTER_SETTINGS);
   const [footerLinks, setFooterLinks] = useState<FooterLink[]>([]);
@@ -150,6 +157,7 @@ export function AdminBrandingSettingsPage() {
   useEffect(() => {
     fetchFooterSettings().then(setFooterSettings);
     fetchFooterLinks().then(setFooterLinks);
+    checkMigrationApplied().then(setMigrationStatus);
   }, []);
 
   // ── Track branding changes ──
@@ -327,6 +335,26 @@ export function AdminBrandingSettingsPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Branding &amp; Footer</h1>
         <p className="text-gray-600">Manage site identity, colours, and footer content</p>
       </div>
+
+      {/* Migration notice — shown only when new DB columns / tables are missing */}
+      {migrationStatus && (!migrationStatus.brandingColumnsReady || !migrationStatus.footerTablesReady) && (
+        <div className="p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
+          <TriangleAlert className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-amber-900 text-sm">Database migration required</p>
+            <p className="text-amber-800 text-sm mt-0.5">
+              Some features are unavailable because the database schema hasn&apos;t been updated yet.
+              {!migrationStatus.brandingColumnsReady && ' (Secondary colour, gradient, favicon columns missing.)'}
+              {!migrationStatus.footerTablesReady && ' (Footer tables missing.)'}
+            </p>
+            <p className="text-amber-700 text-xs mt-2">
+              Go to your <strong>Supabase project → SQL Editor</strong> and run the file{' '}
+              <code className="bg-amber-100 px-1 rounded">supabase/migrations/20260121000100_branding_and_footer_upgrade.sql</code>.
+              Basic site name &amp; logo saves still work in the meantime.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Branding alerts */}
       {brandingError && (

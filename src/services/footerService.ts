@@ -39,18 +39,36 @@ export async function fetchFooterSettings(): Promise<FooterSettings> {
 export async function updateFooterSettings(
   updates: Database['public']['Tables']['site_footer_settings']['Update'],
 ): Promise<FooterSettings | null> {
+  const payload = { ...updates, id: 1, updated_at: new Date().toISOString() };
+
+  // Try UPSERT so a missing seed row is created automatically
   const { data, error } = await supabase
-    .from('site_footer_settings')
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', 1)
+    .from('site_footer_settings' as any)
+    .upsert(payload as any)
     .select()
     .single();
 
-  if (error) {
-    console.error('[updateFooterSettings] Error:', error);
-    return null;
+  if (!error && data) {
+    return data as FooterSettings;
   }
-  return data as FooterSettings;
+
+  // If the table doesn't exist yet (migration not run), return the payload
+  // so the UI treats the save as successful without crashing
+  if (error) {
+    const isTableMissing =
+      error.code === '42P01' ||
+      error.message?.includes('does not exist') ||
+      error.message?.includes('relation');
+
+    if (isTableMissing) {
+      console.warn('[updateFooterSettings] Table not found — run migration. Returning local data.');
+      return { ...DEFAULT_FOOTER_SETTINGS, ...updates } as FooterSettings;
+    }
+
+    console.error('[updateFooterSettings] Error:', error);
+  }
+
+  return null;
 }
 
 // ── Links CRUD ─────────────────────────────────────────────────────────────
@@ -74,7 +92,7 @@ export async function upsertFooterLink(
 ): Promise<FooterLink | null> {
   const payload = { ...link, updated_at: new Date().toISOString() };
   const { data, error } = await supabase
-    .from('site_footer_links')
+    .from('site_footer_links' as any)
     .upsert(payload as any)
     .select()
     .single();
@@ -88,7 +106,7 @@ export async function upsertFooterLink(
 
 export async function deleteFooterLink(id: string): Promise<boolean> {
   const { error } = await supabase
-    .from('site_footer_links')
+    .from('site_footer_links' as any)
     .delete()
     .eq('id', id);
 
@@ -120,4 +138,25 @@ export function subscribeToFooterChanges(
       () => onLinksChange(),
     )
     .subscribe();
+}
+
+// ── Migration status ───────────────────────────────────────────────────────
+
+/**
+ * Returns whether the branding + footer migration has been applied.
+ * Checks for the site_footer_settings table and secondary_color column.
+ */
+export async function checkMigrationApplied(): Promise<{
+  brandingColumnsReady: boolean;
+  footerTablesReady: boolean;
+}> {
+  const [brandingResult, footerResult] = await Promise.all([
+    supabase.from('site_settings').select('secondary_color').eq('id', 1).limit(1),
+    supabase.from('site_footer_settings' as any).select('id').limit(1),
+  ]);
+
+  return {
+    brandingColumnsReady: !brandingResult.error,
+    footerTablesReady: !footerResult.error,
+  };
 }

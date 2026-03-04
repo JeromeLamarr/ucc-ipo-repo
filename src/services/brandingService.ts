@@ -160,29 +160,38 @@ export async function deleteLogo(logoPath: string): Promise<boolean> {
 }
 export async function fetchBrandingData(): Promise<BrandingData> {
   try {
-    console.log('[fetchBrandingData] Fetching branding data from site_settings table...');
+    // Try full select including new columns
     const { data, error } = await supabase
       .from('site_settings')
       .select('id, site_name, logo_url, primary_color, secondary_color, gradient_style, favicon_url, updated_at')
       .eq('id', 1)
       .single();
 
-    console.log('[fetchBrandingData] Response - Error:', error, 'Data:', data);
+    if (!error && data) {
+      return data as BrandingData;
+    }
 
-    if (error) {
-      console.warn('Failed to fetch branding data:', error.message);
+    // Fall back to base columns if new columns don't exist yet
+    const { data: baseData, error: baseError } = await supabase
+      .from('site_settings')
+      .select('id, site_name, logo_url, primary_color, updated_at')
+      .eq('id', 1)
+      .single();
+
+    if (baseError || !baseData) {
+      console.warn('[fetchBrandingData] Failed:', baseError?.message);
       return DEFAULT_BRANDING;
     }
 
-    if (!data) {
-      console.warn('No branding data found');
-      return DEFAULT_BRANDING;
-    }
-
-    console.log('[fetchBrandingData] Successfully fetched branding:', data);
-    return data as BrandingData;
+    return {
+      ...DEFAULT_BRANDING,
+      ...baseData,
+      secondary_color: DEFAULT_BRANDING.secondary_color,
+      gradient_style: DEFAULT_BRANDING.gradient_style,
+      favicon_url: null,
+    } as BrandingData;
   } catch (err) {
-    console.error('Error fetching branding data:', err);
+    console.error('[fetchBrandingData] Error:', err);
     return DEFAULT_BRANDING;
   }
 }
@@ -214,16 +223,40 @@ export async function updateBrandingData(
       .select()
       .single();
 
-    console.log('[updateBrandingData] Supabase response received:', result);
-
     const { data, error } = result;
 
-    if (error) {
-      console.error('[updateBrandingData] Error response:', error);
-      return null;
+    if (!error && data) {
+      return data as BrandingData;
     }
 
-    console.log('[updateBrandingData] Success! Updated data:', data);
+    // If new columns don't exist yet, retry with only base columns
+    if (error) {
+      console.warn('[updateBrandingData] Full update failed, trying base columns only:', error.message);
+      const basePayload: Record<string, any> = {
+        updated_at: updatePayload.updated_at,
+      };
+      if (updatePayload.site_name !== undefined) basePayload.site_name = updatePayload.site_name;
+      if (updatePayload.logo_url !== undefined) basePayload.logo_url = updatePayload.logo_url;
+      if (updatePayload.primary_color !== undefined) basePayload.primary_color = updatePayload.primary_color;
+
+      const fallback: any = await supabase
+        .from('site_settings' as const)
+        .update(basePayload)
+        .eq('id', 1)
+        .select()
+        .single();
+
+      if (fallback.error) {
+        console.error('[updateBrandingData] Fallback also failed:', fallback.error);
+        return null;
+      }
+
+      return {
+        ...DEFAULT_BRANDING,
+        ...fallback.data,
+      } as BrandingData;
+    }
+
     return data as BrandingData;
   } catch (err) {
     console.error('[updateBrandingData] Catch error:', err);
