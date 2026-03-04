@@ -12,8 +12,10 @@ import { CMSPageEditor } from '@pages/CMSPageEditor';
 import { ApplicantDashboard } from '@pages/ApplicantDashboard';
 import { MySubmissionsPage } from '@pages/MySubmissionsPage';
 import { NewSubmissionPage } from '@pages/NewSubmissionPage';
-import { SupervisorDashboard } from '@pages/SupervisorDashboard';
-import { EvaluatorDashboard } from '@pages/EvaluatorDashboard';
+import { SupervisorDashboardHome } from '@pages/SupervisorDashboardHome';
+import { SupervisorReviewPage } from '@pages/SupervisorReviewPage';
+import { EvaluatorDashboardHome } from '@pages/EvaluatorDashboardHome';
+import { EvaluatorEvaluationsPage } from '@pages/EvaluatorEvaluationsPage';
 import { AdminDashboard } from '@pages/AdminDashboard';
 import { AdminBrandingSettingsPage } from '@pages/AdminBrandingSettingsPage';
 import { UserManagement } from '@pages/UserManagement';
@@ -46,9 +48,9 @@ function DashboardRouter() {
   const getDashboardComponent = () => {
     switch (profile.role) {
       case 'supervisor':
-        return <SupervisorDashboard />;
+        return <SupervisorDashboardHome />;
       case 'evaluator':
-        return <EvaluatorDashboard />;
+        return <EvaluatorDashboardHome />;
       case 'admin':
         return <AdminDashboard />;
       default:
@@ -65,8 +67,8 @@ function DashboardRouter() {
         <Route path="submissions/:id" element={<SubmissionDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="branding" element={<AdminBrandingSettingsPage />} />
-        <Route path="review" element={<SupervisorDashboard />} />
-        <Route path="evaluations" element={<EvaluatorDashboard />} />
+        <Route path="review" element={<SupervisorReviewPage />} />
+        <Route path="evaluations" element={<EvaluatorEvaluationsPage />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="public-pages" element={<PublicPagesManagement />} />
         <Route path="public-pages/:slug/edit" element={<CMSPageEditor />} />

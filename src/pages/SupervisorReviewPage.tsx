@@ -1,0 +1,1092 @@
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { useBranding } from '../hooks/useBranding';
+import {
+  ClipboardList,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Eye,
+  FileText,
+  Download,
+  Users,
+  Calendar,
+  Tag,
+  X,
+  History,
+  ListChecks,
+  Search
+} from 'lucide-react';
+import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
+import { Pagination } from '../components/Pagination';
+import { ProcessTrackingWizard } from '../components/ProcessTrackingWizard';
+import type { Database } from '../lib/database.types';
+
+type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
+  applicant?: Database['public']['Tables']['users']['Row'];
+};
+
+type IpDocument = Database['public']['Tables']['ip_documents']['Row'];
+
+export function SupervisorReviewPage() {
+  const { primaryColor } = useBranding();
+  const { profile } = useAuth();
+  const [activeTab, setActiveTab] = useState<'queue' | 'history'>('queue');
+  const [records, setRecords] = useState<IpRecord[]>([]);
+  const [historyRecords, setHistoryRecords] = useState<IpRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRecord, setSelectedRecord] = useState<IpRecord | null>(null);
+  const [documents, setDocuments] = useState<IpDocument[]>([]);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [action, setAction] = useState<'approve' | 'reject' | 'revision' | null>(null);
+  const [remarks, setRemarks] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [departments, setDepartments] = useState<{ [key: string]: string }>({});
+
+  // Pagination states for queue
+  const [queueCurrentPage, setQueueCurrentPage] = useState(1);
+  const [queueItemsPerPage, setQueueItemsPerPage] = useState(5);
+
+  // Pagination states for history
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const [historyItemsPerPage, setHistoryItemsPerPage] = useState(5);
+
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  useEffect(() => {
+    fetchDepartments();
+    fetchAssignedRecords();
+    fetchHistoryRecords();
+  }, [profile]);
+
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name');
+
+      if (error) throw error;
+      if (data) {
+        const deptMap = data.reduce((acc, dept) => {
+          acc[dept.id] = dept.name;
+          return acc;
+        }, {} as { [key: string]: string });
+        setDepartments(deptMap);
+      }
+    } catch (error) {
+      console.warn('Could not fetch departments:', error);
+    }
+  };
+
+  const getDepartmentName = (affiliationId: string) => {
+    if (!affiliationId) return 'Not specified';
+    return departments[affiliationId] || affiliationId;
+  };
+
+  const fetchAssignedRecords = async () => {
+    if (!profile) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('ip_records')
+        .select(`
+          *,
+          applicant:users!ip_records_applicant_id_fkey(*)
+        `)
+        .eq('supervisor_id', profile.id)
+        .in('status', ['waiting_supervisor', 'supervisor_revision'])
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setRecords(data || []);
+    } catch (error) {
+      console.error('Error fetching records:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchHistoryRecords = async () => {
+    if (!profile) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('ip_records')
+        .select(`
+          *,
+          applicant:users!ip_records_applicant_id_fkey(*)
+        `)
+        .eq('supervisor_id', profile.id)
+        .in('status', ['supervisor_approved', 'rejected', 'evaluator_approved', 'evaluator_revision', 'waiting_evaluation', 'completed', 'preparing_legal', 'ready_for_filing'])
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      setHistoryRecords(data || []);
+    } catch (error) {
+      console.error('Error fetching history:', error);
+    }
+  };
+
+  const openDetailModal = async (record: IpRecord) => {
+    setSelectedRecord(record);
+
+    const { data: docs } = await supabase
+      .from('ip_documents')
+      .select('*')
+      .eq('ip_record_id', record.id)
+      .order('created_at', { ascending: true });
+
+    setDocuments(docs || []);
+    setShowDetailModal(true);
+  };
+
+  const openReviewModal = (reviewAction: 'approve' | 'reject' | 'revision') => {
+    setAction(reviewAction);
+    setRemarks('');
+    setShowDetailModal(false);
+    setShowReviewModal(true);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!selectedRecord || !action || !profile) return;
+
+    if (!remarks || remarks.trim() === '') {
+      alert('Please provide remarks/comments for your decision');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      type ValidStatus = 'waiting_evaluation' | 'rejected' | 'supervisor_revision';
+      let newStatus: ValidStatus;
+      let currentStage: string;
+
+      switch (action) {
+        case 'approve':
+          newStatus = 'waiting_evaluation';
+          currentStage = 'Approved by Supervisor - Waiting for Evaluation';
+          break;
+        case 'reject':
+          newStatus = 'rejected';
+          currentStage = 'Rejected by Supervisor';
+          break;
+        case 'revision':
+          newStatus = 'supervisor_revision';
+          currentStage = 'Revision Requested by Supervisor';
+          break;
+        default:
+          alert('Invalid action');
+          setSubmitting(false);
+          return;
+      }
+
+      // Prepare the initial update data
+      const updatePayload: any = {
+        status: newStatus,
+        current_stage: currentStage,
+      };
+
+      // If approving, check for evaluator BEFORE updating ip_records
+      let evaluatorId: string | null = null;
+      if (action === 'approve') {
+        const { data: evaluators } = await supabase
+          .from('users')
+          .select('id, full_name')
+          .eq('role', 'evaluator')
+          .eq('category_specialization', selectedRecord.category)
+          .limit(1);
+
+        const categoryEvaluator = evaluators && evaluators.length > 0 ? evaluators[0] : null;
+
+        if (categoryEvaluator) {
+          evaluatorId = categoryEvaluator.id;
+          updatePayload.evaluator_id = categoryEvaluator.id;
+        }
+      }
+
+      // Single update to ip_records with all necessary fields
+      const { data: updateData, error: updateError } = await supabase
+        .from('ip_records')
+        .update(updatePayload)
+        .eq('id', selectedRecord.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Update error details:', updateError);
+        alert(`Failed to update submission: ${updateError.message}`);
+        setSubmitting(false);
+        return;
+      }
+
+      console.log('Successfully updated record:', updateData);
+
+      // ==========================================
+      // SLA TRACKING: Close current supervisor_review stage and create next stage
+      // ==========================================
+      try {
+        // Close the supervisor_review stage instance
+        const { data: closedStageData, error: closedStageError } = await supabase
+          .rpc('close_stage_instance', {
+            p_record_id: selectedRecord.id,
+            p_close_status: 'COMPLETED',
+          });
+
+        if (closedStageError) {
+          console.warn('Could not close supervisor_review stage instance:', closedStageError);
+        } else {
+          console.log('Closed supervisor_review stage instance:', closedStageData);
+        }
+
+        // Create next stage instance based on action
+        let nextStage: string | null = null;
+        let nextAssignedUserId: string | null = null;
+
+        if (action === 'approve') {
+          nextStage = 'evaluation';
+          nextAssignedUserId = evaluatorId; // The evaluator we found above
+        } else if (action === 'revision') {
+          nextStage = 'revision_requested';
+          nextAssignedUserId = selectedRecord.applicant_id; // Applicant must revise
+        }
+        // For reject, no next stage - workflow ends
+
+        if (nextStage) {
+          const { data: newStageData, error: newStageError } = await supabase
+            .rpc('create_stage_instance', {
+              p_record_id: selectedRecord.id,
+              p_stage: nextStage,
+              p_assigned_user_id: nextAssignedUserId,
+            });
+
+          if (newStageError) {
+            console.warn(`Could not create ${nextStage} stage instance:`, newStageError);
+          } else {
+            console.log(`Created ${nextStage} stage instance:`, newStageData);
+          }
+        }
+      } catch (slaError) {
+        // SLA tracking is non-critical; log but don't fail the workflow
+        console.warn('SLA tracking error (non-critical):', slaError);
+      }
+
+      await supabase.from('supervisor_assignments').update({
+        status: action === 'approve' ? 'accepted' : 'rejected',
+        remarks: remarks,
+      }).eq('ip_record_id', selectedRecord.id).eq('supervisor_id', profile.id);
+
+      if (action === 'approve' && evaluatorId) {
+        // Validate that this submission belongs to this supervisor before inserting
+        if (selectedRecord.supervisor_id !== profile.id) {
+          console.error('Security violation: Supervisor trying to assign submission they do not supervise');
+          alert('Security error: You cannot assign submissions you do not supervise');
+          setSubmitting(false);
+          return;
+        }
+
+        // Create evaluator assignment record
+        const { data: assignmentData, error: assignmentError } = await supabase
+          .from('evaluator_assignments')
+          .insert({
+            ip_record_id: selectedRecord.id,
+            evaluator_id: evaluatorId,
+            category: selectedRecord.category,
+            assigned_by: profile.id,
+          })
+          .select()
+          .single();
+
+        if (assignmentError) {
+          console.error('Failed to create evaluator assignment:', assignmentError);
+          alert(`Warning: Evaluator assignment failed: ${assignmentError.message}`);
+        } else {
+          console.log('Evaluator assignment created:', { 
+            submission_id: selectedRecord.id, 
+            evaluator_id: evaluatorId,
+            assignment: assignmentData 
+          });
+        }
+
+        await supabase.from('notifications').insert({
+          user_id: evaluatorId,
+          type: 'assignment',
+          title: 'New IP Submission for Evaluation',
+          message: `A ${selectedRecord.category} submission "${selectedRecord.title}" has been approved by supervisor and assigned to you`,
+          payload: { ip_record_id: selectedRecord.id },
+        });
+
+        // Send email notification to evaluator
+        const { data: evaluatorData } = await supabase
+          .from('users')
+          .select('email, full_name')
+          .eq('id', evaluatorId)
+          .single();
+
+        if (evaluatorData?.email) {
+          // Fetch applicant data to get full name
+          const { data: applicantData } = await supabase
+            .from('users')
+            .select('full_name')
+            .eq('id', selectedRecord.applicant_id)
+            .single();
+
+          try {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: JSON.stringify({
+                to: evaluatorData.email,
+                subject: 'New IP Submission Assigned for Evaluation',
+                title: 'New IP Submission Assigned',
+                message: `A ${selectedRecord.category} intellectual property submission has been approved by supervisor and assigned to you for evaluation.`,
+                submissionTitle: selectedRecord.title,
+                submissionCategory: selectedRecord.category,
+                applicantName: applicantData?.full_name || selectedRecord.applicant?.full_name || 'Unknown',
+              }),
+            });
+          } catch (emailError) {
+            console.error('Error sending evaluator email:', emailError);
+          }
+        }
+
+        // Track the assignment
+        await supabase.from('activity_logs').insert({
+          user_id: profile.id,
+          ip_record_id: selectedRecord.id,
+          action: 'evaluator_auto_assigned',
+          details: {
+            evaluator_id: evaluatorId,
+            category: selectedRecord.category,
+            method: 'supervisor_approval',
+          },
+        });
+
+        console.log(`Assigned ${selectedRecord.category} submission to evaluator ID: ${evaluatorId}`);
+      } else if (action === 'approve') {
+        console.warn(`No evaluator found for category: ${selectedRecord.category}`);
+        alert(`Warning: No evaluator available for category "${selectedRecord.category}". The submission has been approved but not assigned to an evaluator. Please contact an administrator.`);
+      }
+
+      await supabase.from('notifications').insert({
+        user_id: selectedRecord.applicant_id,
+        type: 'supervisor_decision',
+        title: `Supervisor ${action === 'approve' ? 'Approved' : action === 'reject' ? 'Rejected' : 'Requested Revision'}`,
+        message: `Your submission "${selectedRecord.title}" has been ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'sent back for revision'} by supervisor ${profile.full_name}`,
+        payload: { ip_record_id: selectedRecord.id, remarks },
+      });
+
+      await supabase.from('activity_logs').insert({
+        user_id: profile.id,
+        ip_record_id: selectedRecord.id,
+        action: `supervisor_${action}`,
+        details: { remarks, decision: action },
+      });
+
+      await supabase.from('process_tracking').insert({
+        ip_record_id: selectedRecord.id,
+        stage: currentStage,
+        status: newStatus,
+        actor_id: profile.id,
+        actor_name: profile.full_name,
+        actor_role: 'Supervisor',
+        action: `supervisor_${action}`,
+        description: `Supervisor ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'requested revision for'} the submission`,
+        metadata: { remarks },
+      });
+
+      // Fetch applicant details to ensure we have email (in case it's not in the record)
+      let applicantEmail = selectedRecord.applicant?.email;
+      let applicantName = selectedRecord.applicant?.full_name;
+
+      if (!applicantEmail) {
+        const { data: applicantData } = await supabase
+          .from('users')
+          .select('email, full_name')
+          .eq('id', selectedRecord.applicant_id)
+          .single();
+
+        if (applicantData) {
+          applicantEmail = applicantData.email;
+          applicantName = applicantData.full_name;
+        }
+      }
+
+      if (applicantEmail) {
+        try {
+          console.log(`[SupervisorReviewPage] Sending email notification to ${applicantEmail}`);
+          
+          // Define status-specific email content
+          const statusEmailContent: Record<string, { subject: string; title: string; message: string }> = {
+            supervisor_approved: {
+              subject: '✓ Supervisor Approved Your Submission',
+              title: 'Supervisor Approved Your Submission',
+              message: `Great news! Your submission "${selectedRecord.title}" has been approved by the supervisor and is now in the evaluation stage. Your submission will be evaluated by our technical expert team shortly.`,
+            },
+            supervisor_revision: {
+              subject: '🔄 Revision Requested by Supervisor',
+              title: 'Revision Requested',
+              message: `The supervisor has reviewed your submission "${selectedRecord.title}" and requested revisions. Please review the comments below and resubmit your updated work.`,
+            },
+            rejected: {
+              subject: '✗ Submission Decision',
+              title: 'Submission Decision',
+              message: `After careful review, your submission "${selectedRecord.title}" has been declined. Please review the comments for more information and contact us if you have questions.`,
+            },
+            waiting_evaluation: {
+              subject: '📋 Submission In Evaluation',
+              title: 'Submission In Evaluation',
+              message: `Your submission "${selectedRecord.title}" is now being evaluated by our technical expert team. We will notify you once the evaluation is complete.`,
+            },
+          };
+          
+          const emailContent = statusEmailContent[newStatus] || {
+            subject: `Status Update: ${currentStage}`,
+            title: currentStage,
+            message: `Your submission status has been updated to: ${currentStage}`,
+          };
+
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-notification-email`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              to: applicantEmail,
+              subject: emailContent.subject,
+              title: emailContent.title,
+              message: emailContent.message,
+              submissionTitle: selectedRecord.title,
+              submissionCategory: selectedRecord.category,
+              applicantName: applicantName,
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            console.error('[SupervisorReviewPage] Email service error:', {
+              status: response.status,
+              error: error,
+              to: applicantEmail,
+            });
+          } else {
+            const result = await response.json();
+            console.log('[SupervisorReviewPage] Email sent successfully:', {
+              to: applicantEmail,
+              status: newStatus,
+              subject: emailContent.subject,
+            });
+          }
+        } catch (emailError) {
+          console.error('[SupervisorReviewPage] Error sending email notification:', {
+            error: emailError,
+            to: applicantEmail,
+          });
+        }
+      } else {
+        console.warn('[SupervisorReviewPage] Could not send email: applicant email not found', {
+          applicant_id: selectedRecord.applicant_id,
+        });
+      }
+
+      setShowReviewModal(false);
+      setSelectedRecord(null);
+      setAction(null);
+      setRemarks('');
+      setDocuments([]);
+      fetchAssignedRecords();
+      fetchHistoryRecords();
+    } catch (error: any) {
+      console.error('Error submitting review:', error);
+      alert('Failed to submit review: ' + error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const downloadDocument = async (doc: IpDocument) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('ip-documents')
+        .download(doc.file_path);
+
+      if (error) throw error;
+
+      const url = window.URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Failed to download document');
+    }
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  };
+
+  const getDocTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      disclosure: 'Disclosure Form',
+      drawing: 'Technical Drawing',
+      attachment: 'Supporting Document',
+    };
+    return labels[type] || type;
+  };
+
+  // Client-side filtering
+  const filteredQueueRecords = records.filter((r) => {
+    const matchesSearch = !searchTerm ||
+      r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.applicant?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || r.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+  const filteredHistoryRecords = historyRecords.filter((r) => {
+    const matchesSearch = !searchTerm ||
+      r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.applicant?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || r.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  // Pagination calculations for queue
+  const queueStartIndex = (queueCurrentPage - 1) * queueItemsPerPage;
+  const queueEndIndex = queueStartIndex + queueItemsPerPage;
+  const paginatedQueueRecords = filteredQueueRecords.slice(queueStartIndex, queueEndIndex);
+  const queueTotalPages = Math.ceil(filteredQueueRecords.length / queueItemsPerPage);
+
+  // Pagination calculations for history
+  const historyStartIndex = (historyCurrentPage - 1) * historyItemsPerPage;
+  const historyEndIndex = historyStartIndex + historyItemsPerPage;
+  const paginatedHistoryRecords = filteredHistoryRecords.slice(historyStartIndex, historyEndIndex);
+  const historyTotalPages = Math.ceil(filteredHistoryRecords.length / historyItemsPerPage);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 lg:space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Review Queue</h1>
+        <p className="text-gray-600 mt-1">Review and approve IP submissions assigned to you</p>
+      </div>
+
+      {/* Filter bar */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setQueueCurrentPage(1); setHistoryCurrentPage(1); }}
+              placeholder="Search by title or applicant..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+              style={{ '--tw-ring-color': primaryColor } as any}
+            />
+          </div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => { setCategoryFilter(e.target.value); setQueueCurrentPage(1); setHistoryCurrentPage(1); }}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+            style={{ '--tw-ring-color': primaryColor } as any}
+          >
+            <option value="all">All Categories</option>
+            <option value="patent">Patent</option>
+            <option value="copyright">Copyright</option>
+            <option value="trademark">Trademark</option>
+            <option value="design">Industrial Design</option>
+            <option value="utility_model">Utility Model</option>
+            <option value="other">Other</option>
+          </select>
+          <div className="text-sm text-gray-500 flex items-center">
+            {filteredQueueRecords.length + filteredHistoryRecords.length} submission{filteredQueueRecords.length + filteredHistoryRecords.length !== 1 ? 's' : ''} match filters
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div style={{ borderBottomColor: '#e5e7eb' }} className="border-b">
+          <div className="grid grid-cols-2 gap-2 p-2">
+            <button
+              onClick={() => setActiveTab('queue')}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-3 font-medium transition-colors rounded-lg min-w-0 ${
+                activeTab === 'queue'
+                  ? 'border-b-2'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+              style={activeTab === 'queue' ? { color: primaryColor, borderBottomColor: primaryColor } : {}}
+            >
+              <ListChecks className="h-5 w-5 shrink-0" />
+              <span className="min-w-0 truncate">Review Queue ({records.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-3 font-medium transition-colors rounded-lg min-w-0 ${
+                activeTab === 'history'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <History className="h-5 w-5 shrink-0" />
+              <span className="min-w-0 truncate">Review History ({historyRecords.length})</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {activeTab === 'queue' && (
+            <div className="space-y-4">
+        {filteredQueueRecords.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <ClipboardList className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Submissions to Review</h3>
+            <p className="text-gray-600">{records.length === 0 ? "You don't have any IP submissions assigned for review at the moment." : 'No submissions match your current filters.'}</p>
+          </div>
+        ) : (
+          <>
+            {paginatedQueueRecords.map((record) => (
+              <div key={record.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6 hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start mb-4 gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-2 break-words line-clamp-2">{record.title}</h3>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 text-sm text-gray-600">
+                      <span className="flex items-center gap-1 min-w-0">
+                        <Users className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{record.applicant?.full_name}</span>
+                      </span>
+                      <span className="flex items-center gap-1 min-w-0">
+                        <Tag className="h-4 w-4 shrink-0" />
+                        <span className="capitalize truncate">{record.category}</span>
+                      </span>
+                      <span className="flex items-center gap-1 col-span-2 sm:col-span-1 min-w-0">
+                        <Calendar className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{formatDate(record.created_at)}</span>
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${
+                      record.status === 'waiting_supervisor'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-orange-100 text-orange-800'
+                    }`}
+                  >
+                    {record.status === 'waiting_supervisor' ? 'Pending Review' : 'Needs Revision'}
+                  </span>
+                </div>
+
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Abstract</h4>
+                  <p className="text-sm text-gray-600 line-clamp-2">{record.abstract || 'No abstract provided'}</p>
+                </div>
+
+                <div className="flex gap-2 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => openDetailModal(record)}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex-1"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View Full Details
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <Pagination
+              currentPage={queueCurrentPage}
+              totalPages={queueTotalPages}
+              onPageChange={setQueueCurrentPage}
+              itemsPerPage={queueItemsPerPage}
+              onItemsPerPageChange={(count) => {
+                setQueueItemsPerPage(count);
+                setQueueCurrentPage(1);
+              }}
+              totalItems={filteredQueueRecords.length}
+            />
+          </>
+        )}
+            </div>
+          )}
+
+          {activeTab === 'history' && (
+            <div className="space-y-4">
+              {filteredHistoryRecords.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                  <History className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Review History</h3>
+                  <p className="text-gray-600">{historyRecords.length === 0 ? "You haven't reviewed any submissions yet." : 'No history records match your current filters.'}</p>
+                </div>
+              ) : (
+                <>
+                  {paginatedHistoryRecords.map((record) => (
+                    <div key={record.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-4 gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-2 break-words line-clamp-2">{record.title}</h3>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 text-sm text-gray-600">
+                            <span className="flex items-center gap-1 min-w-0">
+                              <Users className="h-4 w-4 shrink-0" />
+                              <span className="truncate">{record.applicant?.full_name || 'Unknown Applicant'}</span>
+                            </span>
+                            <span className="flex items-center gap-1 min-w-0">
+                              <Tag className="h-4 w-4 shrink-0" />
+                              <span className="capitalize truncate">{record.category}</span>
+                            </span>
+                            <span className="flex items-center gap-1 col-span-2 sm:col-span-1 min-w-0">
+                              <Calendar className="h-4 w-4 shrink-0" />
+                              <span className="truncate">Reviewed: {formatDate(record.updated_at)}</span>
+                            </span>
+                          </div>
+                        </div>
+                        <span
+                          className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${
+                            getStatusColor(record.status)
+                          }`}
+                        >
+                          {record.status === 'waiting_evaluation'
+                            ? 'Approved - In Evaluation'
+                            : record.status === 'rejected'
+                            ? 'Rejected'
+                            : getStatusLabel(record.status)}
+                        </span>
+                      </div>
+
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Abstract</h4>
+                        <p className="text-sm text-gray-600 line-clamp-2">{record.abstract || 'No abstract provided'}</p>
+                      </div>
+
+                      <div className="flex gap-2 pt-4 border-t border-gray-200">
+                        <button
+                          onClick={() => openDetailModal(record)}
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors flex-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  <Pagination
+                    currentPage={historyCurrentPage}
+                    totalPages={historyTotalPages}
+                    onPageChange={setHistoryCurrentPage}
+                    itemsPerPage={historyItemsPerPage}
+                    onItemsPerPageChange={(count) => {
+                      setHistoryItemsPerPage(count);
+                      setHistoryCurrentPage(1);
+                    }}
+                    totalItems={filteredHistoryRecords.length}
+                  />
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showDetailModal && selectedRecord && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-5xl w-full my-8 max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-2xl font-bold text-gray-900">IP Submission Details</h3>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedRecord(null);
+                  setDocuments([]);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h2 className="text-2xl font-bold text-blue-900 mb-3">{selectedRecord.title}</h2>
+                <div className="grid md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-semibold text-blue-700">Applicant:</span>
+                    <span className="text-blue-900 ml-2">{selectedRecord.applicant?.full_name}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-blue-700">Email:</span>
+                    <span className="text-blue-900 ml-2">{selectedRecord.applicant?.email}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-blue-700">Category:</span>
+                    <span className="text-blue-900 ml-2 capitalize">{selectedRecord.category}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-blue-700">Submitted:</span>
+                    <span className="text-blue-900 ml-2">{formatDate(selectedRecord.created_at)}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-blue-700">Status:</span>
+                    <span className="text-blue-900 ml-2">{getStatusLabel(selectedRecord.status)}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-blue-700">Reference:</span>
+                    <span className="text-blue-900 ml-2 font-mono text-xs">{selectedRecord.reference_number}</span>
+                  </div>
+                </div>
+              </div>
+
+              <ProcessTrackingWizard
+                ipRecordId={selectedRecord.id}
+                currentStatus={selectedRecord.status}
+                currentStage={selectedRecord.current_stage}
+              />
+
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h4 className="text-lg font-bold text-gray-900 mb-3">Abstract</h4>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedRecord.abstract}</p>
+              </div>
+
+              {selectedRecord.details && typeof selectedRecord.details === 'object' && (
+                <>
+                  {'description' in selectedRecord.details && selectedRecord.details.description && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <h4 className="text-lg font-bold text-gray-900 mb-3">Description</h4>
+                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {String(selectedRecord.details.description)}
+                      </p>
+                    </div>
+                  )}
+
+                  {'technicalField' in selectedRecord.details && selectedRecord.details.technicalField && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <h4 className="text-lg font-bold text-gray-900 mb-3">Technical Field</h4>
+                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {String(selectedRecord.details.technicalField)}
+                      </p>
+                    </div>
+                  )}
+
+                  {'backgroundArt' in selectedRecord.details && selectedRecord.details.backgroundArt && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <h4 className="text-lg font-bold text-gray-900 mb-3">Background Art</h4>
+                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {String(selectedRecord.details.backgroundArt)}
+                      </p>
+                    </div>
+                  )}
+
+                  {'problemStatement' in selectedRecord.details && selectedRecord.details.problemStatement && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <h4 className="text-lg font-bold text-gray-900 mb-3">Problem Statement</h4>
+                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {String(selectedRecord.details.problemStatement)}
+                      </p>
+                    </div>
+                  )}
+
+                  {'solution' in selectedRecord.details && selectedRecord.details.solution && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <h4 className="text-lg font-bold text-gray-900 mb-3">Solution</h4>
+                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {String(selectedRecord.details.solution)}
+                      </p>
+                    </div>
+                  )}
+
+                  {'advantages' in selectedRecord.details && selectedRecord.details.advantages && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <h4 className="text-lg font-bold text-gray-900 mb-3">Advantages</h4>
+                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {String(selectedRecord.details.advantages)}
+                      </p>
+                    </div>
+                  )}
+
+                  {'inventors' in selectedRecord.details && Array.isArray(selectedRecord.details.inventors) && (
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <h4 className="text-lg font-bold text-gray-900 mb-3">Inventors</h4>
+                      <div className="space-y-3">
+                        {selectedRecord.details.inventors.map((inv: any, idx: number) => (
+                          <div key={idx} className="border-l-4 border-blue-500 pl-4 py-2">
+                            <p className="font-semibold text-gray-900">{inv.name}</p>
+                            {inv.affiliation && (
+                              <p className="text-sm text-gray-600">Affiliation: {getDepartmentName(inv.affiliation)}</p>
+                            )}
+                            {inv.contribution && (
+                              <p className="text-sm text-gray-600">Contribution: {inv.contribution}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <h4 className="text-lg font-bold text-gray-900 mb-4">Documents ({documents.length})</h4>
+                {documents.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">No documents uploaded</p>
+                ) : (
+                  <div className="space-y-3">
+                    {documents.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <FileText className="h-8 w-8 text-blue-600" />
+                          <div>
+                            <p className="font-medium text-gray-900">{doc.file_name}</p>
+                            <p className="text-sm text-gray-600">
+                              {getDocTypeLabel(doc.doc_type)} • {formatFileSize(doc.size_bytes)} • {formatDate(doc.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => downloadDocument(doc)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-6 border-t border-gray-200 sticky bottom-0 bg-white">
+                {['supervisor_approved', 'rejected', 'supervisor_revision', 'waiting_evaluation', 'evaluator_approved', 'evaluator_revision', 'completed', 'preparing_legal', 'ready_for_filing'].includes(selectedRecord.status) ? (
+                  <button
+                    disabled
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-400 text-white rounded-lg font-medium transition-colors cursor-not-allowed"
+                  >
+                    <CheckCircle className="h-5 w-5" />
+                    Already Reviewed
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => openReviewModal('approve')}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+                    >
+                      <CheckCircle className="h-5 w-5" />
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => openReviewModal('revision')}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors"
+                    >
+                      <AlertCircle className="h-5 w-5" />
+                      Request Revision
+                    </button>
+                    <button
+                      onClick={() => openReviewModal('reject')}
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+                    >
+                      <XCircle className="h-5 w-5" />
+                      Reject
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReviewModal && selectedRecord && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+              {action === 'approve' && 'Approve Submission'}
+              {action === 'reject' && 'Reject Submission'}
+              {action === 'revision' && 'Request Revision'}
+            </h3>
+
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-semibold text-gray-900">{selectedRecord.title}</h4>
+              <p className="text-sm text-gray-600 mt-1">by {selectedRecord.applicant?.full_name}</p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Remarks / Comments {action !== 'approve' && <span className="text-red-500">*</span>}
+              </label>
+              <textarea
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                rows={4}
+                required={action !== 'approve'}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder={
+                  action === 'approve'
+                    ? 'Optional: Add comments or feedback'
+                    : 'Required: Provide detailed feedback on why revision/rejection is needed'
+                }
+              />
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setShowDetailModal(true);
+                }}
+                disabled={submitting}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitReview}
+                disabled={submitting || (action !== 'approve' && !remarks.trim())}
+                className={`px-6 py-2 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+                  action === 'approve'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : action === 'reject'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-orange-600 hover:bg-orange-700'
+                }`}
+              >
+                {submitting ? 'Submitting...' : `Confirm ${action === 'approve' ? 'Approval' : action === 'reject' ? 'Rejection' : 'Revision Request'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
