@@ -46,12 +46,7 @@ export async function updateFooterSettings(
     .from('site_footer_settings' as any)
     .update(payload as any)
     .eq('id', 1)
-    .select()
-    .single();
-
-  if (!error && data) {
-    return data as FooterSettings;
-  }
+    .select();
 
   if (error) {
     const isTableMissing =
@@ -64,10 +59,15 @@ export async function updateFooterSettings(
       return { ...DEFAULT_FOOTER_SETTINGS, ...updates } as FooterSettings;
     }
 
-    console.error('[updateFooterSettings] Error:', error);
+    console.error('[updateFooterSettings] Error:', error.code, error.message, error.details, error.hint);
+    return null;
   }
 
-  return null;
+  if (data && (data as any[]).length > 0) {
+    return (data as any[])[0] as FooterSettings;
+  }
+
+  return { ...DEFAULT_FOOTER_SETTINGS, ...updates, updated_at: payload.updated_at } as FooterSettings;
 }
 
 // ── Links CRUD ─────────────────────────────────────────────────────────────
