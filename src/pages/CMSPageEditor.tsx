@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -17,6 +17,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
 import { CmsPageRenderer } from '../components/cms/CmsPageRenderer';
+import { MediaDropzone } from '../components/cms/MediaDropzone';
 import {
   supportedSectionTypes,
   validateSection,
@@ -567,20 +568,6 @@ function SectionContentEditor({ section, primaryColor, onSave }: SectionContentE
     setDirty(true);
   };
 
-  const updateNested = (path: string[], value: any) => {
-    setContent(prev => {
-      const next = { ...prev };
-      let cur: any = next;
-      for (let i = 0; i < path.length - 1; i++) {
-        cur[path[i]] = { ...cur[path[i]] };
-        cur = cur[path[i]];
-      }
-      cur[path[path.length - 1]] = value;
-      return next;
-    });
-    setDirty(true);
-  };
-
   const handleSave = () => {
     onSave(content);
     setDirty(false);
@@ -697,9 +684,12 @@ function HeroEditor({ content, update }: { content: Record<string, any>; update:
           <TextInput value={content.cta_link} onChange={v => update('cta_link', v)} placeholder="/register" />
         </FieldRow>
       </div>
-      <FieldRow label="Background Image URL">
-        <TextInput value={content.background_image} onChange={v => update('background_image', v)} placeholder="https://..." />
-      </FieldRow>
+      <MediaDropzone
+        label="Background Image"
+        value={content.background_image || ''}
+        onChange={v => update('background_image', v)}
+        folder="hero"
+      />
       {content.background_image && (
         <FieldRow label="Image Layout">
           <select
@@ -770,8 +760,21 @@ function ShowcaseEditor({ content, update }: { content: Record<string, any>; upd
     update('items', next);
   };
 
-  const addItem = () => update('items', [...items, { title: `Item ${items.length + 1}`, description: '', image_url: '', link: '' }]);
+  const moveItem = (i: number, dir: 'up' | 'down') => {
+    const next = [...items];
+    const j = dir === 'up' ? i - 1 : i + 1;
+    if (j < 0 || j >= next.length) return;
+    [next[i], next[j]] = [next[j], next[i]];
+    update('items', next);
+  };
+
+  const addItem = () => update('items', [...items, { title: `Item ${items.length + 1}`, subtitle: '', description: '', image_url: '', link_url: '', tags: [], status: '' }]);
   const removeItem = (i: number) => update('items', items.filter((_: any, idx: number) => idx !== i));
+
+  const updateTags = (i: number, tagsStr: string) => {
+    const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+    updateItem(i, 'tags', tags);
+  };
 
   return (
     <div className="space-y-4">
@@ -786,7 +789,17 @@ function ShowcaseEditor({ content, update }: { content: Record<string, any>; upd
       {items.map((item: any, i: number) => (
         <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-600">Item {i + 1}</span>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-0.5">
+                <button onClick={() => moveItem(i, 'up')} disabled={i === 0} className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                  <ArrowUp size={12} />
+                </button>
+                <button onClick={() => moveItem(i, 'down')} disabled={i === items.length - 1} className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                  <ArrowDown size={12} />
+                </button>
+              </div>
+              <span className="text-xs font-semibold text-gray-600">Item {i + 1}</span>
+            </div>
             <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600">
               <X size={14} />
             </button>
@@ -795,16 +808,34 @@ function ShowcaseEditor({ content, update }: { content: Record<string, any>; upd
             <FieldRow label="Title">
               <TextInput value={item.title} onChange={v => updateItem(i, 'title', v)} />
             </FieldRow>
-            <FieldRow label="Link">
-              <TextInput value={item.link} onChange={v => updateItem(i, 'link', v)} placeholder="https://..." />
+            <FieldRow label="Subtitle">
+              <TextInput value={item.subtitle || ''} onChange={v => updateItem(i, 'subtitle', v)} placeholder="Optional subtitle" />
             </FieldRow>
           </div>
           <FieldRow label="Description">
             <Textarea value={item.description} onChange={v => updateItem(i, 'description', v)} rows={2} />
           </FieldRow>
-          <FieldRow label="Image URL">
-            <TextInput value={item.image_url} onChange={v => updateItem(i, 'image_url', v)} placeholder="https://..." />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <FieldRow label="Link URL">
+              <TextInput value={item.link_url || item.link || ''} onChange={v => updateItem(i, 'link_url', v)} placeholder="https://..." />
+            </FieldRow>
+            <FieldRow label="Status Badge">
+              <TextInput value={item.status || ''} onChange={v => updateItem(i, 'status', v)} placeholder="e.g. New, Featured" />
+            </FieldRow>
+          </div>
+          <FieldRow label="Tags (comma-separated)">
+            <TextInput
+              value={Array.isArray(item.tags) ? item.tags.join(', ') : (item.tags || '')}
+              onChange={v => updateTags(i, v)}
+              placeholder="tag1, tag2, tag3"
+            />
           </FieldRow>
+          <MediaDropzone
+            label="Item Image"
+            value={item.image_url || ''}
+            onChange={v => updateItem(i, 'image_url', v)}
+            folder="showcase"
+          />
         </div>
       ))}
       <button
@@ -915,15 +946,121 @@ function CategoriesEditor({ content, update }: { content: Record<string, any>; u
 }
 
 function TextSectionEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  const layout = content.layout || 'single';
+  const blocks: any[] = Array.isArray(content.blocks) ? content.blocks : [];
+
+  const updateBlock = (i: number, key: string, val: any) => {
+    const next = blocks.map((b: any, idx: number) => idx === i ? { ...b, [key]: val } : b);
+    update('blocks', next);
+  };
+  const addBlock = () => update('blocks', [...blocks, { title: '', content: '', image_url: '', shape: 'plain' }]);
+  const removeBlock = (i: number) => update('blocks', blocks.filter((_: any, idx: number) => idx !== i));
+
   return (
     <div className="space-y-4">
       <FieldRow label="Section Title">
         <TextInput value={content.section_title} onChange={v => update('section_title', v)} placeholder="Section Title" />
       </FieldRow>
-      <FieldRow label="Body Content">
-        <Textarea value={content.body_content} onChange={v => update('body_content', v)} rows={6} />
-        <p className="text-xs text-gray-400 mt-1">Separate paragraphs with a blank line.</p>
+
+      <FieldRow label="Layout">
+        <select
+          value={layout}
+          onChange={e => update('layout', e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+        >
+          <option value="single">Single column (body text)</option>
+          <option value="blocks">Stacked blocks</option>
+          <option value="grid">Grid of blocks</option>
+          <option value="side-by-side">Side by side</option>
+        </select>
       </FieldRow>
+
+      {layout === 'single' && (
+        <FieldRow label="Body Content">
+          <Textarea value={content.body_content} onChange={v => update('body_content', v)} rows={6} />
+          <p className="text-xs text-gray-400 mt-1">Separate paragraphs with a blank line.</p>
+        </FieldRow>
+      )}
+
+      {layout !== 'single' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-gray-600">Content Blocks</label>
+            <button onClick={addBlock} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium">
+              <Plus size={12} /> Add Block
+            </button>
+          </div>
+          {blocks.map((block: any, i: number) => (
+            <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-600">Block {i + 1}</span>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={block.shape || 'plain'}
+                    onChange={e => updateBlock(i, 'shape', e.target.value)}
+                    className="border border-gray-200 rounded px-2 py-1 text-xs"
+                  >
+                    <option value="plain">Plain</option>
+                    <option value="card">Card</option>
+                  </select>
+                  <button onClick={() => removeBlock(i)} className="text-red-400 hover:text-red-600">
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+              <FieldRow label="Block Title">
+                <TextInput value={block.title} onChange={v => updateBlock(i, 'title', v)} placeholder="Optional heading" />
+              </FieldRow>
+              <FieldRow label="Content">
+                <Textarea value={block.content} onChange={v => updateBlock(i, 'content', v)} rows={3} />
+              </FieldRow>
+              <MediaDropzone
+                label="Block Image (optional)"
+                value={block.image_url || ''}
+                onChange={v => updateBlock(i, 'image_url', v)}
+                folder="text-blocks"
+              />
+            </div>
+          ))}
+          {blocks.length === 0 && (
+            <button
+              onClick={addBlock}
+              className="w-full py-3 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-500 hover:border-gray-300"
+            >
+              + Add your first block
+            </button>
+          )}
+        </div>
+      )}
+
+      {layout === 'grid' && (
+        <div className="grid grid-cols-2 gap-3">
+          <FieldRow label="Columns">
+            <select
+              value={content.grid_cols || '2'}
+              onChange={e => update('grid_cols', e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="2">2 columns</option>
+              <option value="3">3 columns</option>
+              <option value="4">4 columns</option>
+            </select>
+          </FieldRow>
+          <FieldRow label="Gap">
+            <select
+              value={content.grid_gap || 'gap-8'}
+              onChange={e => update('grid_gap', e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="gap-4">Tight</option>
+              <option value="gap-6">Normal</option>
+              <option value="gap-8">Wide</option>
+              <option value="gap-12">Extra wide</option>
+            </select>
+          </FieldRow>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <FieldRow label="Text Alignment">
           <select
@@ -944,6 +1081,7 @@ function TextSectionEditor({ content, update }: { content: Record<string, any>; 
             <option value="narrow">Narrow</option>
             <option value="normal">Normal</option>
             <option value="wide">Wide</option>
+            <option value="full">Full</option>
           </select>
         </FieldRow>
         <FieldRow label="Background">
@@ -956,6 +1094,7 @@ function TextSectionEditor({ content, update }: { content: Record<string, any>; 
             <option value="light_gray">Light Gray</option>
             <option value="soft_blue">Soft Blue</option>
             <option value="soft_yellow">Soft Yellow</option>
+            <option value="dark">Dark</option>
           </select>
         </FieldRow>
         <FieldRow label="Vertical Spacing">
@@ -1039,9 +1178,12 @@ function GalleryEditor({ content, update }: { content: Record<string, any>; upda
               <X size={14} />
             </button>
           </div>
-          <FieldRow label="Image URL">
-            <TextInput value={img.url} onChange={v => updateImage(i, 'url', v)} placeholder="https://..." />
-          </FieldRow>
+          <MediaDropzone
+            label="Image"
+            value={img.url || ''}
+            onChange={v => updateImage(i, 'url', v)}
+            folder="gallery"
+          />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <FieldRow label="Alt Text">
               <TextInput value={img.alt_text} onChange={v => updateImage(i, 'alt_text', v)} />

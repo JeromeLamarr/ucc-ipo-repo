@@ -86,24 +86,13 @@ const VALIDATION_RULES: Record<string, any> = {
     ],
   },
 
-  text: {
-    required: ['body'],
+  'text-section': {
+    required: ['body_content'],
     validations: [
       {
-        field: 'body',
-        test: (value: string) => value.length > 10,
-        message: 'Content should be more than 10 characters',
-        severity: 'warning',
-      },
-      {
-        field: 'body',
-        test: (value: string) => {
-          // Check for unmatched HTML tags
-          const openTags = (value.match(/<[^/][^>]*>/g) || []).length;
-          const closeTags = (value.match(/<\/[^>]*>/g) || []).length;
-          return openTags === closeTags;
-        },
-        message: 'HTML tags appear to be unmatched',
+        field: 'body_content',
+        test: (value: string) => value && value.length > 0,
+        message: 'Content cannot be empty',
         severity: 'error',
       },
     ],
