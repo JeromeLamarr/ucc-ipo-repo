@@ -16,10 +16,12 @@ export function DepartmentManagementPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Department Management</h1>
-        <p className="text-gray-600 mt-2">Create, edit, and manage all departments in the system</p>
+    <div className="space-y-6 lg:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Department Management</h1>
+          <p className="text-gray-600 mt-2">Create, edit, and manage all departments in the system</p>
+        </div>
       </div>
 
       <AdminDepartmentManagement />

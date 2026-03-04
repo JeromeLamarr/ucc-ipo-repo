@@ -167,9 +167,7 @@ export function AdminDepartmentManagement() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold mb-6">Department Management</h2>
-
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
       {error && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
           {error}
@@ -252,7 +250,7 @@ export function AdminDepartmentManagement() {
       )}
 
       {/* Departments Table */}
-      <div className="overflow-x-auto">
+      <div className="hidden lg:block overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-gray-100 border-b-2 border-gray-300">
@@ -314,6 +312,54 @@ export function AdminDepartmentManagement() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="lg:hidden space-y-4">
+        {loading && departments.length === 0 ? (
+          <div className="py-12 text-center text-gray-500">Loading departments...</div>
+        ) : departments.length === 0 ? (
+          <div className="py-12 text-center text-gray-500">
+            <p className="font-medium">No departments found</p>
+            <p className="text-sm mt-1">Create one to get started.</p>
+          </div>
+        ) : (
+          departments.map((dept) => (
+            <div key={dept.id} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="font-medium text-gray-900">{dept.name}</div>
+                <span
+                  className={`px-2 py-1 text-xs font-semibold rounded-full shrink-0 ${
+                    dept.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {dept.active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              {dept.description && (
+                <p className="text-sm text-gray-600">{dept.description}</p>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => startEdit(dept)}
+                  disabled={loading}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition disabled:opacity-50"
+                >
+                  <Edit2 size={16} />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(dept.id)}
+                  disabled={loading}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+                >
+                  <Trash2 size={16} />
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
