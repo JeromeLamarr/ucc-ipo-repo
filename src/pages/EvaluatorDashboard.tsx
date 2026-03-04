@@ -16,7 +16,8 @@ import {
   Tag,
   X,
   History,
-  ListChecks
+  ListChecks,
+  Search
 } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { Pagination } from '../components/Pagination';
@@ -51,6 +52,10 @@ export function EvaluatorDashboard() {
   // Pagination states for history
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const [historyItemsPerPage, setHistoryItemsPerPage] = useState(5);
+
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const [evaluationForm, setEvaluationForm] = useState({
     innovation: 0,
@@ -516,17 +521,33 @@ export function EvaluatorDashboard() {
     return labels[type] || type;
   };
 
+  // Client-side filtering
+  const filteredQueueRecords = records.filter((r) => {
+    const matchesSearch = !searchTerm ||
+      r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.applicant?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || r.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+  const filteredHistoryRecords = historyRecords.filter((r) => {
+    const matchesSearch = !searchTerm ||
+      r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.applicant?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || r.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
   // Pagination calculations for queue
   const queueStartIndex = (queueCurrentPage - 1) * queueItemsPerPage;
   const queueEndIndex = queueStartIndex + queueItemsPerPage;
-  const paginatedQueueRecords = records.slice(queueStartIndex, queueEndIndex);
-  const queueTotalPages = Math.ceil(records.length / queueItemsPerPage);
+  const paginatedQueueRecords = filteredQueueRecords.slice(queueStartIndex, queueEndIndex);
+  const queueTotalPages = Math.ceil(filteredQueueRecords.length / queueItemsPerPage);
 
   // Pagination calculations for history
   const historyStartIndex = (historyCurrentPage - 1) * historyItemsPerPage;
   const historyEndIndex = historyStartIndex + historyItemsPerPage;
-  const paginatedHistoryRecords = historyRecords.slice(historyStartIndex, historyEndIndex);
-  const historyTotalPages = Math.ceil(historyRecords.length / historyItemsPerPage);
+  const paginatedHistoryRecords = filteredHistoryRecords.slice(historyStartIndex, historyEndIndex);
+  const historyTotalPages = Math.ceil(filteredHistoryRecords.length / historyItemsPerPage);
 
   if (loading) {
     return (
@@ -540,7 +561,7 @@ export function EvaluatorDashboard() {
   const suggestedGrade = getGradeFromScore(overallScore);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Evaluator Dashboard</h1>
         <p className="text-gray-600 mt-1">Evaluate IP submissions assigned to your category</p>
@@ -582,6 +603,40 @@ export function EvaluatorDashboard() {
         </div>
       </div>
 
+      {/* Filter bar */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setQueueCurrentPage(1); setHistoryCurrentPage(1); }}
+              placeholder="Search by title or applicant..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+              style={{ '--tw-ring-color': primaryColor } as any}
+            />
+          </div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => { setCategoryFilter(e.target.value); setQueueCurrentPage(1); setHistoryCurrentPage(1); }}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+            style={{ '--tw-ring-color': primaryColor } as any}
+          >
+            <option value="all">All Categories</option>
+            <option value="patent">Patent</option>
+            <option value="copyright">Copyright</option>
+            <option value="trademark">Trademark</option>
+            <option value="design">Industrial Design</option>
+            <option value="utility_model">Utility Model</option>
+            <option value="other">Other</option>
+          </select>
+          <div className="text-sm text-gray-500 flex items-center">
+            {filteredQueueRecords.length + filteredHistoryRecords.length} submission{filteredQueueRecords.length + filteredHistoryRecords.length !== 1 ? 's' : ''} match filters
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="border-b border-gray-200">
           <div className="flex">
@@ -613,11 +668,11 @@ export function EvaluatorDashboard() {
         <div className="p-6">
           {activeTab === 'queue' && (
             <div className="space-y-4">
-        {records.length === 0 ? (
+        {filteredQueueRecords.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
             <Star className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No Submissions to Evaluate</h3>
-            <p className="text-gray-600">You don't have any IP submissions assigned for evaluation at the moment.</p>
+            <p className="text-gray-600">{records.length === 0 ? "You don't have any IP submissions assigned for evaluation at the moment." : 'No submissions match your current filters.'}</p>
           </div>
         ) : (
           <>
@@ -651,10 +706,10 @@ export function EvaluatorDashboard() {
                   <p className="text-sm text-gray-600 line-clamp-2">{record.abstract || 'No abstract provided'}</p>
                 </div>
 
-                <div className="pt-4 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t border-gray-200">
                   <button
                     onClick={() => openDetailModal(record)}
-                    className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
+                    className="flex items-center justify-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors w-full sm:w-auto"
                   >
                     <Eye className="h-4 w-4" />
                     View & Evaluate
@@ -663,19 +718,17 @@ export function EvaluatorDashboard() {
               </div>
             ))}
 
-            {queueTotalPages > 1 && (
-              <Pagination
-                currentPage={queueCurrentPage}
-                totalPages={queueTotalPages}
-                onPageChange={setQueueCurrentPage}
-                itemsPerPage={queueItemsPerPage}
-                onItemsPerPageChange={(count) => {
-                  setQueueItemsPerPage(count);
-                  setQueueCurrentPage(1);
-                }}
-                totalItems={records.length}
-              />
-            )}
+            <Pagination
+              currentPage={queueCurrentPage}
+              totalPages={queueTotalPages}
+              onPageChange={setQueueCurrentPage}
+              itemsPerPage={queueItemsPerPage}
+              onItemsPerPageChange={(count) => {
+                setQueueItemsPerPage(count);
+                setQueueCurrentPage(1);
+              }}
+              totalItems={filteredQueueRecords.length}
+            />
           </>
         )}
             </div>
@@ -683,16 +736,16 @@ export function EvaluatorDashboard() {
 
           {activeTab === 'history' && (
             <div className="space-y-4">
-              {historyRecords.length === 0 ? (
-                <div className="p-12 text-center">
+              {filteredHistoryRecords.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
                   <History className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">No Evaluation History</h3>
-                  <p className="text-gray-600">You haven't evaluated any submissions yet.</p>
+                  <p className="text-gray-600">{historyRecords.length === 0 ? "You haven't evaluated any submissions yet." : 'No history records match your current filters.'}</p>
                 </div>
               ) : (
                 <>
                   {paginatedHistoryRecords.map((record) => (
-                    <div key={record.id} className="border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition-colors">
+                    <div key={record.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6 hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
                           <h3 className="text-xl font-bold text-gray-900 mb-2">{record.title}</h3>
@@ -721,31 +774,29 @@ export function EvaluatorDashboard() {
                         <p className="text-sm text-gray-600 line-clamp-2">{record.abstract || 'No abstract provided'}</p>
                       </div>
 
-                      <div className="flex gap-3 pt-4 border-t border-gray-200">
+                      <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t border-gray-200">
                         <button
                           onClick={() => openDetailModal(record)}
-                          className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors"
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors w-full sm:w-auto"
                         >
-                        <Eye className="h-4 w-4" />
-                        View Details
-                      </button>
-                    </div>
+                          <Eye className="h-4 w-4" />
+                          View Details
+                        </button>
+                      </div>
                   </div>
                   ))}
 
-                  {historyTotalPages > 1 && (
-                    <Pagination
-                      currentPage={historyCurrentPage}
-                      totalPages={historyTotalPages}
-                      onPageChange={setHistoryCurrentPage}
-                      itemsPerPage={historyItemsPerPage}
-                      onItemsPerPageChange={(count) => {
-                        setHistoryItemsPerPage(count);
-                        setHistoryCurrentPage(1);
-                      }}
-                      totalItems={historyRecords.length}
-                    />
-                  )}
+                  <Pagination
+                    currentPage={historyCurrentPage}
+                    totalPages={historyTotalPages}
+                    onPageChange={setHistoryCurrentPage}
+                    itemsPerPage={historyItemsPerPage}
+                    onItemsPerPageChange={(count) => {
+                      setHistoryItemsPerPage(count);
+                      setHistoryCurrentPage(1);
+                    }}
+                    totalItems={filteredHistoryRecords.length}
+                  />
                 </>
               )}
             </div>
