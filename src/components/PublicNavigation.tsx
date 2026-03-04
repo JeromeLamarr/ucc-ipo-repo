@@ -70,43 +70,45 @@ export function PublicNavigation() {
               navigate('/');
               setMobileMenuOpen(false);
             }}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0"
+            className="min-w-0 flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             {logoPath ? (
               <img
                 src={logoPath}
                 alt={siteName}
-                className="h-8 w-8 object-contain"
+                className="h-8 w-8 object-contain flex-shrink-0"
               />
             ) : (
-              <GraduationCap className="h-8 w-8" style={{ color: primaryColor }} />
+              <GraduationCap className="h-8 w-8 flex-shrink-0" style={{ color: primaryColor }} />
             )}
-            <span className="text-base font-bold text-gray-900 hidden sm:block whitespace-nowrap">
+            <span className="min-w-0 truncate text-base font-bold text-gray-900 hidden sm:block max-w-[160px] sm:max-w-[240px] md:max-w-[320px]">
               {siteName}
             </span>
           </button>
 
           {/* Center Navigation Links - Hidden on mobile */}
           {!loading && (
-            <div className="hidden md:flex gap-6 items-center flex-1 justify-center">
-              <button
-                onClick={() => {
-                  navigate('/');
-                  setMobileMenuOpen(false);
-                }}
-                className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm whitespace-nowrap"
-              >
-                Home
-              </button>
-              {pages.length > 0 && pages.map((page) => (
-                <a
-                  key={page.slug}
-                  href={`/pages/${page.slug}`}
+            <div className="hidden md:flex flex-1 justify-center">
+              <div className="min-w-0 flex items-center gap-6">
+                <button
+                  onClick={() => {
+                    navigate('/');
+                    setMobileMenuOpen(false);
+                  }}
                   className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm whitespace-nowrap"
                 >
-                  {page.title}
-                </a>
-              ))}
+                  Home
+                </button>
+                {pages.length > 0 && pages.map((page) => (
+                  <a
+                    key={page.slug}
+                    href={`/pages/${page.slug}`}
+                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm whitespace-nowrap"
+                  >
+                    {page.title}
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 
@@ -114,7 +116,7 @@ export function PublicNavigation() {
           {loading && <div className="flex-1" />}
 
           {/* Auth Buttons - Right */}
-          <div className="flex gap-3 items-center flex-shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Desktop buttons */}
             <div className="hidden sm:flex gap-3">
               <button

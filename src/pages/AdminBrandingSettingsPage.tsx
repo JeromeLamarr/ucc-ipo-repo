@@ -59,11 +59,11 @@ function LivePreview({
           ) : (
             <GraduationCap className="h-6 w-6 flex-shrink-0" style={{ color: primaryColor }} />
           )}
-          <span className="text-sm font-bold text-gray-900 truncate max-w-[180px]">
+          <span className="min-w-0 text-sm font-bold text-gray-900 truncate max-w-[120px] sm:max-w-[180px]">
             {siteName || 'Site Name'}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <span className="px-3 py-1 rounded text-xs font-semibold border-2 text-blue-600 border-blue-600">
             Login
           </span>
