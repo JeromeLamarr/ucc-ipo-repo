@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useBranding } from '../hooks/useBranding';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 import { PublicNavigation } from '../components/PublicNavigation';
 
@@ -10,6 +11,7 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
+  const { primaryColor, secondaryColor } = useBranding();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -87,7 +89,8 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full text-white py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                style={{ background: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})` }}
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>

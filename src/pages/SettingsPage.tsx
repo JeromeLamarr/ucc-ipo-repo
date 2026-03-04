@@ -8,7 +8,7 @@ import { AdminBrandingSettingsPage } from './AdminBrandingSettingsPage';
 
 export function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
-  const { primaryColor } = useBranding();
+  const { primaryColor, secondaryColor } = useBranding();
   const [searchParams] = useSearchParams();
   
   // Read ?tab query param, default to profile
@@ -143,7 +143,7 @@ export function SettingsPage() {
                       ? 'text-white shadow-lg scale-105'
                       : 'text-gray-700 hover:bg-white/50'
                   }`}
-                  style={activeTab === tab.id ? { background: `linear-gradient(to right, ${primaryColor}, #6366f1)`, boxShadow: `0 8px 16px ${primaryColor}33` } : {}}
+                  style={activeTab === tab.id ? { background: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`, boxShadow: `0 8px 16px ${primaryColor}33` } : {}}
                 >
                   <Icon className="h-5 w-5" />
                   {tab.label}
@@ -191,7 +191,7 @@ export function SettingsPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
-                    <div className="px-4 py-3 border rounded-xl text-gray-700 capitalize font-medium" style={{ background: `linear-gradient(to right, ${primaryColor}08, #6366f108)`, borderColor: `${primaryColor}40` }}>
+                    <div className="px-4 py-3 border rounded-xl text-gray-700 capitalize font-medium" style={{ background: `linear-gradient(to right, ${primaryColor}08, ${secondaryColor}08)`, borderColor: `${primaryColor}40` }}>
                       {profile?.role}
                     </div>
                     <p className="text-xs text-gray-500 mt-2 font-medium">Role is assigned by administrators</p>
@@ -203,7 +203,7 @@ export function SettingsPage() {
                 type="submit"
                 disabled={loading}
                 className="flex items-center gap-2 px-8 py-4 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-                style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)` }}
+                style={{ background: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})` }}
               >
                 <Save className="h-5 w-5" />
                 {loading ? 'Saving...' : 'Save Changes'}

@@ -11,7 +11,7 @@ interface CMSPage {
 
 export function PublicNavigation() {
   const navigate = useNavigate();
-  const { primaryColor, siteName, logoPath } = useBranding();
+  const { primaryColor, secondaryColor, siteName, logoPath } = useBranding();
   const [pages, setPages] = useState<CMSPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [navError, setNavError] = useState<string | null>(null);
@@ -129,7 +129,7 @@ export function PublicNavigation() {
                 onClick={() => navigate('/register')}
                 className="px-6 py-2 text-white rounded-lg hover:shadow-lg font-semibold transition-all duration-300 hover:scale-105 text-sm"
                 style={{
-                  background: `linear-gradient(to right, ${primaryColor}, ${adjustColor(primaryColor, 30)})`,
+                  background: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`,
                 }}
               >
                 Register
@@ -188,7 +188,7 @@ export function PublicNavigation() {
                   }}
                   className="px-4 py-2 text-white rounded-lg hover:shadow-lg font-semibold transition-all text-sm"
                   style={{
-                    background: `linear-gradient(to right, ${primaryColor}, ${adjustColor(primaryColor, 30)})`,
+                    background: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`,
                   }}
                 >
                   Register
@@ -212,12 +212,3 @@ export function PublicNavigation() {
   );
 }
 
-// Helper function to adjust color brightness
-function adjustColor(color: string, percent: number): string {
-  const num = parseInt(color.replace('#', ''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = Math.min(255, (num >> 16) + amt);
-  const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
-  const B = Math.min(255, (num & 0x0000FF) + amt);
-  return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
-}
