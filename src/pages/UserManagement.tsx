@@ -268,8 +268,8 @@ export function UserManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 lg:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600 mt-1">Manage system users and their roles</p>
@@ -284,8 +284,8 @@ export function UserManagement() {
         </button>
       </div>
 
-      <div className="rounded-xl shadow-sm border border-gray-200 p-6" style={{ background: 'white' }}>
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4 mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
@@ -314,7 +314,7 @@ export function UserManagement() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead style={{ background: `linear-gradient(to right, ${primaryColor}08, #6366f108)` }}>
               <tr>
@@ -391,19 +391,73 @@ export function UserManagement() {
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            onItemsPerPageChange={(count) => {
-              setItemsPerPage(count);
-              setCurrentPage(1);
-            }}
-            totalItems={filteredUsers.length}
-          />
-        )}
+        {/* Mobile card list */}
+        <div className="lg:hidden space-y-4">
+          {paginatedUsers.length === 0 ? (
+            <div className="py-12 text-center text-gray-500">
+              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No users found</p>
+            </div>
+          ) : (
+            paginatedUsers.map((user) => (
+              <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-gray-900">{user.full_name}</div>
+                    <div className="text-sm text-gray-500">{user.email}</div>
+                  </div>
+                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 capitalize shrink-0">
+                    {user.role}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <div className="text-gray-500">Department</div>
+                    <div className="font-medium text-gray-900">
+                      {user.department_id && departments.length > 0
+                        ? departments.find(d => d.id === user.department_id)?.name || '-'
+                        : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Joined</div>
+                    <div className="font-medium text-gray-900">{formatDate(user.created_at)}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  {user.role !== 'applicant' && (
+                    <button
+                      onClick={() => handleResetPassword(user)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition"
+                    >
+                      <Lock className="h-4 w-4" />
+                      Reset Password
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDeleteUser(user.id)}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={(count) => {
+            setItemsPerPage(count);
+            setCurrentPage(1);
+          }}
+          totalItems={filteredUsers.length}
+        />
       </div>
 
       {showCreateModal && (
