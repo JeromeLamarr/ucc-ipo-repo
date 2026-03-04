@@ -63,38 +63,38 @@ export function PublicNavigation() {
       hasScroll ? 'shadow-lg' : 'shadow-sm'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+        <div className="flex h-16 items-center gap-4">
           {/* Logo - Left */}
           <button
             onClick={() => {
               navigate('/');
               setMobileMenuOpen(false);
             }}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0 max-w-[40%] flex-shrink"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0"
           >
             {logoPath ? (
-              <img 
-                src={logoPath} 
+              <img
+                src={logoPath}
                 alt={siteName}
-                className="h-8 w-8 object-contain" 
+                className="h-8 w-8 object-contain"
               />
             ) : (
               <GraduationCap className="h-8 w-8" style={{ color: primaryColor }} />
             )}
-            <span className="text-lg font-bold text-gray-900 hidden sm:block truncate">
+            <span className="text-base font-bold text-gray-900 hidden sm:block whitespace-nowrap">
               {siteName}
             </span>
           </button>
 
           {/* Center Navigation Links - Hidden on mobile */}
           {!loading && (
-            <div className="hidden md:flex gap-8 items-center absolute left-1/2 transform -translate-x-1/2">
+            <div className="hidden md:flex gap-6 items-center flex-1 justify-center">
               <button
                 onClick={() => {
                   navigate('/');
                   setMobileMenuOpen(false);
                 }}
-                className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm"
+                className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm whitespace-nowrap"
               >
                 Home
               </button>
@@ -102,13 +102,16 @@ export function PublicNavigation() {
                 <a
                   key={page.slug}
                   href={`/pages/${page.slug}`}
-                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm"
+                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm whitespace-nowrap"
                 >
                   {page.title}
                 </a>
               ))}
             </div>
           )}
+
+          {/* Spacer when nav links are loading */}
+          {loading && <div className="flex-1" />}
 
           {/* Auth Buttons - Right */}
           <div className="flex gap-3 items-center flex-shrink-0">
