@@ -1,65 +1,78 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Save,
+  X,
+  Eye,
+  EyeOff,
+  Copy,
+  ChevronDown,
+  ChevronRight,
+  Settings,
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
-import { Plus, Trash2, ArrowUp, ArrowDown, Save, X, Eye, Edit2 } from 'lucide-react';
-import DOMPurify from 'dompurify';
+import { CmsPageRenderer } from '../components/cms/CmsPageRenderer';
+import {
+  supportedSectionTypes,
+  validateSection,
+  getDefaultContent,
+} from '../components/cms/sectionRegistry';
+import type { CmsSection } from '../components/cms/sectionRegistry';
 import type { Database } from '../lib/database.types';
-import { FileUploadField, MediaPicker } from '../components/FileUploadField';
-import { RichTextEditor } from '../components/RichTextEditor';
 
 type CMSPage = Database['public']['Tables']['cms_pages']['Row'];
-type CMSSection = Database['public']['Tables']['cms_sections']['Row'];
 
-interface SectionWithContent extends CMSSection {
+interface SectionWithContent extends CmsSection {
   content: Record<string, any>;
 }
-
-const SECTION_TYPES = [
-  { value: 'hero', label: 'Hero Section', icon: '🦸', description: 'Large banner with headline and CTA' },
-  { value: 'features', label: 'Features Grid', icon: '✨', description: 'Showcase your key features' },
-  { value: 'showcase', label: 'Showcase', icon: '🎪', description: 'Display items in a showcase format' },
-  { value: 'steps', label: 'Steps/Process', icon: '📋', description: 'Show a step-by-step process' },
-  { value: 'categories', label: 'Categories', icon: '📂', description: 'Display categories or services' },
-  { value: 'text-section', label: 'Text Section', icon: '📄', description: 'Display informational text content' },
-  { value: 'gallery', label: 'Image Gallery', icon: '🖼️', description: 'Display multiple images' },
-  { value: 'cta', label: 'Call to Action', icon: '🎯', description: 'Button or action section' },
-];
 
 export function CMSPageEditor() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { primaryColor } = useBranding();
+  const { primaryColor, secondaryColor, siteName } = useBranding();
+  const branding = { primaryColor, secondaryColor, siteName };
 
   const [page, setPage] = useState<CMSPage | null>(null);
   const [sections, setSections] = useState<SectionWithContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [editingSection, setEditingSection] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [addingSection, setAddingSection] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [pageTitle, setPageTitle] = useState('');
+  const [pageDescription, setPageDescription] = useState('');
+  const [pagePublished, setPagePublished] = useState(false);
 
   useEffect(() => {
-    fetchPageAndSections();
+    if (slug) fetchPageAndSections();
   }, [slug]);
 
   const fetchPageAndSections = async () => {
     if (!slug) return;
-
     try {
       setLoading(true);
-
-      // Fetch page
       const { data: pageData, error: pageError } = await supabase
         .from('cms_pages')
         .select('*')
         .eq('slug', slug)
-        .single();
+        .maybeSingle();
 
       if (pageError) throw pageError;
-      setPage(pageData as CMSPage);
+      if (!pageData) { setError('Page not found'); setLoading(false); return; }
 
-      // Fetch sections
+      setPage(pageData as CMSPage);
+      setPageTitle(pageData.title || '');
+      setPageDescription((pageData as any).description || '');
+      setPagePublished(pageData.is_published || false);
+
       const { data: sectionsData, error: sectionsError } = await supabase
         .from('cms_sections')
         .select('*')
@@ -69,179 +82,136 @@ export function CMSPageEditor() {
       if (sectionsError) throw sectionsError;
       setSections((sectionsData || []) as SectionWithContent[]);
     } catch (err: any) {
-      console.error('Error fetching page:', err);
       setError(err.message || 'Failed to load page');
     } finally {
       setLoading(false);
     }
   };
 
+  const showMsg = (msg: string, isError = false) => {
+    if (isError) { setError(msg); setTimeout(() => setError(null), 5000); }
+    else { setSuccess(msg); setTimeout(() => setSuccess(null), 3000); }
+  };
+
+  const handleSavePage = async () => {
+    if (!page) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('cms_pages')
+        .update({
+          title: pageTitle,
+          description: pageDescription,
+          is_published: pagePublished,
+        } as any)
+        .eq('id', page.id);
+      if (error) throw error;
+      setPage(p => p ? { ...p, title: pageTitle, is_published: pagePublished } : p);
+      showMsg('Page settings saved');
+    } catch (err: any) {
+      showMsg(err.message || 'Failed to save page', true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleAddSection = async (sectionType: string) => {
     if (!page) return;
-
+    setAddingSection(false);
     try {
-      const newOrderIndex = sections.length;
-
+      const newOrder = sections.length;
       const { data, error } = await supabase
         .from('cms_sections')
-        .insert([
-          {
-            page_id: page.id,
-            section_type: sectionType,
-            content: getDefaultContent(sectionType),
-            order_index: newOrderIndex,
-          },
-        ] as any)
+        .insert([{
+          page_id: page.id,
+          section_type: sectionType,
+          content: getDefaultContent(sectionType),
+          order_index: newOrder,
+        }] as any)
         .select();
-
       if (error) throw error;
-      setSections([...sections, data[0] as SectionWithContent]);
-      setSuccess('Section added');
-      setTimeout(() => setSuccess(null), 3000);
+      const newSection = data[0] as SectionWithContent;
+      setSections(prev => [...prev, newSection]);
+      setEditingId(newSection.id);
+      showMsg('Section added');
     } catch (err: any) {
-      setError(err.message || 'Failed to add section');
+      showMsg(err.message || 'Failed to add section', true);
     }
   };
 
   const handleDeleteSection = async (sectionId: string) => {
-    if (!confirm('Are you sure you want to delete this section?')) return;
-
+    if (!confirm('Delete this section?')) return;
     try {
-      const { error } = await supabase
-        .from('cms_sections')
-        .delete()
-        .eq('id', sectionId);
-
+      const { error } = await supabase.from('cms_sections').delete().eq('id', sectionId);
       if (error) throw error;
-
       const updated = sections.filter(s => s.id !== sectionId);
       setSections(updated);
-
-      // Reorder remaining sections
-      for (let i = 0; i < updated.length; i++) {
-        await supabase
-          .from('cms_sections')
-          .update({ order_index: i })
-          .eq('id', updated[i].id);
-      }
-
-      setSuccess('Section deleted');
-      setTimeout(() => setSuccess(null), 3000);
+      await reorderSections(updated);
+      if (editingId === sectionId) setEditingId(null);
+      showMsg('Section deleted');
     } catch (err: any) {
-      setError(err.message || 'Failed to delete section');
+      showMsg(err.message || 'Failed to delete section', true);
+    }
+  };
+
+  const handleDuplicateSection = async (section: SectionWithContent) => {
+    if (!page) return;
+    try {
+      const newOrder = sections.length;
+      const { data, error } = await supabase
+        .from('cms_sections')
+        .insert([{
+          page_id: page.id,
+          section_type: section.section_type,
+          content: { ...section.content },
+          order_index: newOrder,
+        }] as any)
+        .select();
+      if (error) throw error;
+      setSections(prev => [...prev, data[0] as SectionWithContent]);
+      showMsg('Section duplicated');
+    } catch (err: any) {
+      showMsg(err.message || 'Failed to duplicate section', true);
     }
   };
 
   const handleMoveSection = async (index: number, direction: 'up' | 'down') => {
-    if ((direction === 'up' && index === 0) || (direction === 'down' && index === sections.length - 1)) {
-      return;
-    }
-
+    if ((direction === 'up' && index === 0) || (direction === 'down' && index === sections.length - 1)) return;
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    const newSections = [...sections];
-    [newSections[index], newSections[newIndex]] = [newSections[newIndex], newSections[index]];
-
-    setSections(newSections);
-
+    const reordered = [...sections];
+    [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
+    setSections(reordered);
     try {
       await Promise.all([
-        supabase.from('cms_sections').update({ order_index: index }).eq('id', newSections[newIndex].id),
-        supabase.from('cms_sections').update({ order_index: newIndex }).eq('id', newSections[index].id),
+        supabase.from('cms_sections').update({ order_index: index }).eq('id', reordered[newIndex].id),
+        supabase.from('cms_sections').update({ order_index: newIndex }).eq('id', reordered[index].id),
       ]);
     } catch (err: any) {
-      setError('Failed to reorder sections');
+      showMsg('Failed to reorder sections', true);
     }
   };
 
-  const handleUpdateSectionContent = async (sectionId: string, newContent: Record<string, any>) => {
+  const reorderSections = async (secs: SectionWithContent[]) => {
+    await Promise.all(
+      secs.map((s, i) => supabase.from('cms_sections').update({ order_index: i }).eq('id', s.id))
+    );
+  };
+
+  const handleUpdateContent = async (sectionId: string, newContent: Record<string, any>) => {
     try {
-      const { error } = await supabase
-        .from('cms_sections')
-        .update({ content: newContent })
-        .eq('id', sectionId);
-
+      const { error } = await supabase.from('cms_sections').update({ content: newContent }).eq('id', sectionId);
       if (error) throw error;
-
-      setSections(sections.map(s => s.id === sectionId ? { ...s, content: newContent } : s));
-      setSuccess('Section updated');
-      setTimeout(() => setSuccess(null), 3000);
+      setSections(prev => prev.map(s => s.id === sectionId ? { ...s, content: newContent } : s));
+      showMsg('Section saved');
     } catch (err: any) {
-      setError(err.message || 'Failed to update section');
-    }
-  };
-
-  const getDefaultContent = (sectionType: string): Record<string, any> => {
-    switch (sectionType) {
-      case 'hero':
-        return {
-          headline: 'Welcome',
-          headline_highlight: 'to our site',
-          subheadline: 'Add your description here',
-          cta_text: 'Get Started',
-          cta_link: '/register',
-        };
-      case 'features':
-        return {
-          features: [
-            { title: 'Feature 1', description: 'Description', icon_bg_color: 'bg-blue-100', icon_color: 'text-blue-600' },
-          ],
-        };
-      case 'showcase':
-        return {
-          title: 'Showcase',
-          items: [
-            { title: 'Item 1', description: 'Description', image_url: '', image_width: 300, image_height: 300, image_position: 'center' },
-          ],
-        };
-      case 'gallery':
-        return {
-          title: 'Gallery',
-          images: [],
-        };
-      case 'steps':
-        return {
-          steps: [
-            { title: 'Step 1', description: 'Description' },
-          ],
-        };
-      case 'categories':
-        return {
-          categories: [
-            { name: 'Category 1', description: 'Description' },
-          ],
-        };
-      case 'cta':
-        return {
-          heading: 'Ready to get started?',
-          description: 'Take action now',
-          button_text: 'Click Here',
-          button_link: '/register',
-        };
-      case 'text-section':
-        return {
-          section_title: 'Section Title',
-          body_content: 'Add your informational content here.',
-          text_alignment: 'left',
-          max_width: 'normal',
-          background_style: 'none',
-          show_divider: false,
-          text_style_preset: 'default',
-          title_style: 'normal',
-          text_size: 'medium',
-          visual_tone: 'neutral',
-          accent_icon: 'none',
-          emphasize_section: false,
-          vertical_spacing: 'normal',
-        };
-      default:
-        return {};
+      showMsg(err.message || 'Failed to save section', true);
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderBottomColor: primaryColor }}></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2" style={{ borderBottomColor: primaryColor }} />
       </div>
     );
   }
@@ -249,11 +219,8 @@ export function CMSPageEditor() {
   if (!page) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600 mb-4">Page not found</p>
-        <button
-          onClick={() => navigate('/dashboard/pages')}
-          className="text-blue-600 hover:text-blue-700 font-medium"
-        >
+        <p className="text-gray-600 mb-4">{error || 'Page not found'}</p>
+        <button onClick={() => navigate('/dashboard/public-pages')} className="text-blue-600 hover:underline font-medium">
           Back to Pages
         </button>
       </div>
@@ -261,1211 +228,879 @@ export function CMSPageEditor() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 lg:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{page.title}</h1>
-          <p className="text-gray-600 mt-1">Edit page content and sections</p>
-        </div>
-        <div className="flex gap-3">
           <button
-            onClick={() => navigate('/dashboard/pages')}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+            onClick={() => navigate('/dashboard/public-pages')}
+            className="text-sm text-gray-500 hover:text-gray-700 mb-1 flex items-center gap-1"
           >
-            Back
+            ← Public Pages
           </button>
+          <h1 className="text-2xl font-bold text-gray-900">{page.title}</h1>
+          <p className="text-gray-500 text-sm mt-1">/{page.slug}</p>
         </div>
-      </div>
-
-      {/* Messages */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
-          <X className="h-5 w-5" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
-          <Save className="h-5 w-5" />
-          <span>{success}</span>
-        </div>
-      )}
-
-      {/* Sections */}
-      <div className="space-y-4">
-        {sections.length === 0 ? (
-          <div className="bg-gray-50 rounded-lg p-8 text-center">
-            <p className="text-gray-600 mb-4">No sections yet. Add one to get started.</p>
-          </div>
-        ) : (
-          sections.map((section, index) => (
-            <SectionEditor
-              key={section.id}
-              section={section}
-              index={index}
-              total={sections.length}
-              onUpdate={handleUpdateSectionContent}
-              onDelete={handleDeleteSection}
-              onMove={handleMoveSection}
-              isEditing={editingSection === section.id}
-              onEditToggle={() => setEditingSection(editingSection === section.id ? null : section.id)}
-              primaryColor={primaryColor}
-            />
-          ))
-        )}
-      </div>
-
-      {/* Add Section */}
-      <div className="rounded-lg border border-gray-300 p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
-        <h3 className="font-bold text-gray-900 mb-4">Add New Section</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {SECTION_TYPES.map(type => (
-            <button
-              key={type.value}
-              onClick={() => handleAddSection(type.value)}
-              className="p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition text-left"
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setShowPreview(v => !v)}
+            className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showPreview ? 'Hide Preview' : 'Preview'}
+          </button>
+          {page.is_published && (
+            <a
+              href={`/pages/${page.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <div className="text-3xl mb-2">{type.icon}</div>
-              <div className="font-medium text-gray-900">{type.label}</div>
-              <div className="text-xs text-gray-600 mt-1">{type.description}</div>
-            </button>
-          ))}
+              View Live
+            </a>
+          )}
         </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)}><X size={16} /></button>
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+          {success}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+        <div className={showPreview ? 'xl:col-span-3 space-y-6' : 'xl:col-span-5 space-y-6'}>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Settings size={16} />
+              Page Settings
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={pageTitle}
+                  onChange={e => setPageTitle(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                <input
+                  type="text"
+                  value={page.slug}
+                  disabled
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <input
+                  type="text"
+                  value={pageDescription}
+                  onChange={e => setPageDescription(e.target.value)}
+                  placeholder="Optional meta description"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={pagePublished}
+                    onChange={e => setPagePublished(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`w-10 h-6 rounded-full transition-colors ${pagePublished ? 'bg-green-500' : 'bg-gray-300'}`}
+                    onClick={() => setPagePublished(v => !v)}
+                  />
+                  <div
+                    className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${pagePublished ? 'translate-x-5' : 'translate-x-1'}`}
+                  />
+                </div>
+                <span className="text-sm font-medium text-gray-700">
+                  {pagePublished ? 'Published' : 'Draft'}
+                </span>
+              </label>
+              <button
+                onClick={handleSavePage}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 text-white text-sm font-medium rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <Save size={14} />
+                {saving ? 'Saving…' : 'Save Settings'}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900">Sections</h2>
+              <button
+                onClick={() => setAddingSection(v => !v)}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white rounded-lg transition-opacity hover:opacity-90"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <Plus size={14} />
+                Add Section
+              </button>
+            </div>
+
+            {addingSection && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-800">Choose Section Type</h3>
+                  <button onClick={() => setAddingSection(false)} className="text-gray-400 hover:text-gray-600">
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {supportedSectionTypes.map(type => (
+                    <button
+                      key={type.value}
+                      onClick={() => handleAddSection(type.value)}
+                      className="text-left p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors group"
+                    >
+                      <p className="text-sm font-medium text-gray-900 group-hover:text-blue-700">{type.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{type.description}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {sections.length === 0 ? (
+              <div className="bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 p-10 text-center">
+                <p className="text-gray-500 mb-3">No sections yet</p>
+                <button
+                  onClick={() => setAddingSection(true)}
+                  className="text-sm font-medium px-4 py-2 rounded-lg text-white"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  Add your first section
+                </button>
+              </div>
+            ) : (
+              sections.map((section, index) => (
+                <SectionCard
+                  key={section.id}
+                  section={section}
+                  index={index}
+                  total={sections.length}
+                  isEditing={editingId === section.id}
+                  primaryColor={primaryColor}
+                  onToggleEdit={() => setEditingId(editingId === section.id ? null : section.id)}
+                  onMove={dir => handleMoveSection(index, dir)}
+                  onDelete={() => handleDeleteSection(section.id)}
+                  onDuplicate={() => handleDuplicateSection(section)}
+                  onSave={newContent => handleUpdateContent(section.id, newContent)}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {showPreview && (
+          <div className="xl:col-span-2">
+            <div className="sticky top-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
+                  <Eye size={14} className="text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700">Live Preview</span>
+                </div>
+                <div className="overflow-y-auto max-h-[calc(100vh-200px)] bg-white">
+                  {sections.length === 0 ? (
+                    <div className="p-8 text-center text-gray-400 text-sm">
+                      Add sections to see the preview
+                    </div>
+                  ) : (
+                    <div className="transform scale-75 origin-top-left w-[133%]">
+                      <CmsPageRenderer page={page as any} sections={sections} branding={branding} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function SectionEditor({
-  section,
-  index,
-  total,
-  onUpdate,
-  onDelete,
-  onMove,
-  isEditing,
-  onEditToggle,
-  primaryColor,
-}: {
+interface SectionCardProps {
   section: SectionWithContent;
   index: number;
   total: number;
-  onUpdate: (id: string, content: Record<string, any>) => void;
-  onDelete: (id: string) => void;
-  onMove: (index: number, direction: 'up' | 'down') => void;
   isEditing: boolean;
-  onEditToggle: () => void;
   primaryColor: string;
-}) {
-  const [content, setContent] = useState(section.content);
+  onToggleEdit: () => void;
+  onMove: (dir: 'up' | 'down') => void;
+  onDelete: () => void;
+  onDuplicate: () => void;
+  onSave: (content: Record<string, any>) => void;
+}
 
-  const handleSave = () => {
-    onUpdate(section.id, content);
-    onEditToggle();
-  };
-
-  const getPreview = () => {
-    switch (section.section_type) {
-      case 'hero':
-        return `${content.headline} ${content.headline_highlight}`;
-      case 'features':
-        return `${(content.features || []).length} features`;
-      case 'steps':
-        return `${(content.steps || []).length} steps`;
-      case 'categories':
-        return `${(content.categories || []).length} categories`;
-      case 'gallery':
-        return `${(content.images || []).length} images`;
-      case 'cta':
-        return content.heading || 'Call to action';
-      case 'text-section':
-        return content.section_title || content.body_content?.substring(0, 40) + '...' || 'Text Section';
-      default:
-        return 'Section content';
-    }
-  };
+function SectionCard({
+  section,
+  index,
+  total,
+  isEditing,
+  primaryColor,
+  onToggleEdit,
+  onMove,
+  onDelete,
+  onDuplicate,
+  onSave,
+}: SectionCardProps) {
+  const validation = validateSection(section);
+  const typeInfo = supportedSectionTypes.find(t => t.value === section.section_type);
+  const typeLabel = typeInfo?.label || section.section_type;
 
   return (
-    <div className="border border-gray-300 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
-      <div
-        className="p-4 flex justify-between items-center cursor-pointer"
-        style={{ background: `${primaryColor}10`, borderBottomColor: `${primaryColor}40` }}
-        onClick={onEditToggle}
-      >
-        <div className="flex items-center gap-4 flex-1">
-          <div className="text-2xl">
-            {SECTION_TYPES.find(t => t.value === section.section_type)?.icon}
-          </div>
-          <div className="min-w-0">
-            <p className="font-bold text-gray-900 capitalize">{section.section_type} Section</p>
-            <p className="text-sm text-gray-600 truncate">{getPreview()}</p>
-            <p className="text-xs text-gray-500 mt-1">Position: {index + 1} of {total}</p>
-          </div>
-        </div>
-        <div className="flex gap-1 ml-4 flex-shrink-0">
-          {index > 0 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onMove(index, 'up'); }}
-              className="p-2 hover:bg-gray-200 rounded text-gray-600"
-              title="Move up"
-            >
-              <ArrowUp className="h-4 w-4" />
-            </button>
-          )}
-          {index < total - 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onMove(index, 'down'); }}
-              className="p-2 hover:bg-gray-200 rounded text-gray-600"
-              title="Move down"
-            >
-              <ArrowDown className="h-4 w-4" />
-            </button>
-          )}
+    <div className={`bg-white rounded-xl shadow-sm border transition-colors ${
+      isEditing ? 'border-blue-300' : 'border-gray-200'
+    }`}>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex flex-col gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); onEditToggle(); }}
-            className="p-2 hover:bg-blue-100 rounded text-blue-600"
-            title="Edit"
+            onClick={() => onMove('up')}
+            disabled={index === 0}
+            className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
+            title="Move up"
           >
-            <Edit2 className="h-4 w-4" />
+            <ArrowUp size={14} />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(section.id); }}
-            className="p-2 hover:bg-red-100 rounded text-red-600"
-            title="Delete"
+            onClick={() => onMove('down')}
+            disabled={index === total - 1}
+            className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
+            title="Move down"
           >
-            <Trash2 className="h-4 w-4" />
+            <ArrowDown size={14} />
+          </button>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+              {index + 1}
+            </span>
+            <span className="text-sm font-semibold text-gray-900 truncate">{typeLabel}</span>
+            {validation.errors.length > 0 && (
+              <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                {validation.errors.length} error{validation.errors.length > 1 ? 's' : ''}
+              </span>
+            )}
+            {validation.warnings.length > 0 && validation.errors.length === 0 && (
+              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
+                warning
+              </span>
+            )}
+          </div>
+          {validation.errors.length > 0 && (
+            <p className="text-xs text-red-600 mt-0.5">{validation.errors[0]}</p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onDuplicate}
+            title="Duplicate"
+            className="p-2 text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <Copy size={14} />
+          </button>
+          <button
+            onClick={onDelete}
+            title="Delete"
+            className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+          >
+            <Trash2 size={14} />
+          </button>
+          <button
+            onClick={onToggleEdit}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors"
+            style={isEditing ? { borderColor: primaryColor, color: primaryColor } : { borderColor: '#e5e7eb', color: '#374151' }}
+          >
+            {isEditing ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            {isEditing ? 'Collapse' : 'Edit'}
           </button>
         </div>
       </div>
 
       {isEditing && (
-        <div className="p-6 border-t border-gray-300 space-y-4 bg-white">
+        <div className="border-t border-gray-100">
           <SectionContentEditor
-            sectionType={section.section_type}
-            content={content}
-            onChange={setContent}
-            pageSlug="home"
+            section={section}
+            primaryColor={primaryColor}
+            onSave={onSave}
           />
-          <div className="flex gap-3 pt-4 border-t">
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium transition"
-              style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)` }}
-            >
-              <Save className="h-4 w-4" />
-              Save Changes
-            </button>
-            <button
-              onClick={onEditToggle}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition"
-            >
-              Cancel
-            </button>
-          </div>
         </div>
       )}
     </div>
   );
 }
 
-function SectionContentEditor({
-  sectionType,
-  content,
-  onChange,
-  pageSlug = 'home',
-}: {
-  sectionType: string;
-  content: Record<string, any>;
-  onChange: (content: Record<string, any>) => void;
-  pageSlug?: string;
-}) {
-  const [uploadError, setUploadError] = useState<string | null>(null);
-
-  switch (sectionType) {
-    case 'hero':
-      return (
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Main Headline</label>
-            <input
-              type="text"
-              value={content.headline || ''}
-              onChange={(e) => onChange({ ...content, headline: e.target.value })}
-              placeholder="e.g., University Intellectual"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-            />
-            <p className="text-xs text-gray-500 mt-1">This is the first part of your headline</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Highlighted Text</label>
-            <input
-              type="text"
-              value={content.headline_highlight || ''}
-              onChange={(e) => onChange({ ...content, headline_highlight: e.target.value })}
-              placeholder="e.g., Property Management System"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-            />
-            <p className="text-xs text-gray-500 mt-1">This text will be highlighted in blue</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Subheadline</label>
-            <textarea
-              value={content.subheadline || ''}
-              onChange={(e) => onChange({ ...content, subheadline: e.target.value })}
-              placeholder="Describe your service..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              rows={2}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Button Text</label>
-              <input
-                type="text"
-                value={content.cta_text || ''}
-                onChange={(e) => onChange({ ...content, cta_text: e.target.value })}
-                placeholder="e.g., Get Started"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Button Link</label>
-              <input
-                type="text"
-                value={content.cta_link || ''}
-                onChange={(e) => onChange({ ...content, cta_link: e.target.value })}
-                placeholder="e.g., /register"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Background Image Control */}
-          <div className="border border-gray-300 rounded-lg overflow-hidden">
-            <button
-              type="button"
-              onClick={() => {
-                const newImageExpanded = !content.image_settings_expanded;
-                onChange({ ...content, image_settings_expanded: newImageExpanded });
-              }}
-              className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 flex justify-between items-center font-medium text-left transition"
-            >
-              <span className="text-gray-900">Background Image Settings</span>
-              <span className="text-gray-600">{content.image_settings_expanded ? '▼' : '▶'}</span>
-            </button>
-
-            {content.image_settings_expanded && (
-              <div className="p-4 space-y-4 bg-white">
-                {/* Image Upload */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Upload Image</label>
-                  {uploadError && (
-                    <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                      {uploadError}
-                    </div>
-                  )}
-                  <MediaPicker
-                    type="image"
-                    onSelect={(url) => {
-                      onChange({ ...content, background_image: url });
-                      setUploadError(null);
-                    }}
-                    pageSlug={pageSlug}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Upload PNG, JPG, GIF or WebP (max 10MB)</p>
-                </div>
-
-                {/* Image Preview */}
-                {content.background_image && (
-                  <div className="p-4 bg-gray-100 rounded-lg border border-gray-300">
-                    <p className="text-xs font-medium text-gray-700 mb-2">Preview</p>
-                    <img
-                      src={content.background_image}
-                      alt="Hero background"
-                      className="w-full h-40 object-cover rounded"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => onChange({ ...content, background_image: null })}
-                      className="mt-2 text-sm text-red-600 hover:text-red-700 font-medium"
-                    >
-                      Remove Image
-                    </button>
-                  </div>
-                )}
-
-                {content.background_image && (
-                  <>
-                    {/* Layout Mode */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Image Layout</label>
-                      <select
-                        value={content.image_layout || 'full-width'}
-                        onChange={(e) => onChange({
-                          ...content,
-                          image_layout: e.target.value,
-                          // Reset sizing if switching to full-width
-                          ...(e.target.value === 'full-width' ? {
-                            image_width: undefined,
-                            image_height: undefined
-                          } : {})
-                        })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-                      >
-                        <option value="full-width">Full Width (Stretched)</option>
-                        <option value="contained">Contained (Fixed Size)</option>
-                        <option value="grid-left">Grid: Image Left (50% width)</option>
-                        <option value="grid-right">Grid: Image Right (50% width)</option>
-                        <option value="grid-center">Grid: Image Center (40% width)</option>
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">Choose how the image should be displayed</p>
-                    </div>
-
-                    {/* Size Controls (if not full-width) */}
-                    {content.image_layout !== 'full-width' && (
-                      <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-2">Width (px)</label>
-                          <input
-                            type="number"
-                            value={content.image_width || 400}
-                            onChange={(e) => onChange({
-                              ...content,
-                              image_width: parseInt(e.target.value) || 400
-                            })}
-                            placeholder="400"
-                            min="100"
-                            max="1200"
-                            step="50"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-2">Height (px)</label>
-                          <input
-                            type="number"
-                            value={content.image_height || 300}
-                            onChange={(e) => onChange({
-                              ...content,
-                              image_height: parseInt(e.target.value) || 300
-                            })}
-                            placeholder="300"
-                            min="100"
-                            max="1000"
-                            step="50"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Image Positioning */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Image Position</label>
-                      <select
-                        value={content.image_position || 'center'}
-                        onChange={(e) => onChange({
-                          ...content,
-                          image_position: e.target.value
-                        })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-                      >
-                        <option value="top">Top</option>
-                        <option value="center">Center</option>
-                        <option value="bottom">Bottom</option>
-                      </select>
-                    </div>
-
-                    {/* Overlay Opacity */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Overlay Darkness ({content.image_overlay || 0}%)
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="70"
-                        step="5"
-                        value={content.image_overlay || 0}
-                        onChange={(e) => onChange({
-                          ...content,
-                          image_overlay: parseInt(e.target.value)
-                        })}
-                        className="w-full"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Darken the image to improve text readability (0% = no overlay)</p>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      );
-
-    case 'features':
-      return (
-        <div className="space-y-6">
-          <div className="space-y-4">
-            {(content.features || []).map((feature: any, idx: number) => (
-              <div key={idx} className="p-4 border border-gray-200 rounded-lg space-y-3 bg-gray-50">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-medium text-gray-900">Feature {idx + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newFeatures = content.features.filter((_: any, i: number) => i !== idx);
-                      onChange({ ...content, features: newFeatures });
-                    }}
-                    className="text-red-600 hover:text-red-700 text-sm"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={feature.title || ''}
-                  onChange={(e) => {
-                    const newFeatures = [...content.features];
-                    newFeatures[idx].title = e.target.value;
-                    onChange({ ...content, features: newFeatures });
-                  }}
-                  placeholder="Feature title"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                />
-                <textarea
-                  value={feature.description || ''}
-                  onChange={(e) => {
-                    const newFeatures = [...content.features];
-                    newFeatures[idx].description = e.target.value;
-                    onChange({ ...content, features: newFeatures });
-                  }}
-                  placeholder="Feature description"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                  rows={2}
-                />
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              const newFeatures = [...(content.features || []), { title: '', description: '' }];
-              onChange({ ...content, features: newFeatures });
-            }}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition"
-          >
-            + Add Feature
-          </button>
-        </div>
-      );
-
-
-    case 'cta':
-      return (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Heading</label>
-            <input
-              type="text"
-              value={content.heading || ''}
-              onChange={(e) => onChange({ ...content, heading: e.target.value })}
-              placeholder="Ready to get started?"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              value={content.description || ''}
-              onChange={(e) => onChange({ ...content, description: e.target.value })}
-              placeholder="Add details about your CTA..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              rows={2}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Button Text</label>
-              <input
-                type="text"
-                value={content.button_text || ''}
-                onChange={(e) => onChange({ ...content, button_text: e.target.value })}
-                placeholder="Click here"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Button Link</label>
-              <input
-                type="text"
-                value={content.button_link || ''}
-                onChange={(e) => onChange({ ...content, button_link: e.target.value })}
-                placeholder="/register"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-        </div>
-      );
-
-    case 'steps':
-      return (
-        <div className="space-y-6">
-          <div className="space-y-4">
-            {(content.steps || []).map((step: any, idx: number) => (
-              <div key={idx} className="p-4 border border-gray-200 rounded-lg space-y-3 bg-gray-50">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-medium text-gray-900">Step {idx + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newSteps = content.steps.filter((_: any, i: number) => i !== idx);
-                      onChange({ ...content, steps: newSteps });
-                    }}
-                    className="text-red-600 hover:text-red-700 text-sm"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={step.title || ''}
-                  onChange={(e) => {
-                    const newSteps = [...content.steps];
-                    newSteps[idx].title = e.target.value;
-                    onChange({ ...content, steps: newSteps });
-                  }}
-                  placeholder="Step title"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                />
-                <textarea
-                  value={step.description || ''}
-                  onChange={(e) => {
-                    const newSteps = [...content.steps];
-                    newSteps[idx].description = e.target.value;
-                    onChange({ ...content, steps: newSteps });
-                  }}
-                  placeholder="Step description"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                  rows={2}
-                />
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              const newSteps = [...(content.steps || []), { title: '', description: '' }];
-              onChange({ ...content, steps: newSteps });
-            }}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition"
-          >
-            + Add Step
-          </button>
-        </div>
-      );
-
-    case 'categories':
-      return (
-        <div className="space-y-6">
-          <div className="space-y-4">
-            {(content.categories || []).map((category: any, idx: number) => (
-              <div key={idx} className="p-4 border border-gray-200 rounded-lg space-y-3 bg-gray-50">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-medium text-gray-900">Category {idx + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newCategories = content.categories.filter((_: any, i: number) => i !== idx);
-                      onChange({ ...content, categories: newCategories });
-                    }}
-                    className="text-red-600 hover:text-red-700 text-sm"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={category.name || ''}
-                  onChange={(e) => {
-                    const newCategories = [...content.categories];
-                    newCategories[idx].name = e.target.value;
-                    onChange({ ...content, categories: newCategories });
-                  }}
-                  placeholder="Category name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                />
-                <textarea
-                  value={category.description || ''}
-                  onChange={(e) => {
-                    const newCategories = [...content.categories];
-                    newCategories[idx].description = e.target.value;
-                    onChange({ ...content, categories: newCategories });
-                  }}
-                  placeholder="Category description"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                  rows={2}
-                />
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              const newCategories = [...(content.categories || []), { name: '', description: '' }];
-              onChange({ ...content, categories: newCategories });
-            }}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition"
-          >
-            + Add Category
-          </button>
-        </div>
-      );
-
-    case 'gallery':
-      return (
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Gallery Title</label>
-            <input
-              type="text"
-              value={content.title || ''}
-              onChange={(e) => onChange({ ...content, title: e.target.value })}
-              placeholder="e.g., Photo Gallery"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Gallery Images</label>
-            <div className="space-y-4">
-              {(content.images || []).map((image: any, idx: number) => (
-                <div key={idx} className="p-4 border border-gray-200 rounded-lg space-y-3 bg-gray-50">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium text-gray-900">Image {idx + 1}</h4>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newImages = content.images.filter((_: any, i: number) => i !== idx);
-                        onChange({ ...content, images: newImages });
-                      }}
-                      className="text-red-600 hover:text-red-700 text-sm"
-                    >
-                      Remove
-                    </button>
-                  </div>
-
-                  {image.url && (
-                    <img 
-                      src={image.url} 
-                      alt={image.alt_text || 'Gallery image'} 
-                      className="w-full h-32 object-cover rounded"
-                    />
-                  )}
-
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 mb-1 block">Upload Image</label>
-                    <MediaPicker
-                      type="image"
-                      onSelect={(url) => {
-                        const newImages = [...content.images];
-                        newImages[idx].url = url;
-                        onChange({ ...content, images: newImages });
-                        setUploadError(null);
-                      }}
-                      pageSlug={pageSlug}
-                    />
-                  </div>
-
-                  <input
-                    type="text"
-                    value={image.caption || ''}
-                    onChange={(e) => {
-                      const newImages = [...content.images];
-                      newImages[idx].caption = e.target.value;
-                      onChange({ ...content, images: newImages });
-                    }}
-                    placeholder="Name or title (displayed above position)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                  />
-
-                  <input
-                    type="text"
-                    value={image.position || ''}
-                    onChange={(e) => {
-                      const newImages = [...content.images];
-                      newImages[idx].position = e.target.value;
-                      onChange({ ...content, images: newImages });
-                    }}
-                    placeholder="Position/Title (e.g., Full Stack Developer)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                  />
-
-                  <input
-                    type="text"
-                    value={image.alt_text || ''}
-                    onChange={(e) => {
-                      const newImages = [...content.images];
-                      newImages[idx].alt_text = e.target.value;
-                      onChange({ ...content, images: newImages });
-                    }}
-                    placeholder="Alt text (for accessibility)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500 text-sm"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                const newImages = [...(content.images || []), { url: '', caption: '', position: '', alt_text: '' }];
-                onChange({ ...content, images: newImages });
-              }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition"
-            >
-              + Add Image
-            </button>
-          </div>
-        </div>
-      );
-
-    case 'text-section':
-      return (
-        <TextSectionEditor content={content} onChange={onChange} />
-      );
-  }
+interface SectionContentEditorProps {
+  section: SectionWithContent;
+  primaryColor: string;
+  onSave: (content: Record<string, any>) => void;
 }
 
-function TextSectionEditor({ content, onChange }: { content: Record<string, any>; onChange: (content: Record<string, any>) => void }) {
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    content: true,
-    style: false,
-    layout: false,
-  });
+function SectionContentEditor({ section, primaryColor, onSave }: SectionContentEditorProps) {
+  const [content, setContent] = useState<Record<string, any>>({ ...section.content });
+  const [dirty, setDirty] = useState(false);
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
+  const update = (key: string, value: any) => {
+    setContent(prev => ({ ...prev, [key]: value }));
+    setDirty(true);
   };
 
-  const getAccentIconDisplay = (iconType: string) => {
-    const icons: Record<string, string> = {
-      none: '—',
-      info: 'ℹ️',
-      lightbulb: '💡',
-      shield: '🛡️',
-      document: '📄',
-    };
-    return icons[iconType] || '—';
+  const updateNested = (path: string[], value: any) => {
+    setContent(prev => {
+      const next = { ...prev };
+      let cur: any = next;
+      for (let i = 0; i < path.length - 1; i++) {
+        cur[path[i]] = { ...cur[path[i]] };
+        cur = cur[path[i]];
+      }
+      cur[path[path.length - 1]] = value;
+      return next;
+    });
+    setDirty(true);
+  };
+
+  const handleSave = () => {
+    onSave(content);
+    setDirty(false);
+  };
+
+  const renderEditor = () => {
+    switch (section.section_type) {
+      case 'hero':
+        return <HeroEditor content={content} update={update} />;
+      case 'features':
+        return <FeaturesEditor content={content} update={update} />;
+      case 'showcase':
+        return <ShowcaseEditor content={content} update={update} />;
+      case 'steps':
+        return <StepsEditor content={content} update={update} />;
+      case 'categories':
+        return <CategoriesEditor content={content} update={update} />;
+      case 'text-section':
+        return <TextSectionEditor content={content} update={update} />;
+      case 'cta':
+        return <CTAEditor content={content} update={update} />;
+      case 'gallery':
+        return <GalleryEditor content={content} update={update} />;
+      case 'tabs':
+        return <TabsEditor content={content} update={update} />;
+      default:
+        return (
+          <div className="p-4">
+            <p className="text-sm text-gray-500 mb-2">Raw JSON editor for unknown section type:</p>
+            <textarea
+              className="w-full font-mono text-xs border border-gray-200 rounded p-3 h-48"
+              value={JSON.stringify(content, null, 2)}
+              onChange={e => {
+                try {
+                  setContent(JSON.parse(e.target.value));
+                  setDirty(true);
+                } catch {}
+              }}
+            />
+          </div>
+        );
+    }
   };
 
   return (
+    <div>
+      <div className="p-4">{renderEditor()}</div>
+      <div className="flex justify-end gap-3 px-4 py-3 bg-gray-50 border-t border-gray-100 rounded-b-xl">
+        <button
+          onClick={handleSave}
+          disabled={!dirty}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg transition-opacity hover:opacity-90 disabled:opacity-40"
+          style={{ backgroundColor: primaryColor }}
+        >
+          <Save size={14} />
+          Save Section
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function TextInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <input
+      type="text"
+      value={value || ''}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+  );
+}
+
+function Textarea({ value, onChange, rows = 3 }: { value: string; onChange: (v: string) => void; rows?: number }) {
+  return (
+    <textarea
+      value={value || ''}
+      onChange={e => onChange(e.target.value)}
+      rows={rows}
+      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+    />
+  );
+}
+
+function HeroEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  return (
     <div className="space-y-4">
-      {/* CONTENT SECTION */}
-      <div className="border border-gray-300 rounded-lg overflow-hidden">
-        <button
-          onClick={() => toggleSection('content')}
-          className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 flex justify-between items-center font-medium text-left transition"
-        >
-          <span className="text-gray-900">Content</span>
-          <span className="text-gray-600">{expandedSections.content ? '▼' : '▶'}</span>
-        </button>
-        {expandedSections.content && (
-          <div className="p-4 space-y-4 bg-white">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Section Title (Optional)</label>
-              <input
-                type="text"
-                value={content.section_title || ''}
-                onChange={(e) => onChange({ ...content, section_title: e.target.value })}
-                placeholder="e.g., About Our Mission"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">Leave empty if you don't want a title</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Body Content (Required)</label>
-              <textarea
-                value={content.body_content || ''}
-                onChange={(e) => onChange({ ...content, body_content: e.target.value })}
-                placeholder="Add your informational content here. Separate paragraphs with blank lines."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-                rows={6}
-              />
-              <p className="text-xs text-gray-500 mt-1">Supports line breaks and paragraphs (separate with blank lines)</p>
-            </div>
-          </div>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FieldRow label="Headline">
+          <TextInput value={content.headline} onChange={v => update('headline', v)} placeholder="Welcome" />
+        </FieldRow>
+        <FieldRow label="Headline Highlight">
+          <TextInput value={content.headline_highlight} onChange={v => update('headline_highlight', v)} placeholder="to our site" />
+        </FieldRow>
       </div>
-
-      {/* STYLE SECTION */}
-      <div className="border border-gray-300 rounded-lg overflow-hidden">
-        <button
-          onClick={() => toggleSection('style')}
-          className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 flex justify-between items-center font-medium text-left transition"
-        >
-          <span className="text-gray-900">Style</span>
-          <span className="text-gray-600">{expandedSections.style ? '▼' : '▶'}</span>
-        </button>
-        {expandedSections.style && (
-          <div className="p-4 space-y-4 bg-white">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Text Style Preset</label>
-              <select
-                value={content.text_style_preset || 'default'}
-                onChange={(e) => onChange({ ...content, text_style_preset: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              >
-                <option value="default">Default (Body Text)</option>
-                <option value="introduction">Section Introduction</option>
-                <option value="highlight">Highlight Statement</option>
-                <option value="policy">Policy / Notice</option>
-                <option value="callout">Callout Text</option>
-              </select>
-            </div>
-
-            {content.section_title && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title Style</label>
-                <select
-                  value={content.title_style || 'normal'}
-                  onChange={(e) => onChange({ ...content, title_style: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="normal">Normal</option>
-                  <option value="bold">Bold</option>
-                  <option value="uppercase">Uppercase</option>
-                  <option value="underline">Subtle Underline</option>
-                </select>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Text Size</label>
-              <select
-                value={content.text_size || 'medium'}
-                onChange={(e) => onChange({ ...content, text_size: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              >
-                <option value="small">Small</option>
-                <option value="medium">Medium (Default)</option>
-                <option value="large">Large</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tone / Mood</label>
-              <select
-                value={content.visual_tone || 'neutral'}
-                onChange={(e) => onChange({ ...content, visual_tone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              >
-                <option value="neutral">Neutral</option>
-                <option value="informative">Informative</option>
-                <option value="emphasis">Emphasis</option>
-                <option value="formal">Formal</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Accent Icon (Optional)</label>
-              <div className="flex items-center gap-2">
-                <select
-                  value={content.accent_icon || 'none'}
-                  onChange={(e) => onChange({ ...content, accent_icon: e.target.value })}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="none">None</option>
-                  <option value="info">ℹ️ Info</option>
-                  <option value="lightbulb">💡 Lightbulb</option>
-                  <option value="shield">🛡️ Shield</option>
-                  <option value="document">📄 Document</option>
-                </select>
-                <div className="text-2xl px-3 py-2 bg-gray-100 rounded-lg min-w-12 flex items-center justify-center">
-                  {getAccentIconDisplay(content.accent_icon || 'none')}
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Displays near section title if provided</p>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <input
-                type="checkbox"
-                id="emphasizeSection"
-                checked={content.emphasize_section || false}
-                onChange={(e) => onChange({ ...content, emphasize_section: e.target.checked })}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:outline-none"
-              />
-              <label htmlFor="emphasizeSection" className="text-sm font-medium text-gray-700">
-                Emphasize Section (adds border and background accent)
-              </label>
-            </div>
-          </div>
-        )}
+      <FieldRow label="Subheadline">
+        <Textarea value={content.subheadline} onChange={v => update('subheadline', v)} rows={2} />
+      </FieldRow>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FieldRow label="Button Text">
+          <TextInput value={content.cta_text} onChange={v => update('cta_text', v)} placeholder="Get Started" />
+        </FieldRow>
+        <FieldRow label="Button Link">
+          <TextInput value={content.cta_link} onChange={v => update('cta_link', v)} placeholder="/register" />
+        </FieldRow>
       </div>
+      <FieldRow label="Background Image URL">
+        <TextInput value={content.background_image} onChange={v => update('background_image', v)} placeholder="https://..." />
+      </FieldRow>
+      {content.background_image && (
+        <FieldRow label="Image Layout">
+          <select
+            value={content.image_layout || 'default'}
+            onChange={e => update('image_layout', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none"
+          >
+            <option value="default">Default (text centered, no image)</option>
+            <option value="full-width">Full-width background</option>
+            <option value="grid-left">Image left, text right</option>
+            <option value="grid-right">Text left, image right</option>
+          </select>
+        </FieldRow>
+      )}
+    </div>
+  );
+}
 
-      {/* LAYOUT SECTION */}
-      <div className="border border-gray-300 rounded-lg overflow-hidden">
-        <button
-          onClick={() => toggleSection('layout')}
-          className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 flex justify-between items-center font-medium text-left transition"
-        >
-          <span className="text-gray-900">Layout</span>
-          <span className="text-gray-600">{expandedSections.layout ? '▼' : '▶'}</span>
-        </button>
-        {expandedSections.layout && (
-          <div className="p-4 space-y-4 bg-white">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Text Alignment</label>
-                <select
-                  value={content.text_alignment || 'left'}
-                  onChange={(e) => onChange({ ...content, text_alignment: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="left">Left</option>
-                  <option value="center">Center</option>
-                </select>
-              </div>
+function FeaturesEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  const features = Array.isArray(content.features) ? content.features : [];
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Width</label>
-                <select
-                  value={content.max_width || 'normal'}
-                  onChange={(e) => onChange({ ...content, max_width: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="narrow">Narrow</option>
-                  <option value="normal">Normal (Default)</option>
-                  <option value="wide">Wide</option>
-                </select>
-              </div>
-            </div>
+  const updateFeature = (i: number, key: string, val: any) => {
+    const next = features.map((f: any, idx: number) => idx === i ? { ...f, [key]: val } : f);
+    update('features', next);
+  };
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Background Style</label>
-              <select
-                value={content.background_style || 'none'}
-                onChange={(e) => onChange({ ...content, background_style: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              >
-                <option value="none">None (White)</option>
-                <option value="light_gray">Soft Gray</option>
-                <option value="soft_blue">Soft Blue</option>
-                <option value="soft_yellow">Soft Yellow (Notice-style)</option>
-              </select>
-            </div>
+  const addFeature = () => update('features', [...features, { title: `Feature ${features.length + 1}`, description: '', icon: '', icon_bg_color: 'bg-blue-100', icon_color: 'text-blue-600' }]);
+  const removeFeature = (i: number) => update('features', features.filter((_: any, idx: number) => idx !== i));
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vertical Spacing</label>
-              <select
-                value={content.vertical_spacing || 'normal'}
-                onChange={(e) => onChange({ ...content, vertical_spacing: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none focus:border-blue-500"
-              >
-                <option value="compact">Compact</option>
-                <option value="normal">Normal (Default)</option>
-                <option value="spacious">Spacious</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <input
-                type="checkbox"
-                id="showDivider"
-                checked={content.show_divider || false}
-                onChange={(e) => onChange({ ...content, show_divider: e.target.checked })}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:outline-none"
-              />
-              <label htmlFor="showDivider" className="text-sm font-medium text-gray-700">
-                Show subtle dividers above and below
-              </label>
-            </div>
-
-            {/* Grid Layout Controls */}
-            <div className="pt-4 border-t border-gray-300">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-900">Grid Layout</h4>
-                    <p className="text-xs text-gray-600 mt-1">Display content in columns (e.g., Mission & Vision side-by-side)</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    id="gridLayout"
-                    checked={content.internal_grid?.enabled === true}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        onChange({
-                          ...content,
-                          internal_grid: { enabled: true, columns: 2, gap: 'gap-6' },
-                          blocks: content.blocks && content.blocks.length > 0 ? content.blocks : [{ title: '', content: content.body_content || '' }]
-                        });
-                      } else {
-                        onChange({
-                          ...content,
-                          internal_grid: { enabled: false, columns: 2, gap: 'gap-6' }
-                        });
-                      }
-                    }}
-                    className="h-5 w-5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  />
-                </div>
-
-                {content.internal_grid?.enabled && (
-                  <div className="space-y-3 mt-3 pt-3 border-t border-blue-200">
-                    {/* Number of Columns */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-2">
-                        Number of Columns
-                      </label>
-                      <select
-                        value={content.internal_grid?.columns || 2}
-                        onChange={(e) => onChange({
-                          ...content,
-                          internal_grid: {
-                            ...content.internal_grid,
-                            columns: parseInt(e.target.value)
-                          }
-                        })}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value={2}>2 Columns</option>
-                        <option value={3}>3 Columns</option>
-                        <option value={4}>4 Columns</option>
-                      </select>
-                    </div>
-
-                    {/* Gap/Spacing */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-2">
-                        Column Spacing
-                      </label>
-                      <select
-                        value={content.internal_grid?.gap || 'gap-6'}
-                        onChange={(e) => onChange({
-                          ...content,
-                          internal_grid: {
-                            ...content.internal_grid,
-                            gap: e.target.value
-                          }
-                        })}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="gap-4">Small (16px)</option>
-                        <option value="gap-6">Medium (24px)</option>
-                        <option value="gap-8">Large (32px)</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Content Blocks Manager */}
-              {content.internal_grid?.enabled && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Content Blocks ({(content.blocks || []).length})
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const currentBlocks = content.blocks || [];
-                        onChange({
-                          ...content,
-                          blocks: [...currentBlocks, { title: '', content: '' }]
-                        });
-                      }}
-                      className="text-sm px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 font-medium"
-                    >
-                      + Add Block
-                    </button>
-                  </div>
-
-                  {(!content.blocks || content.blocks.length === 0) && (
-                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-800">No blocks yet. Click "Add Block" to create content.</p>
-                    </div>
-                  )}
-
-                  {(content.blocks || []).map((block: any, idx: number) => (
-                    <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3 mb-3">
-                      <div className="flex items-center justify-between">
-                        <h5 className="text-sm font-semibold text-gray-900">Block {idx + 1}</h5>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newBlocks = (content.blocks || []).filter((_: any, i: number) => i !== idx);
-                            onChange({
-                              ...content,
-                              blocks: newBlocks
-                            });
-                          }}
-                          className="text-red-600 hover:text-red-700 text-xs font-medium"
-                        >
-                          Remove
-                        </button>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Block Title (optional)
-                        </label>
-                        <input
-                          type="text"
-                          value={block.title || ''}
-                          onChange={(e) => {
-                            const newBlocks = [...(content.blocks || [])];
-                            newBlocks[idx] = { ...newBlocks[idx], title: e.target.value };
-                            onChange({
-                              ...content,
-                              blocks: newBlocks
-                            });
-                          }}
-                          placeholder="e.g., Our Mission"
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Block Content <span className="text-red-600">*</span>
-                        </label>
-                        <textarea
-                          value={block.content || ''}
-                          onChange={(e) => {
-                            const newBlocks = [...(content.blocks || [])];
-                            newBlocks[idx] = { ...newBlocks[idx], content: e.target.value };
-                            onChange({
-                              ...content,
-                              blocks: newBlocks
-                            });
-                          }}
-                          placeholder="Enter content for this block..."
-                          rows={4}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Use line breaks to create paragraphs</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+  return (
+    <div className="space-y-4">
+      {features.map((f: any, i: number) => (
+        <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-600">Feature {i + 1}</span>
+            <button onClick={() => removeFeature(i)} className="text-red-400 hover:text-red-600">
+              <X size={14} />
+            </button>
           </div>
-        )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <FieldRow label="Title">
+              <TextInput value={f.title} onChange={v => updateFeature(i, 'title', v)} />
+            </FieldRow>
+            <FieldRow label="Icon name">
+              <TextInput value={f.icon} onChange={v => updateFeature(i, 'icon', v)} placeholder="Shield, Star, Zap…" />
+            </FieldRow>
+          </div>
+          <FieldRow label="Description">
+            <Textarea value={f.description} onChange={v => updateFeature(i, 'description', v)} rows={2} />
+          </FieldRow>
+        </div>
+      ))}
+      <button
+        onClick={addFeature}
+        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+      >
+        <Plus size={14} /> Add Feature
+      </button>
+    </div>
+  );
+}
+
+function ShowcaseEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  const items = Array.isArray(content.items) ? content.items : [];
+
+  const updateItem = (i: number, key: string, val: any) => {
+    const next = items.map((item: any, idx: number) => idx === i ? { ...item, [key]: val } : item);
+    update('items', next);
+  };
+
+  const addItem = () => update('items', [...items, { title: `Item ${items.length + 1}`, description: '', image_url: '', link: '' }]);
+  const removeItem = (i: number) => update('items', items.filter((_: any, idx: number) => idx !== i));
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FieldRow label="Section Title">
+          <TextInput value={content.title} onChange={v => update('title', v)} placeholder="Our Showcase" />
+        </FieldRow>
+        <FieldRow label="Section Subtitle">
+          <TextInput value={content.subtitle} onChange={v => update('subtitle', v)} placeholder="Optional subtitle" />
+        </FieldRow>
       </div>
+      {items.map((item: any, i: number) => (
+        <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-600">Item {i + 1}</span>
+            <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600">
+              <X size={14} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <FieldRow label="Title">
+              <TextInput value={item.title} onChange={v => updateItem(i, 'title', v)} />
+            </FieldRow>
+            <FieldRow label="Link">
+              <TextInput value={item.link} onChange={v => updateItem(i, 'link', v)} placeholder="https://..." />
+            </FieldRow>
+          </div>
+          <FieldRow label="Description">
+            <Textarea value={item.description} onChange={v => updateItem(i, 'description', v)} rows={2} />
+          </FieldRow>
+          <FieldRow label="Image URL">
+            <TextInput value={item.image_url} onChange={v => updateItem(i, 'image_url', v)} placeholder="https://..." />
+          </FieldRow>
+        </div>
+      ))}
+      <button
+        onClick={addItem}
+        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+      >
+        <Plus size={14} /> Add Item
+      </button>
+    </div>
+  );
+}
+
+function StepsEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  const steps = Array.isArray(content.steps) ? content.steps : [];
+
+  const updateStep = (i: number, key: string, val: any) => {
+    const next = steps.map((s: any, idx: number) => idx === i ? { ...s, [key]: val } : s);
+    update('steps', next);
+  };
+
+  const addStep = () => update('steps', [...steps, { number: steps.length + 1, label: `Step ${steps.length + 1}`, description: '' }]);
+  const removeStep = (i: number) => update('steps', steps.filter((_: any, idx: number) => idx !== i));
+
+  return (
+    <div className="space-y-4">
+      <FieldRow label="Section Title">
+        <TextInput value={content.title} onChange={v => update('title', v)} placeholder="Our Process" />
+      </FieldRow>
+      {steps.map((s: any, i: number) => (
+        <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-600">Step {i + 1}</span>
+            <button onClick={() => removeStep(i)} className="text-red-400 hover:text-red-600">
+              <X size={14} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <FieldRow label="Number / Label">
+              <TextInput value={s.label || s.title} onChange={v => updateStep(i, 'label', v)} />
+            </FieldRow>
+            <FieldRow label="Number Badge">
+              <TextInput value={String(s.number || i + 1)} onChange={v => updateStep(i, 'number', parseInt(v) || i + 1)} />
+            </FieldRow>
+          </div>
+          <FieldRow label="Description">
+            <Textarea value={s.description} onChange={v => updateStep(i, 'description', v)} rows={2} />
+          </FieldRow>
+        </div>
+      ))}
+      <button
+        onClick={addStep}
+        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+      >
+        <Plus size={14} /> Add Step
+      </button>
+    </div>
+  );
+}
+
+function CategoriesEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  const categories = Array.isArray(content.categories) ? content.categories : [];
+  const [newCat, setNewCat] = useState('');
+
+  const addCat = () => {
+    if (!newCat.trim()) return;
+    update('categories', [...categories, newCat.trim()]);
+    setNewCat('');
+  };
+
+  const removeCat = (i: number) => update('categories', categories.filter((_: any, idx: number) => idx !== i));
+
+  return (
+    <div className="space-y-4">
+      <FieldRow label="Section Title">
+        <TextInput value={content.title} onChange={v => update('title', v)} placeholder="Categories" />
+      </FieldRow>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-2">Categories</label>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {categories.map((cat: string, i: number) => (
+            <span key={i} className="flex items-center gap-1 bg-blue-50 text-blue-800 text-xs px-3 py-1.5 rounded-full">
+              {cat}
+              <button onClick={() => removeCat(i)} className="hover:text-red-600 ml-1">
+                <X size={10} />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newCat}
+            onChange={e => setNewCat(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addCat()}
+            placeholder="Type category name…"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={addCat}
+            className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TextSectionEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  return (
+    <div className="space-y-4">
+      <FieldRow label="Section Title">
+        <TextInput value={content.section_title} onChange={v => update('section_title', v)} placeholder="Section Title" />
+      </FieldRow>
+      <FieldRow label="Body Content">
+        <Textarea value={content.body_content} onChange={v => update('body_content', v)} rows={6} />
+        <p className="text-xs text-gray-400 mt-1">Separate paragraphs with a blank line.</p>
+      </FieldRow>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <FieldRow label="Text Alignment">
+          <select
+            value={content.text_alignment || 'left'}
+            onChange={e => update('text_alignment', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+          </select>
+        </FieldRow>
+        <FieldRow label="Max Width">
+          <select
+            value={content.max_width || 'normal'}
+            onChange={e => update('max_width', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="narrow">Narrow</option>
+            <option value="normal">Normal</option>
+            <option value="wide">Wide</option>
+          </select>
+        </FieldRow>
+        <FieldRow label="Background">
+          <select
+            value={content.background_style || 'none'}
+            onChange={e => update('background_style', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="none">White</option>
+            <option value="light_gray">Light Gray</option>
+            <option value="soft_blue">Soft Blue</option>
+            <option value="soft_yellow">Soft Yellow</option>
+          </select>
+        </FieldRow>
+        <FieldRow label="Vertical Spacing">
+          <select
+            value={content.vertical_spacing || 'normal'}
+            onChange={e => update('vertical_spacing', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="compact">Compact</option>
+            <option value="normal">Normal</option>
+            <option value="spacious">Spacious</option>
+          </select>
+        </FieldRow>
+      </div>
+      <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={content.show_divider || false}
+          onChange={e => update('show_divider', e.target.checked)}
+          className="rounded"
+        />
+        Show divider lines
+      </label>
+    </div>
+  );
+}
+
+function CTAEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  return (
+    <div className="space-y-4">
+      <FieldRow label="Heading">
+        <TextInput value={content.heading} onChange={v => update('heading', v)} placeholder="Ready to get started?" />
+      </FieldRow>
+      <FieldRow label="Description">
+        <Textarea value={content.description} onChange={v => update('description', v)} rows={2} />
+      </FieldRow>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FieldRow label="Button Text">
+          <TextInput value={content.button_text} onChange={v => update('button_text', v)} placeholder="Click Here" />
+        </FieldRow>
+        <FieldRow label="Button Link">
+          <TextInput value={content.button_link} onChange={v => update('button_link', v)} placeholder="/register" />
+        </FieldRow>
+      </div>
+      <FieldRow label="Background Color">
+        <div className="flex gap-2 items-center">
+          <input
+            type="color"
+            value={content.background_color || '#2563EB'}
+            onChange={e => update('background_color', e.target.value)}
+            className="h-9 w-14 rounded border border-gray-300 cursor-pointer"
+          />
+          <TextInput value={content.background_color || '#2563EB'} onChange={v => update('background_color', v)} placeholder="#2563EB" />
+        </div>
+      </FieldRow>
+    </div>
+  );
+}
+
+function GalleryEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  const images = Array.isArray(content.images) ? content.images : [];
+
+  const updateImage = (i: number, key: string, val: any) => {
+    const next = images.map((img: any, idx: number) => idx === i ? { ...img, [key]: val } : img);
+    update('images', next);
+  };
+
+  const addImage = () => update('images', [...images, { url: '', alt_text: '', caption: '' }]);
+  const removeImage = (i: number) => update('images', images.filter((_: any, idx: number) => idx !== i));
+
+  return (
+    <div className="space-y-4">
+      <FieldRow label="Section Title">
+        <TextInput value={content.title} onChange={v => update('title', v)} placeholder="Gallery" />
+      </FieldRow>
+      {images.map((img: any, i: number) => (
+        <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-600">Image {i + 1}</span>
+            <button onClick={() => removeImage(i)} className="text-red-400 hover:text-red-600">
+              <X size={14} />
+            </button>
+          </div>
+          <FieldRow label="Image URL">
+            <TextInput value={img.url} onChange={v => updateImage(i, 'url', v)} placeholder="https://..." />
+          </FieldRow>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <FieldRow label="Alt Text">
+              <TextInput value={img.alt_text} onChange={v => updateImage(i, 'alt_text', v)} />
+            </FieldRow>
+            <FieldRow label="Caption">
+              <TextInput value={img.caption} onChange={v => updateImage(i, 'caption', v)} />
+            </FieldRow>
+          </div>
+        </div>
+      ))}
+      <button
+        onClick={addImage}
+        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+      >
+        <Plus size={14} /> Add Image
+      </button>
+    </div>
+  );
+}
+
+function TabsEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  const tabs = Array.isArray(content.tabs) ? content.tabs : [];
+
+  const updateTab = (i: number, key: string, val: any) => {
+    const next = tabs.map((t: any, idx: number) => idx === i ? { ...t, [key]: val } : t);
+    update('tabs', next);
+  };
+
+  const addTab = () => update('tabs', [...tabs, { title: `Tab ${tabs.length + 1}`, content: '' }]);
+  const removeTab = (i: number) => update('tabs', tabs.filter((_: any, idx: number) => idx !== i));
+
+  return (
+    <div className="space-y-4">
+      <FieldRow label="Section Title">
+        <TextInput value={content.title} onChange={v => update('title', v)} placeholder="Optional section heading" />
+      </FieldRow>
+      {tabs.map((tab: any, i: number) => (
+        <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-600">Tab {i + 1}</span>
+            <button onClick={() => removeTab(i)} className="text-red-400 hover:text-red-600">
+              <X size={14} />
+            </button>
+          </div>
+          <FieldRow label="Tab Title">
+            <TextInput value={tab.title} onChange={v => updateTab(i, 'title', v)} />
+          </FieldRow>
+          <FieldRow label="Content">
+            <Textarea value={tab.content} onChange={v => updateTab(i, 'content', v)} rows={4} />
+            <p className="text-xs text-gray-400 mt-1">Use • or - at the start of a line for bullet points.</p>
+          </FieldRow>
+        </div>
+      ))}
+      <button
+        onClick={addTab}
+        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+      >
+        <Plus size={14} /> Add Tab
+      </button>
     </div>
   );
 }

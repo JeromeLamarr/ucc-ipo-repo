@@ -1,0 +1,670 @@
+import { useState } from 'react';
+import {
+  FileText,
+  Shield,
+  TrendingUp,
+  Users,
+  Settings,
+  CheckCircle,
+  AlertCircle,
+  Zap,
+  Heart,
+  Star,
+  Layers,
+  Workflow,
+  ExternalLink,
+} from 'lucide-react';
+
+export interface CmsSection {
+  id: string;
+  section_type: string;
+  content: Record<string, any>;
+  order_index: number;
+}
+
+export interface CmsBranding {
+  primaryColor: string;
+  secondaryColor: string;
+  siteName: string;
+}
+
+export interface SectionTypeInfo {
+  value: string;
+  label: string;
+  description: string;
+}
+
+export const supportedSectionTypes: SectionTypeInfo[] = [
+  { value: 'hero', label: 'Hero Section', description: 'Large banner with headline and CTA' },
+  { value: 'features', label: 'Features Grid', description: 'Showcase your key features' },
+  { value: 'showcase', label: 'Showcase', description: 'Display items in a grid showcase format' },
+  { value: 'steps', label: 'Steps / Process', description: 'Show a step-by-step process' },
+  { value: 'categories', label: 'Categories', description: 'Display categories or services' },
+  { value: 'text-section', label: 'Text Section', description: 'Display informational text content' },
+  { value: 'gallery', label: 'Image Gallery', description: 'Display multiple images' },
+  { value: 'cta', label: 'Call to Action', description: 'Highlight CTA banner' },
+  { value: 'tabs', label: 'Tabs', description: 'Tabbed content with bullet support' },
+];
+
+export interface SectionValidationResult {
+  errors: string[];
+  warnings: string[];
+}
+
+export function validateSection(section: CmsSection): SectionValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!section.section_type) {
+    errors.push('Section type is required');
+    return { errors, warnings };
+  }
+
+  const known = supportedSectionTypes.map(t => t.value);
+  if (!known.includes(section.section_type)) {
+    warnings.push(`Unknown section type "${section.section_type}" — it will not render`);
+  }
+
+  const content = section.content || {};
+
+  switch (section.section_type) {
+    case 'hero':
+      if (!content.headline) warnings.push('Hero: headline is empty');
+      break;
+    case 'features':
+      if (!Array.isArray(content.features) || content.features.length === 0)
+        errors.push('Features: at least one feature is required');
+      break;
+    case 'showcase':
+      if (!Array.isArray(content.items) || content.items.length === 0)
+        errors.push('Showcase: at least one item is required');
+      break;
+    case 'steps':
+      if (!Array.isArray(content.steps) || content.steps.length === 0)
+        errors.push('Steps: at least one step is required');
+      break;
+    case 'categories':
+      if (!Array.isArray(content.categories) || content.categories.length === 0)
+        errors.push('Categories: at least one category is required');
+      break;
+    case 'gallery':
+      if (!Array.isArray(content.images) || content.images.length === 0)
+        errors.push('Gallery: at least one image is required');
+      break;
+    case 'tabs':
+      if (!Array.isArray(content.tabs) || content.tabs.length === 0)
+        errors.push('Tabs: at least one tab is required');
+      break;
+  }
+
+  return { errors, warnings };
+}
+
+export function getDefaultContent(sectionType: string): Record<string, any> {
+  switch (sectionType) {
+    case 'hero':
+      return {
+        headline: 'Welcome',
+        headline_highlight: 'to our site',
+        subheadline: 'Add your description here',
+        cta_text: 'Get Started',
+        cta_link: '/register',
+      };
+    case 'features':
+      return {
+        features: [
+          { title: 'Feature 1', description: 'Description', icon_bg_color: 'bg-blue-100', icon_color: 'text-blue-600' },
+        ],
+      };
+    case 'showcase':
+      return {
+        title: 'Showcase',
+        subtitle: '',
+        items: [
+          { title: 'Item 1', description: 'Description', image_url: '', link: '' },
+        ],
+      };
+    case 'gallery':
+      return { title: 'Gallery', images: [] };
+    case 'steps':
+      return {
+        title: '',
+        steps: [{ number: 1, label: 'Step 1', description: 'Description' }],
+      };
+    case 'categories':
+      return { title: '', categories: ['Category 1'] };
+    case 'cta':
+      return {
+        heading: 'Ready to get started?',
+        description: 'Take action now',
+        button_text: 'Click Here',
+        button_link: '/register',
+      };
+    case 'text-section':
+      return {
+        section_title: 'Section Title',
+        body_content: 'Add your content here.',
+        text_alignment: 'left',
+        max_width: 'normal',
+        background_style: 'none',
+        show_divider: false,
+        text_style_preset: 'default',
+        title_style: 'normal',
+        text_size: 'medium',
+        visual_tone: 'neutral',
+        accent_icon: 'none',
+        emphasize_section: false,
+        vertical_spacing: 'normal',
+      };
+    case 'tabs':
+      return { title: '', tabs: [{ title: 'Tab 1', content: 'Tab content goes here.' }] };
+    default:
+      return {};
+  }
+}
+
+function getIconComponent(iconName: string): React.ReactNode {
+  const iconMap: Record<string, React.ComponentType<{ size?: number }>> = {
+    FileText,
+    Shield,
+    TrendingUp,
+    Users,
+    Settings,
+    CheckCircle,
+    AlertCircle,
+    Zap,
+    Heart,
+    Star,
+    Layers,
+    Workflow,
+  };
+  const Icon = iconMap[iconName];
+  if (!Icon) return <AlertCircle size={24} />;
+  return <Icon size={24} />;
+}
+
+interface SimpleButton {
+  type?: 'simple' | undefined;
+  text: string;
+  link: string;
+}
+interface DropdownItem { text: string; link: string }
+interface DropdownButton { type: 'dropdown'; label: string; items: DropdownItem[] }
+type CMSButtonType = SimpleButton | DropdownButton;
+
+function CMSButton({
+  button,
+  bgColor = '#2563EB',
+  textColor = 'text-white',
+}: {
+  button: CMSButtonType;
+  bgColor?: string;
+  textColor?: string;
+}): React.ReactElement | null {
+  if (!button) return null;
+
+  if (button.type !== 'dropdown') {
+    const b = button as SimpleButton;
+    return (
+      <a
+        href={b.link || '#'}
+        className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow transition-opacity hover:opacity-90 ${textColor}`}
+        style={{ backgroundColor: bgColor }}
+      >
+        {b.text || 'Click here'}
+        <ExternalLink size={14} />
+      </a>
+    );
+  }
+
+  const db = button as DropdownButton;
+  const items = Array.isArray(db.items) ? db.items : [];
+  return (
+    <div className="relative group inline-block">
+      <button
+        className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow transition-opacity hover:opacity-90 ${textColor}`}
+        style={{ backgroundColor: bgColor }}
+      >
+        {db.label || 'Menu'}
+        <svg className="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div className="absolute left-0 mt-1 w-48 bg-white rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+        {items.map((item, idx) => (
+          <a
+            key={idx}
+            href={item.link || '#'}
+            className="block px-4 py-3 text-gray-800 hover:bg-gray-50 hover:text-blue-600 transition-colors first:rounded-t-lg last:rounded-b-lg text-sm"
+          >
+            {item.text || `Item ${idx + 1}`}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HeroSection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+  const headline = content.headline || 'Welcome';
+  const highlight = content.headline_highlight || '';
+  const subheadline = content.subheadline || '';
+  const bgImage = content.background_image || null;
+  const imageLayout = content.image_layout || 'default';
+  const imageWidth = content.image_width || 400;
+  const imageHeight = content.image_height || 300;
+  const imagePosition = content.image_position || 'center';
+  const overlay = content.image_overlay || 0;
+  const primary = branding.primaryColor;
+
+  const button: CMSButtonType = content.button || {
+    text: content.cta_text || 'Get Started',
+    link: content.cta_link || '/register',
+  };
+
+  const headlineEl = (
+    <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+      {headline}
+      {highlight && (
+        <><br /><span style={{ color: primary }}>{highlight}</span></>
+      )}
+    </h1>
+  );
+
+  const headlineWhiteEl = (
+    <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight drop-shadow-lg">
+      {headline}
+      {highlight && (
+        <><br /><span style={{ color: primary }}>{highlight}</span></>
+      )}
+    </h1>
+  );
+
+  if (bgImage && imageLayout === 'full-width') {
+    return (
+      <div
+        className="relative py-24 overflow-hidden bg-cover bg-center"
+        style={{
+          backgroundImage: `url('${bgImage}')`,
+          backgroundPosition: imagePosition === 'top' ? 'center top' : imagePosition === 'bottom' ? 'center bottom' : 'center center',
+        }}
+      >
+        {overlay > 0 && (
+          <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${overlay / 100})` }} />
+        )}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          {headlineWhiteEl}
+          {subheadline && <p className="text-xl text-white/90 max-w-3xl mx-auto mb-8">{subheadline}</p>}
+          <CMSButton button={button} bgColor={primary} />
+        </div>
+      </div>
+    );
+  }
+
+  if (bgImage && (imageLayout === 'grid-left' || imageLayout === 'grid-right')) {
+    const imgEl = (
+      <div className="flex justify-center">
+        <img src={bgImage} alt="Hero" style={{ width: imageWidth, height: imageHeight, objectFit: 'cover' }} className="rounded-xl shadow-lg" />
+      </div>
+    );
+    const txtEl = (
+      <div>
+        {headlineEl}
+        {subheadline && <p className="text-lg text-gray-600 mb-8">{subheadline}</p>}
+        <CMSButton button={button} bgColor={primary} />
+      </div>
+    );
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+          {imageLayout === 'grid-left' ? <>{imgEl}{txtEl}</> : <>{txtEl}{imgEl}</>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+      {headlineEl}
+      {subheadline && <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">{subheadline}</p>}
+      <CMSButton button={button} bgColor={primary} />
+    </div>
+  );
+}
+
+function FeaturesSection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+  const features = Array.isArray(content.features) ? content.features : [];
+  if (features.length === 0) return null;
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {content.title && <h2 className="text-3xl font-bold text-gray-900 text-center mb-10">{content.title}</h2>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {features.map((f: any, i: number) => (
+          <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            {f.icon && (
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${f.icon_bg_color || 'bg-blue-50'}`}>
+                <span className={f.icon_color || 'text-blue-600'}>{getIconComponent(f.icon)}</span>
+              </div>
+            )}
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{f.title || `Feature ${i + 1}`}</h3>
+            {f.description && <p className="text-gray-600 text-sm leading-relaxed">{f.description}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ShowcaseSection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+  const items = Array.isArray(content.items) ? content.items : [];
+  if (items.length === 0) {
+    if (import.meta.env.DEV) console.warn('ShowcaseSection: no items in content', content);
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+        <p className="text-gray-400 text-sm">Showcase section has no items yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {content.title && (
+        <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">{content.title}</h2>
+      )}
+      {content.subtitle && (
+        <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto">{content.subtitle}</p>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {items.map((item: any, i: number) => {
+          if (!item || typeof item !== 'object') return null;
+          const itemButton: CMSButtonType | null = item.button || (item.link ? { text: 'Learn more', link: item.link } : null);
+          return (
+            <div
+              key={i}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col"
+            >
+              {item.image_url && (
+                <div className="h-48 bg-gray-100 overflow-hidden flex items-center justify-center">
+                  <img
+                    src={item.image_url}
+                    alt={item.title || `Item ${i + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
+              )}
+              <div className="p-5 flex flex-col flex-1">
+                {item.title && (
+                  <h3 className="text-base font-semibold text-gray-900 mb-2">{item.title}</h3>
+                )}
+                {item.description && (
+                  <p className="text-gray-600 text-sm leading-relaxed flex-1">{item.description}</p>
+                )}
+                {itemButton && (
+                  <div className="mt-4 pt-3 border-t border-gray-100">
+                    <CMSButton button={itemButton} bgColor={branding.primaryColor} />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StepsSection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+  const steps = Array.isArray(content.steps) ? content.steps : [];
+  if (steps.length === 0) return null;
+
+  const gridCols =
+    steps.length === 1 ? 'grid-cols-1 max-w-xs mx-auto' :
+    steps.length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto' :
+    steps.length === 4 ? 'grid-cols-2 lg:grid-cols-4' :
+    'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        {content.title && <h2 className="text-3xl font-bold text-gray-900 text-center mb-10">{content.title}</h2>}
+        <div className={`grid ${gridCols} gap-6`}>
+          {steps.map((step: any, i: number) => (
+            <div key={i} className="text-center">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-white font-bold text-lg"
+                style={{ backgroundColor: branding.primaryColor }}
+              >
+                {step.number || i + 1}
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-1">{step.label || step.title || `Step ${i + 1}`}</h4>
+              {step.description && <p className="text-sm text-gray-600">{step.description}</p>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoriesSection({ content }: { content: Record<string, any> }) {
+  const categories = Array.isArray(content.categories) ? content.categories : [];
+  if (categories.length === 0) return null;
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+      {content.title && <h2 className="text-3xl font-bold text-gray-900 mb-8">{content.title}</h2>}
+      <div className="flex flex-wrap justify-center gap-3">
+        {categories.map((cat: any, i: number) => (
+          <span key={i} className="px-5 py-2 bg-white border border-gray-200 rounded-full shadow-sm text-gray-700 font-medium hover:border-blue-300 transition-colors">
+            {typeof cat === 'string' ? cat : cat.name || `Category ${i + 1}`}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CTASection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+  const bg = content.background_color || branding.primaryColor;
+  const heading = content.heading || '';
+  const desc = content.description || '';
+  const button: CMSButtonType | null = content.button || (content.button_text ? {
+    text: content.button_text,
+    link: content.button_link || '#',
+  } : null);
+
+  if (!heading && !desc && !button) return null;
+
+  return (
+    <div className="py-16 text-center text-white" style={{ backgroundColor: bg }}>
+      <div className="max-w-3xl mx-auto px-4">
+        {heading && <h2 className="text-3xl sm:text-4xl font-bold mb-4">{heading}</h2>}
+        {desc && <p className="text-lg mb-8 opacity-90">{desc}</p>}
+        {button && <CMSButton button={button} bgColor="white" textColor="text-gray-900" />}
+      </div>
+    </div>
+  );
+}
+
+function GallerySection({ content }: { content: Record<string, any> }) {
+  const images = Array.isArray(content.images) ? content.images : [];
+  if (images.length === 0) return null;
+
+  const cols =
+    images.length === 1 ? 'grid-cols-1 max-w-lg mx-auto' :
+    images.length === 2 ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto' :
+    images.length === 3 ? 'grid-cols-1 sm:grid-cols-3' :
+    'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {content.title && <h2 className="text-3xl font-bold text-gray-900 text-center mb-10">{content.title}</h2>}
+      <div className={`grid ${cols} gap-4 lg:gap-6`}>
+        {images.map((img: any, i: number) => {
+          if (!img?.url) return null;
+          return (
+            <div key={i} className="rounded-xl overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+              <div className="h-48 sm:h-56 bg-gray-100">
+                <img
+                  src={img.url}
+                  alt={img.alt_text || img.caption || `Image ${i + 1}`}
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: `${img.offset_x ?? 50}% ${img.offset_y ?? 50}%` }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="system-ui" font-size="16" fill="%239ca3af"%3EImage not found%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
+              {img.caption && <p className="p-3 text-sm text-gray-700 text-center bg-white">{img.caption}</p>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TextSectionRenderer({ content }: { content: Record<string, any> }) {
+  const title = content.section_title || '';
+  const body = content.body_content || '';
+  const alignment = content.text_alignment === 'center' ? 'text-center' : 'text-left';
+  const maxWidthMap: Record<string, string> = { narrow: 'max-w-2xl', normal: 'max-w-4xl', wide: 'max-w-6xl' };
+  const maxWidth = maxWidthMap[content.max_width] || 'max-w-4xl';
+  const bgMap: Record<string, string> = { none: 'bg-white', light_gray: 'bg-gray-50', soft_blue: 'bg-blue-50', soft_yellow: 'bg-yellow-50' };
+  const bg = bgMap[content.background_style] || 'bg-white';
+  const spacingMap: Record<string, string> = { compact: 'py-8', normal: 'py-16', spacious: 'py-24' };
+  const spacing = spacingMap[content.vertical_spacing] || 'py-16';
+
+  const internalGrid = content.internal_grid;
+  const blocks = Array.isArray(content.blocks) ? content.blocks : [];
+  const hasGrid = internalGrid?.enabled === true && blocks.length > 0;
+  const gridCols = hasGrid ? `grid grid-cols-${internalGrid.columns || 2} ${internalGrid.gap || 'gap-6'}` : '';
+
+  return (
+    <div className={`w-full px-4 sm:px-6 lg:px-8 ${spacing} ${bg}`}>
+      {content.show_divider && <div className="mb-10 border-t border-gray-200" />}
+      <div className={`mx-auto ${maxWidth}`}>
+        {title && (
+          <h2 className={`text-3xl font-bold text-gray-900 mb-6 ${alignment}`}>{title}</h2>
+        )}
+        {hasGrid ? (
+          <div className={gridCols}>
+            {blocks.map((block: any, i: number) => (
+              <div key={i}>
+                {block.title && <h3 className="text-xl font-semibold text-gray-900 mb-3">{block.title}</h3>}
+                <div className="space-y-3">
+                  {(block.content || '').split('\n\n').map((p: string, j: number) => (
+                    <p key={j} className="text-gray-700 leading-relaxed text-sm">{p}</p>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={`space-y-4 ${alignment}`}>
+            {body.split('\n\n').map((p: string, i: number) => (
+              <p key={i} className="text-gray-700 leading-relaxed">{p}</p>
+            ))}
+          </div>
+        )}
+      </div>
+      {content.show_divider && <div className="mt-10 border-b border-gray-200" />}
+    </div>
+  );
+}
+
+function TabsSection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+  const [active, setActive] = useState(0);
+  const tabs = Array.isArray(content.tabs) ? content.tabs : [];
+  if (tabs.length === 0) return null;
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {content.title && <h2 className="text-3xl font-bold text-gray-900 text-center mb-10">{content.title}</h2>}
+      <div className="border-b border-gray-200 mb-6">
+        <div className="flex flex-wrap gap-1 overflow-x-auto">
+          {tabs.map((tab: any, i: number) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              className={`px-5 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
+                active === i ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+              style={active === i ? { borderBottomColor: branding.primaryColor, color: branding.primaryColor } : {}}
+            >
+              {tab.title || `Tab ${i + 1}`}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        {tabs.map((tab: any, i: number) => (
+          <div key={i} className={active === i ? 'block' : 'hidden'}>
+            <div className="space-y-3">
+              {(tab.content || '').split('\n').map((line: string, j: number) => {
+                if (!line.trim()) return <div key={j} className="h-1" />;
+                const isBullet = line.trim().startsWith('•') || line.trim().startsWith('-');
+                if (isBullet) {
+                  return (
+                    <div key={j} className="flex items-start gap-2">
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                      <p className="text-gray-700 text-sm leading-relaxed">{line.trim().replace(/^[•-]\s*/, '')}</p>
+                    </div>
+                  );
+                }
+                return <p key={j} className="text-gray-700 leading-relaxed">{line}</p>;
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function UnknownSection({ sectionType }: { sectionType: string }) {
+  if (import.meta.env.DEV) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800 text-sm">
+          Unknown section type: <code className="font-mono">{sectionType}</code>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+export function renderCmsSection(section: CmsSection, branding: CmsBranding): React.ReactElement | null {
+  if (!section?.section_type || !section?.content) {
+    if (import.meta.env.DEV) console.warn('renderCmsSection: invalid section', section);
+    return null;
+  }
+
+  const content = typeof section.content === 'object' ? section.content : {};
+
+  switch (section.section_type) {
+    case 'hero':
+      return <HeroSection content={content} branding={branding} />;
+    case 'features':
+      return <FeaturesSection content={content} branding={branding} />;
+    case 'showcase':
+      return <ShowcaseSection content={content} branding={branding} />;
+    case 'steps':
+      return <StepsSection content={content} branding={branding} />;
+    case 'categories':
+      return <CategoriesSection content={content} />;
+    case 'text-section':
+      return <TextSectionRenderer content={content} />;
+    case 'cta':
+      return <CTASection content={content} branding={branding} />;
+    case 'gallery':
+      return <GallerySection content={content} />;
+    case 'tabs':
+      return <TabsSection content={content} branding={branding} />;
+    default:
+      return <UnknownSection sectionType={section.section_type} />;
+  }
+}
