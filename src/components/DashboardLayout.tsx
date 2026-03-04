@@ -168,7 +168,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <GraduationCap className="h-6 w-6 text-white" />
                 </div>
               )}
-              <span className="font-black text-lg hidden sm:block" style={{ background: `linear-gradient(to right, ${primaryColor}, #6366f1)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{siteName}</span>
+              <span className="font-bold text-base hidden sm:block text-gray-900 truncate max-w-[200px] lg:max-w-xs">{siteName}</span>
             </Link>
           </div>
 
