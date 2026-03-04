@@ -15,7 +15,7 @@ import {
 } from '../services/footerService';
 import { Card, CardHeader, CardContent, CardFooter } from '../components/Card';
 import { Button } from '../components/Button';
-import { AlertCircle, CheckCircle, Loader, Upload, X, Eye, Plus, Trash2, GraduationCap, Link2, TriangleAlert } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader, Upload, X, Eye, Plus, Trash2, GraduationCap, Link2, AlertTriangle } from 'lucide-react';
 import { getBrandGradient, type GradientStyle } from '../utils/brandStyles';
 
 // ── Option lists ────────────────────────────────────────────────────────────
@@ -339,7 +339,7 @@ export function AdminBrandingSettingsPage() {
       {/* Migration notice — shown only when new DB columns / tables are missing */}
       {migrationStatus && (!migrationStatus.brandingColumnsReady || !migrationStatus.footerTablesReady) && (
         <div className="p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
-          <TriangleAlert className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="font-semibold text-amber-900 text-sm">Database migration required</p>
             <p className="text-amber-800 text-sm mt-0.5">
