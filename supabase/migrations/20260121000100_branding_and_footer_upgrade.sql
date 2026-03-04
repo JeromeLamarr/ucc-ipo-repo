@@ -69,10 +69,9 @@ CREATE POLICY "footer_settings_admin_all"
   ON site_footer_settings FOR ALL
   USING (
     EXISTS (
-      SELECT 1 FROM user_profiles
+      SELECT 1 FROM public.users
       WHERE id = auth.uid()
         AND role = 'admin'
-        AND is_active = true
     )
   );
 
@@ -88,10 +87,9 @@ CREATE POLICY "footer_links_admin_all"
   ON site_footer_links FOR ALL
   USING (
     EXISTS (
-      SELECT 1 FROM user_profiles
+      SELECT 1 FROM public.users
       WHERE id = auth.uid()
         AND role = 'admin'
-        AND is_active = true
     )
   );
 
