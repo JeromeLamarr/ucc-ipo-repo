@@ -639,28 +639,28 @@ export function EvaluatorDashboard() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="border-b border-gray-200">
-          <div className="flex">
+          <div className="grid grid-cols-2 gap-2 p-2">
             <button
               onClick={() => setActiveTab('queue')}
-              className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
+              className={`w-full flex items-center justify-center gap-2 px-3 py-3 font-medium transition-colors rounded-lg min-w-0 ${
                 activeTab === 'queue'
                   ? 'text-purple-600 border-b-2 border-purple-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              <ListChecks className="h-5 w-5" />
-              Evaluation Queue ({records.length})
+              <ListChecks className="h-5 w-5 shrink-0" />
+              <span className="min-w-0 truncate">Evaluation Queue ({records.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
+              className={`w-full flex items-center justify-center gap-2 px-3 py-3 font-medium transition-colors rounded-lg min-w-0 ${
                 activeTab === 'history'
                   ? 'text-purple-600 border-b-2 border-purple-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              <History className="h-5 w-5" />
-              Evaluation History ({historyRecords.length})
+              <History className="h-5 w-5 shrink-0" />
+              <span className="min-w-0 truncate">Evaluation History ({historyRecords.length})</span>
             </button>
           </div>
         </div>
@@ -677,26 +677,26 @@ export function EvaluatorDashboard() {
         ) : (
           <>
             {paginatedQueueRecords.map((record) => (
-              <div key={record.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{record.title}</h3>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        {record.applicant?.full_name}
+              <div key={record.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6 hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start mb-4 gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-2 break-words line-clamp-2">{record.title}</h3>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 text-sm text-gray-600">
+                      <span className="flex items-center gap-1 min-w-0">
+                        <Users className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{record.applicant?.full_name}</span>
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Tag className="h-4 w-4" />
-                        <span className="capitalize">{record.category}</span>
+                      <span className="flex items-center gap-1 min-w-0">
+                        <Tag className="h-4 w-4 shrink-0" />
+                        <span className="capitalize truncate">{record.category}</span>
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {formatDate(record.created_at)}
+                      <span className="flex items-center gap-1 col-span-2 sm:col-span-1 min-w-0">
+                        <Calendar className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{formatDate(record.created_at)}</span>
                       </span>
                     </div>
                   </div>
-                  <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                  <span className="shrink-0 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
                     Pending Evaluation
                   </span>
                 </div>
@@ -706,10 +706,10 @@ export function EvaluatorDashboard() {
                   <p className="text-sm text-gray-600 line-clamp-2">{record.abstract || 'No abstract provided'}</p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t border-gray-200">
+                <div className="flex gap-2 pt-4 border-t border-gray-200">
                   <button
                     onClick={() => openDetailModal(record)}
-                    className="flex items-center justify-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors w-full sm:w-auto"
+                    className="flex items-center justify-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors flex-1"
                   >
                     <Eye className="h-4 w-4" />
                     View & Evaluate
@@ -746,25 +746,25 @@ export function EvaluatorDashboard() {
                 <>
                   {paginatedHistoryRecords.map((record) => (
                     <div key={record.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">{record.title}</h3>
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Users className="h-4 w-4" />
-                              {record.applicant?.full_name || 'Unknown Applicant'}
+                      <div className="flex justify-between items-start mb-4 gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-2 break-words line-clamp-2">{record.title}</h3>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 text-sm text-gray-600">
+                            <span className="flex items-center gap-1 min-w-0">
+                              <Users className="h-4 w-4 shrink-0" />
+                              <span className="truncate">{record.applicant?.full_name || 'Unknown Applicant'}</span>
                             </span>
-                            <span className="flex items-center gap-1">
-                              <Tag className="h-4 w-4" />
-                              <span className="capitalize">{record.category}</span>
+                            <span className="flex items-center gap-1 min-w-0">
+                              <Tag className="h-4 w-4 shrink-0" />
+                              <span className="capitalize truncate">{record.category}</span>
                             </span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              Updated: {formatDate(record.updated_at)}
+                            <span className="flex items-center gap-1 col-span-2 sm:col-span-1 min-w-0">
+                              <Calendar className="h-4 w-4 shrink-0" />
+                              <span className="truncate">Updated: {formatDate(record.updated_at)}</span>
                             </span>
                           </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(record.status)}`}>
+                        <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(record.status)}`}>
                           {getStatusLabel(record.status)}
                         </span>
                       </div>
@@ -774,10 +774,10 @@ export function EvaluatorDashboard() {
                         <p className="text-sm text-gray-600 line-clamp-2">{record.abstract || 'No abstract provided'}</p>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t border-gray-200">
+                      <div className="flex gap-2 pt-4 border-t border-gray-200">
                         <button
                           onClick={() => openDetailModal(record)}
-                          className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors w-full sm:w-auto"
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors flex-1"
                         >
                           <Eye className="h-4 w-4" />
                           View Details
