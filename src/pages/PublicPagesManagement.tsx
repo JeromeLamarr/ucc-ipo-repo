@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
-import { Plus, Edit, Trash2, Search, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Eye, EyeOff, AlertCircle, Navigation } from 'lucide-react';
 import { PAGE_TEMPLATES, getTemplate } from '../lib/pageTemplates';
 import { canPublishPage } from '../lib/sectionValidation';
 
@@ -11,6 +11,8 @@ interface CMSPage {
   slug: string;
   title: string;
   is_published: boolean;
+  show_in_nav: boolean;
+  nav_order: number;
   created_at: string;
 }
 
@@ -28,6 +30,7 @@ export function PublicPagesManagement() {
   const [toggling, setToggling] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showUnpublishConfirm, setShowUnpublishConfirm] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -161,59 +164,78 @@ export function PublicPagesManagement() {
   };
 
   const handleTogglePublish = async (pageId: string, currentStatus: boolean) => {
-    // If trying to publish (not unpublish), validate first
-    if (!currentStatus) {
-      setToggling(pageId);
-      setError(null);
+    // If unpublishing a live page, require confirmation first
+    if (currentStatus) {
+      setShowUnpublishConfirm(pageId);
+      return;
+    }
 
-      try {
-        // Fetch all sections for this page
-        const { data: sections, error: sectionsErr } = await supabase
-          .from('cms_sections')
-          .select('*')
-          .eq('page_id', pageId);
+    // Publishing: validate first
+    setToggling(pageId);
+    setError(null);
 
-        if (sectionsErr) throw sectionsErr;
+    try {
+      const { data: sections, error: sectionsErr } = await supabase
+        .from('cms_sections')
+        .select('*')
+        .eq('page_id', pageId);
 
-        // Check if page can be published
-        const validation = canPublishPage(sections || []);
+      if (sectionsErr) throw sectionsErr;
 
-        if (!validation.canPublish) {
-          setError(
-            `Cannot publish: ${validation.issues[0]} (${validation.issues.length} issue${validation.issues.length !== 1 ? 's' : ''})`
-          );
-          setToggling(null);
-          return;
-        }
-      } catch (err: any) {
-        console.error('Error validating page:', err);
-        setError(err.message || 'Failed to validate page');
+      const validation = canPublishPage(sections || []);
+
+      if (!validation.canPublish) {
+        setError(
+          `Cannot publish: ${validation.issues[0]} (${validation.issues.length} issue${validation.issues.length !== 1 ? 's' : ''})`
+        );
         setToggling(null);
         return;
       }
+    } catch (err: any) {
+      console.error('Error validating page:', err);
+      setError(err.message || 'Failed to validate page');
+      setToggling(null);
+      return;
     }
 
     try {
       const { error: err } = await (supabase
         .from('cms_pages')
-        .update({ is_published: !currentStatus })
+        .update({ is_published: true })
         .eq('id', pageId) as any);
 
       if (err) throw err;
 
-      setPages(
-        pages.map((page) =>
-          page.id === pageId ? { ...page, is_published: !currentStatus } : page
-        )
-      );
-
-      setSuccess(
-        `Page ${!currentStatus ? 'published' : 'unpublished'} successfully`
-      );
+      setPages(pages.map((p) => (p.id === pageId ? { ...p, is_published: true } : p)));
+      setSuccess('Page published successfully');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      console.error('Error toggling publish status:', err);
-      setError(err.message || 'Failed to update page');
+      console.error('Error publishing page:', err);
+      setError(err.message || 'Failed to publish page');
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  const handleConfirmUnpublish = async (pageId: string) => {
+    setShowUnpublishConfirm(null);
+    setToggling(pageId);
+    setError(null);
+
+    try {
+      const { error: err } = await (supabase
+        .from('cms_pages')
+        .update({ is_published: false })
+        .eq('id', pageId) as any);
+
+      if (err) throw err;
+
+      setPages(pages.map((p) => (p.id === pageId ? { ...p, is_published: false } : p)));
+      setSuccess('Page unpublished successfully');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error unpublishing page:', err);
+      setError(err.message || 'Failed to unpublish page');
     } finally {
       setToggling(null);
     }
@@ -252,6 +274,26 @@ export function PublicPagesManagement() {
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  const handleToggleNavVisibility = async (pageId: string, currentVisible: boolean) => {
+    try {
+      const { error: err } = await (supabase
+        .from('cms_pages')
+        .update({ show_in_nav: !currentVisible })
+        .eq('id', pageId) as any);
+
+      if (err) throw err;
+
+      setPages(pages.map((p) =>
+        p.id === pageId ? { ...p, show_in_nav: !currentVisible } : p
+      ));
+      setSuccess(`Page ${!currentVisible ? 'shown in' : 'hidden from'} navigation`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error toggling nav visibility:', err);
+      setError(err.message || 'Failed to update navigation visibility');
+    }
   };
 
   return (
@@ -316,6 +358,7 @@ export function PublicPagesManagement() {
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Title</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Page URL</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Nav</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Created</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
                 </tr>
@@ -348,6 +391,19 @@ export function PublicPagesManagement() {
                           </div>
                         )}
                       </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => handleToggleNavVisibility(page.id, page.show_in_nav ?? true)}
+                        title={page.show_in_nav !== false ? 'Shown in navigation — click to hide' : 'Hidden from navigation — click to show'}
+                        className={`p-1.5 rounded-lg transition-colors ${
+                          page.show_in_nav !== false
+                            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Navigation className="h-4 w-4" />
+                      </button>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
                       {formatDate(page.created_at)}
@@ -400,6 +456,33 @@ export function PublicPagesManagement() {
           </div>
         )}
       </div>
+
+      {/* Unpublish Confirmation Modal */}
+      {showUnpublishConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Unpublish Page?</h2>
+            <p className="text-gray-600 mb-6">
+              This page will no longer be visible to the public and will be removed from the
+              navigation menu. You can re-publish it at any time.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleConfirmUnpublish(showUnpublishConfirm)}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              >
+                Unpublish
+              </button>
+              <button
+                onClick={() => setShowUnpublishConfirm(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Page Modal */}
       {showCreateModal && (

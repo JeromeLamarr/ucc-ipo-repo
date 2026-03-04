@@ -7,6 +7,9 @@ import { GraduationCap, Menu, X } from 'lucide-react';
 interface CMSPage {
   slug: string;
   title: string;
+  nav_label: string | null;
+  nav_order: number;
+  show_in_nav: boolean;
 }
 
 export function PublicNavigation() {
@@ -37,10 +40,12 @@ export function PublicNavigation() {
       // Fetch published CMS pages (excluding home page)
       const { data: pagesData, error: pagesError } = await supabase
         .from('cms_pages')
-        .select('slug, title')
+        .select('slug, title, nav_label, nav_order, show_in_nav')
         .eq('is_published', true)
+        .eq('show_in_nav', true)
         .neq('slug', 'home')
-        .order('created_at', { ascending: true });
+        .order('nav_order', { ascending: true })
+        .order('title', { ascending: true });
 
       if (pagesError) {
         const msg = `Failed to load navigation pages: ${pagesError.message}`;
@@ -105,7 +110,7 @@ export function PublicNavigation() {
                     href={`/pages/${page.slug}`}
                     className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm whitespace-nowrap"
                   >
-                    {page.title}
+                    {page.nav_label || page.title}
                   </a>
                 ))}
               </div>
@@ -166,7 +171,7 @@ export function PublicNavigation() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 font-medium text-sm rounded-lg transition-colors"
                 >
-                  {page.title}
+                  {page.nav_label || page.title}
                 </a>
               ))}
               

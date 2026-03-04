@@ -1,11 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Shield, FileText, TrendingUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
 import { PublicNavigation } from '../components/PublicNavigation';
 import { Footer } from '../components/Footer';
-import DOMPurify from 'dompurify';
 
 interface SiteSettings {
   site_name: string;
@@ -102,6 +100,10 @@ export function LandingPage() {
         return <CTASection key={section.id} content={content} navigate={navigate} />;
       case 'gallery':
         return <GallerySection key={section.id} content={content} />;
+      case 'showcase':
+        return <ShowcaseSection key={section.id} content={content} />;
+      case 'tabs':
+        return <TabsSection key={section.id} content={content} />;
       default:
         return null;
     }
@@ -476,6 +478,129 @@ function TextSectionRenderer({ content }: { content: Record<string, any> }) {
       </div>
 
       {showDivider && <div className="mt-12 border-b border-gray-200"></div>}
+    </div>
+  );
+}
+
+function ShowcaseSection({ content }: { content: Record<string, any> }) {
+  const title = content.title || '';
+  const items = Array.isArray(content.items) ? content.items : [];
+
+  if (items.length === 0) return null;
+
+  const getGridClass = (count: number): string => {
+    if (count === 1) return 'flex justify-center';
+    if (count === 2) return 'grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto';
+    if (count === 3) return 'grid grid-cols-1 md:grid-cols-3 gap-6';
+    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+  };
+
+  return (
+    <div className="w-full bg-gradient-to-b from-white to-blue-50 py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {title && (
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-14 text-gray-900">{title}</h2>
+        )}
+        <div className={getGridClass(items.length)}>
+          {items.map((item: any, index: number) => (
+            <div
+              key={index}
+              className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100 hover:border-blue-300 overflow-hidden"
+            >
+              {item.image_url && (
+                <img
+                  src={item.image_url}
+                  alt={item.title || `Showcase item ${index + 1}`}
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              )}
+              <div className="p-6">
+                {item.title && (
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
+                )}
+                {item.description && (
+                  <p className="text-gray-600 leading-relaxed text-sm">{item.description}</p>
+                )}
+                {item.link && (
+                  <a
+                    href={item.link}
+                    className="inline-block mt-4 text-blue-600 font-semibold text-sm hover:text-blue-700 transition-colors"
+                  >
+                    Learn more →
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabsSection({ content }: { content: Record<string, any> }) {
+  const [activeTab, setActiveTab] = useState<number>(0);
+
+  const tabs = Array.isArray(content?.tabs) ? content.tabs : [];
+  const title = content?.title || '';
+
+  if (tabs.length === 0) return null;
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {title && (
+        <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">{title}</h2>
+      )}
+
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200 mb-8">
+        <div className="flex flex-wrap gap-0 sm:gap-1">
+          {tabs.map((tab: any, idx: number) => (
+            <button
+              key={idx}
+              onClick={() => setActiveTab(idx)}
+              className={`px-4 sm:px-6 py-3 font-medium text-sm sm:text-base border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === idx
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {tab.title || `Tab ${idx + 1}`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <div className="bg-white rounded-lg">
+        {tabs.map((tab: any, idx: number) => (
+          <div key={idx} className={activeTab === idx ? 'block' : 'hidden'}>
+            <div className="prose prose-sm max-w-none">
+              {(tab.content || '').split('\n').map((line: string, lineIdx: number) => {
+                if (!line.trim()) {
+                  return <div key={lineIdx} className="h-2" />;
+                }
+                const isBullet = line.trim().startsWith('•') || line.trim().startsWith('-');
+                if (isBullet) {
+                  return (
+                    <ul key={lineIdx} className="list-disc list-inside mb-3 text-gray-700">
+                      <li>{line.trim().replace(/^[•-]\s*/, '')}</li>
+                    </ul>
+                  );
+                }
+                return (
+                  <p key={lineIdx} className="mb-3 text-gray-700 leading-relaxed">
+                    {line}
+                  </p>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

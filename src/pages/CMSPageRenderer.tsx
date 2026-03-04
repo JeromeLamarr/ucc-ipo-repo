@@ -2,7 +2,6 @@
 /* Using inline styles for dynamic colors from props is necessary for this component */
 import { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
-import DOMPurify from 'dompurify';
 import {
   FileText,
   Shield,
@@ -18,6 +17,7 @@ import {
   Workflow,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useBranding } from '../hooks/useBranding';
 import { PublicNavigation } from '../components/PublicNavigation';
 import { Footer } from '../components/Footer';
 
@@ -309,16 +309,50 @@ export function CMSPageRenderer() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [page, setPage] = useState<CMSPage | null>(null);
   const [sections, setSections] = useState<CMSSection[]>([]);
-  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Use shared branding hook instead of a manual site_settings fetch
+  const { branding, siteName, primaryColor, secondaryColor, logoPath } = useBranding();
+  const settings: SiteSettings = {
+    site_name: siteName || DEFAULT_SITE_SETTINGS.site_name,
+    tagline: (branding as any).tagline || DEFAULT_SITE_SETTINGS.tagline,
+    primary_color: primaryColor || DEFAULT_SITE_SETTINGS.primary_color,
+    secondary_color: secondaryColor || DEFAULT_SITE_SETTINGS.secondary_color,
+    logo_url: logoPath ?? null,
+  };
 
   useEffect(() => {
     if (slug) {
       fetchPageData();
     }
   }, [slug]);
+
+  // SEO: sync document.title and meta description when page/settings load
+  useEffect(() => {
+    if (!page) return;
+
+    // Update page title
+    const prevTitle = document.title;
+    document.title = `${page.title} | ${settings.site_name}`;
+
+    // Update (or create) meta description
+    let metaDesc = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    const prevDesc = metaDesc?.content ?? '';
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.name = 'description';
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.content = settings.tagline || settings.site_name;
+
+    // Restore on unmount / slug change
+    return () => {
+      document.title = prevTitle;
+      if (metaDesc) metaDesc.content = prevDesc;
+    };
+  }, [page, settings]);
 
   const fetchPageData = async () => {
     try {
@@ -374,25 +408,7 @@ export function CMSPageRenderer() {
         setSections((sectionsData as CMSSection[]) || []);
       }
 
-      // Fetch site settings
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('site_settings')
-        .select('*')
-        .eq('id', 1)
-        .single();
-
-      if (settingsError) {
-        if (import.meta.env.DEV) console.warn('Site settings fetch error:', settingsError);
-      } else if (settingsData) {
-        const settings = settingsData as Record<string, any>;
-        setSettings({
-          site_name: settings.site_name || DEFAULT_SITE_SETTINGS.site_name,
-          tagline: settings.tagline || DEFAULT_SITE_SETTINGS.tagline,
-          primary_color: settings.primary_color || DEFAULT_SITE_SETTINGS.primary_color,
-          secondary_color: settings.secondary_color || DEFAULT_SITE_SETTINGS.secondary_color,
-          logo_url: settings.logo_url,
-        });
-      }
+      // Site settings are now provided by useBranding() hook above
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       if (import.meta.env.DEV) console.error('Unexpected error fetching page data:', err);

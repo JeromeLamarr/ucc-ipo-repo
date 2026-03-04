@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Plus, Trash2, Edit, AlertCircle, AlertTriangle, ChevronLeft, GripVertical, Copy } from 'lucide-react';
+import { Plus, Trash2, Edit, AlertCircle, AlertTriangle, ChevronLeft, GripVertical, Copy, ExternalLink } from 'lucide-react';
 import { CMSSectionEditor } from '../components/CMSSectionEditor';
 import { BlockTypePicker } from '../components/BlockTypePicker';
 import { PagePreviewRenderer } from '../components/PagePreviewRenderer';
@@ -442,6 +442,18 @@ export function PageSectionsManagement() {
             </div>
             <p className="text-sm text-gray-600">Edit blocks • Changes preview in real-time</p>
           </div>
+          {page.is_published && (
+            <a
+              href={`/pages/${page.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+              title="Open live page in new tab"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Preview
+            </a>
+          )}
         </div>
       </div>
 

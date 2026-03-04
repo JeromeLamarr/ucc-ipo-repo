@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import {
   Bold,
   Italic,
@@ -129,7 +130,7 @@ export function RichTextEditor({
 
       {isPreview ? (
         <div className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 min-h-40 prose prose-sm max-w-none overflow-auto">
-          <div dangerouslySetInnerHTML={{ __html: value }} />
+          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }} />
         </div>
       ) : (
         <>
@@ -225,7 +226,7 @@ export function RichTextEditor({
             onKeyUp={handleKeyDown}
             onInput={syncContent}
             suppressContentEditableWarning
-            dangerouslySetInnerHTML={{ __html: value }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }}
             className="w-full px-4 py-3 border border-t-0 border-gray-300 rounded-b-lg focus:ring-2 focus:outline-none focus:border-blue-500 min-h-48 bg-white"
             style={{
               wordWrap: 'break-word',
