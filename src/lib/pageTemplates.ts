@@ -89,10 +89,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         },
       },
       {
-        section_type: 'text',
+        section_type: 'text-section',
         content: {
-          title: 'About Us',
-          body: '<h3>Our Mission</h3><p>Add your mission statement here.</p><h3>Our Values</h3><p>Describe your core values and what you stand for.</p>',
+          section_title: 'About Us',
+          body_content: 'Our Mission\n\nAdd your mission statement here.\n\nOur Values\n\nDescribe your core values and what you stand for.',
+          text_alignment: 'left',
+          max_width: 'normal',
+          background_style: 'none',
         },
       },
       {
@@ -160,10 +163,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         },
       },
       {
-        section_type: 'text',
+        section_type: 'text-section',
         content: {
-          title: 'Contact Information',
-          body: '<p><strong>Email:</strong> contact@example.com</p><p><strong>Phone:</strong> (123) 456-7890</p><p><strong>Address:</strong> 123 Main St, City, State 12345</p>',
+          section_title: 'Contact Information',
+          body_content: 'Email: contact@example.com\nPhone: (123) 456-7890\nAddress: 123 Main St, City, State 12345',
+          text_alignment: 'left',
+          max_width: 'normal',
+          background_style: 'none',
         },
       },
       {
@@ -180,7 +186,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
           description: 'Fill out the form on our contact page to send us a direct message',
           button_text: 'Send Message',
           button_link: '/contact/form',
-          background_color: 'bg-gradient-to-r from-purple-600 to-purple-800',
+          background_color: 'bg-gradient-to-r from-blue-700 to-blue-900',
         },
       },
     ],

@@ -121,7 +121,7 @@ export function getDefaultContent(sectionType: string): Record<string, any> {
         title: 'Showcase',
         subtitle: '',
         items: [
-          { title: 'Item 1', description: 'Description', image_url: '', link: '' },
+          { title: 'Item 1', subtitle: '', description: 'Description', image_url: '', link_url: '', tags: [], status: '' },
         ],
       };
     case 'gallery':
@@ -148,13 +148,11 @@ export function getDefaultContent(sectionType: string): Record<string, any> {
         max_width: 'normal',
         background_style: 'none',
         show_divider: false,
-        text_style_preset: 'default',
-        title_style: 'normal',
-        text_size: 'medium',
-        visual_tone: 'neutral',
-        accent_icon: 'none',
-        emphasize_section: false,
         vertical_spacing: 'normal',
+        layout: 'single',
+        grid_cols: '2',
+        grid_gap: 'gap-8',
+        blocks: [],
       };
     case 'tabs':
       return { title: '', tabs: [{ title: 'Tab 1', content: 'Tab content goes here.' }] };
@@ -332,7 +330,7 @@ function HeroSection({ content, branding }: { content: Record<string, any>; bran
   );
 }
 
-function FeaturesSection({ content, branding }: { content: Record<string, any>; branding: CmsBranding }) {
+function FeaturesSection({ content }: { content: Record<string, any>; branding: CmsBranding }) {
   const features = Array.isArray(content.features) ? content.features : [];
   if (features.length === 0) return null;
 
@@ -378,14 +376,24 @@ function ShowcaseSection({ content, branding }: { content: Record<string, any>; 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {items.map((item: any, i: number) => {
           if (!item || typeof item !== 'object') return null;
-          const itemButton: CMSButtonType | null = item.button || (item.link ? { text: 'Learn more', link: item.link } : null);
+          const linkHref = item.link_url || item.link || null;
+          const itemButton: CMSButtonType | null = item.button || (linkHref ? { text: 'Learn more', link: linkHref } : null);
+          const tags: string[] = Array.isArray(item.tags) ? item.tags : (item.tags ? [item.tags] : []);
+          const CardWrapper = linkHref && !item.button
+            ? ({ children }: { children: React.ReactNode }) => (
+                <a href={linkHref} className="block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                  {children}
+                </a>
+              )
+            : ({ children }: { children: React.ReactNode }) => (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                  {children}
+                </div>
+              );
           return (
-            <div
-              key={i}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col"
-            >
+            <CardWrapper key={i}>
               {item.image_url && (
-                <div className="h-48 bg-gray-100 overflow-hidden flex items-center justify-center">
+                <div className="h-48 bg-gray-100 overflow-hidden">
                   <img
                     src={item.image_url}
                     alt={item.title || `Item ${i + 1}`}
@@ -395,11 +403,26 @@ function ShowcaseSection({ content, branding }: { content: Record<string, any>; 
                 </div>
               )}
               <div className="p-5 flex flex-col flex-1">
-                {item.title && (
-                  <h3 className="text-base font-semibold text-gray-900 mb-2">{item.title}</h3>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  {item.title && (
+                    <h3 className="text-base font-semibold text-gray-900">{item.title}</h3>
+                  )}
+                  {item.status && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex-shrink-0">{item.status}</span>
+                  )}
+                </div>
+                {item.subtitle && (
+                  <p className="text-sm font-medium text-gray-500 mb-2">{item.subtitle}</p>
                 )}
                 {item.description && (
                   <p className="text-gray-600 text-sm leading-relaxed flex-1">{item.description}</p>
+                )}
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-3">
+                    {tags.map((tag: string, ti: number) => (
+                      <span key={ti} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{tag}</span>
+                    ))}
+                  </div>
                 )}
                 {itemButton && (
                   <div className="mt-4 pt-3 border-t border-gray-100">
@@ -407,7 +430,7 @@ function ShowcaseSection({ content, branding }: { content: Record<string, any>; 
                   </div>
                 )}
               </div>
-            </div>
+            </CardWrapper>
           );
         })}
       </div>
@@ -530,44 +553,81 @@ function TextSectionRenderer({ content }: { content: Record<string, any> }) {
   const title = content.section_title || '';
   const body = content.body_content || '';
   const alignment = content.text_alignment === 'center' ? 'text-center' : 'text-left';
-  const maxWidthMap: Record<string, string> = { narrow: 'max-w-2xl', normal: 'max-w-4xl', wide: 'max-w-6xl' };
+  const maxWidthMap: Record<string, string> = { narrow: 'max-w-2xl', normal: 'max-w-4xl', wide: 'max-w-6xl', full: 'max-w-none' };
   const maxWidth = maxWidthMap[content.max_width] || 'max-w-4xl';
-  const bgMap: Record<string, string> = { none: 'bg-white', light_gray: 'bg-gray-50', soft_blue: 'bg-blue-50', soft_yellow: 'bg-yellow-50' };
+  const bgMap: Record<string, string> = {
+    none: 'bg-white',
+    light_gray: 'bg-gray-50',
+    soft_blue: 'bg-blue-50',
+    soft_yellow: 'bg-yellow-50',
+    dark: 'bg-gray-900',
+  };
   const bg = bgMap[content.background_style] || 'bg-white';
+  const isDark = content.background_style === 'dark';
+  const textColor = isDark ? 'text-gray-100' : 'text-gray-700';
+  const titleColor = isDark ? 'text-white' : 'text-gray-900';
   const spacingMap: Record<string, string> = { compact: 'py-8', normal: 'py-16', spacious: 'py-24' };
   const spacing = spacingMap[content.vertical_spacing] || 'py-16';
 
-  const internalGrid = content.internal_grid;
-  const blocks = Array.isArray(content.blocks) ? content.blocks : [];
-  const hasGrid = internalGrid?.enabled === true && blocks.length > 0;
-  const gridCols = hasGrid ? `grid grid-cols-${internalGrid.columns || 2} ${internalGrid.gap || 'gap-6'}` : '';
+  const blocks: any[] = Array.isArray(content.blocks) && content.blocks.length > 0 ? content.blocks : [];
+  const layout = content.layout || 'single';
+
+  const gridColsMap: Record<string, string> = {
+    '2': 'grid-cols-1 sm:grid-cols-2',
+    '3': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+    '4': 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+  };
+  const gridGap = content.grid_gap || 'gap-8';
+  const gridCols = gridColsMap[content.grid_cols || '2'] || 'grid-cols-1 sm:grid-cols-2';
+
+  const renderBody = (text: string) => (
+    <div className={`space-y-4 ${alignment}`}>
+      {text.split('\n\n').filter(Boolean).map((p: string, i: number) => (
+        <p key={i} className={`leading-relaxed ${textColor}`}>{p}</p>
+      ))}
+    </div>
+  );
+
+  const renderBlock = (block: any, i: number) => (
+    <div key={i} className={block.shape === 'card' ? `bg-white rounded-xl shadow-sm border border-gray-200 p-6 ${isDark ? 'bg-gray-800 border-gray-700' : ''}` : ''}>
+      {block.title && (
+        <h3 className={`text-xl font-semibold mb-3 ${titleColor}`}>{block.title}</h3>
+      )}
+      {block.image_url && (
+        <img
+          src={block.image_url}
+          alt={block.title || `Block ${i + 1}`}
+          className={`w-full rounded-lg mb-4 object-cover ${block.image_height ? `h-${block.image_height}` : 'h-40'}`}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+      )}
+      {block.content && renderBody(block.content)}
+    </div>
+  );
 
   return (
     <div className={`w-full px-4 sm:px-6 lg:px-8 ${spacing} ${bg}`}>
       {content.show_divider && <div className="mb-10 border-t border-gray-200" />}
       <div className={`mx-auto ${maxWidth}`}>
         {title && (
-          <h2 className={`text-3xl font-bold text-gray-900 mb-6 ${alignment}`}>{title}</h2>
+          <h2 className={`text-3xl font-bold mb-6 ${alignment} ${titleColor}`}>{title}</h2>
         )}
-        {hasGrid ? (
-          <div className={gridCols}>
-            {blocks.map((block: any, i: number) => (
-              <div key={i}>
-                {block.title && <h3 className="text-xl font-semibold text-gray-900 mb-3">{block.title}</h3>}
-                <div className="space-y-3">
-                  {(block.content || '').split('\n\n').map((p: string, j: number) => (
-                    <p key={j} className="text-gray-700 leading-relaxed text-sm">{p}</p>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+        {blocks.length > 0 ? (
+          layout === 'grid' ? (
+            <div className={`grid ${gridCols} ${gridGap}`}>
+              {blocks.map((block, i) => renderBlock(block, i))}
+            </div>
+          ) : layout === 'side-by-side' ? (
+            <div className={`flex flex-col md:flex-row gap-8`}>
+              {blocks.map((block, i) => <div key={i} className="flex-1">{renderBlock(block, i)}</div>)}
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {blocks.map((block, i) => renderBlock(block, i))}
+            </div>
+          )
         ) : (
-          <div className={`space-y-4 ${alignment}`}>
-            {body.split('\n\n').map((p: string, i: number) => (
-              <p key={i} className="text-gray-700 leading-relaxed">{p}</p>
-            ))}
-          </div>
+          renderBody(body)
         )}
       </div>
       {content.show_divider && <div className="mt-10 border-b border-gray-200" />}
