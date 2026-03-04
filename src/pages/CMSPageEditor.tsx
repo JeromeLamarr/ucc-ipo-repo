@@ -727,7 +727,74 @@ function Textarea({ value, onChange, rows = 3 }: { value: string; onChange: (v: 
   );
 }
 
+const HERO_SIZE_OPTIONS_HEADLINE = [
+  { value: 'sm', label: 'Small (text-2xl)' },
+  { value: 'md', label: 'Medium (text-3xl)' },
+  { value: 'lg', label: 'Large (text-4xl)' },
+  { value: 'xl', label: 'X-Large (text-5xl)' },
+  { value: '2xl', label: '2X-Large (text-6xl)' },
+];
+const HERO_SIZE_OPTIONS_SUB = [
+  { value: 'sm', label: 'Small' },
+  { value: 'md', label: 'Medium' },
+  { value: 'lg', label: 'Large' },
+];
+
+function ColorAndSize({
+  label,
+  colorKey,
+  sizeKey,
+  sizeOptions,
+  style,
+  onStyleChange,
+}: {
+  label: string;
+  colorKey: string;
+  sizeKey: string;
+  sizeOptions: { value: string; label: string }[];
+  style: Record<string, any>;
+  onStyleChange: (k: string, v: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
+      <div className="grid grid-cols-2 gap-3">
+        <FieldRow label="Color">
+          <div className="flex gap-2 items-center">
+            <input
+              type="color"
+              value={style[colorKey] || '#111827'}
+              onChange={e => onStyleChange(colorKey, e.target.value)}
+              className="h-9 w-10 rounded border border-gray-300 cursor-pointer flex-shrink-0"
+            />
+            <TextInput
+              value={style[colorKey] || ''}
+              onChange={v => onStyleChange(colorKey, v)}
+              placeholder="#111827"
+            />
+          </div>
+        </FieldRow>
+        <FieldRow label="Size">
+          <select
+            value={style[sizeKey] || ''}
+            onChange={e => onStyleChange(sizeKey, e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none"
+          >
+            <option value="">Default</option>
+            {sizeOptions.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </FieldRow>
+      </div>
+    </div>
+  );
+}
+
 function HeroEditor({ content, update }: { content: Record<string, any>; update: (k: string, v: any) => void }) {
+  const heroStyle: Record<string, any> = content.hero_style || {};
+  const updateHeroStyle = (k: string, v: string) => update('hero_style', { ...heroStyle, [k]: v });
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -748,6 +815,44 @@ function HeroEditor({ content, update }: { content: Record<string, any>; update:
         <FieldRow label="Button Link">
           <TextInput value={content.cta_link} onChange={v => update('cta_link', v)} placeholder="/register" />
         </FieldRow>
+      </div>
+      <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-sm font-semibold text-gray-700">Typography</span>
+          <span className="text-xs text-gray-400">(optional overrides)</span>
+        </div>
+        <ColorAndSize
+          label="Headline"
+          colorKey="headlineColor"
+          sizeKey="headlineSize"
+          sizeOptions={HERO_SIZE_OPTIONS_HEADLINE}
+          style={heroStyle}
+          onStyleChange={updateHeroStyle}
+        />
+        <ColorAndSize
+          label="Headline Highlight"
+          colorKey="highlightColor"
+          sizeKey="highlightSize"
+          sizeOptions={HERO_SIZE_OPTIONS_HEADLINE}
+          style={heroStyle}
+          onStyleChange={updateHeroStyle}
+        />
+        <ColorAndSize
+          label="Subheadline"
+          colorKey="subheadlineColor"
+          sizeKey="subheadlineSize"
+          sizeOptions={HERO_SIZE_OPTIONS_SUB}
+          style={heroStyle}
+          onStyleChange={updateHeroStyle}
+        />
+        <ColorAndSize
+          label="Button Text"
+          colorKey="buttonTextColor"
+          sizeKey="buttonTextSize"
+          sizeOptions={HERO_SIZE_OPTIONS_SUB}
+          style={heroStyle}
+          onStyleChange={updateHeroStyle}
+        />
       </div>
       <MediaDropzone
         label="Background Image"
@@ -1238,13 +1343,16 @@ function GalleryEditor({ content, update }: { content: Record<string, any>; upda
     update('images', next);
   };
 
-  const addImage = () => update('images', [...images, { url: '', alt_text: '', caption: '' }]);
+  const addImage = () => update('images', [...images, { url: '', alt_text: '', caption: '', subtitle: '' }]);
   const removeImage = (i: number) => update('images', images.filter((_: any, idx: number) => idx !== i));
 
   return (
     <div className="space-y-4">
       <FieldRow label="Section Title">
         <TextInput value={content.title} onChange={v => update('title', v)} placeholder="Gallery" />
+      </FieldRow>
+      <FieldRow label="Section Subtitle (optional)">
+        <TextInput value={content.subtitle || ''} onChange={v => update('subtitle', v)} placeholder="A short description under the title" />
       </FieldRow>
       {images.map((img: any, i: number) => (
         <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-3">
@@ -1262,12 +1370,15 @@ function GalleryEditor({ content, update }: { content: Record<string, any>; upda
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <FieldRow label="Alt Text">
-              <TextInput value={img.alt_text} onChange={v => updateImage(i, 'alt_text', v)} />
+              <TextInput value={img.alt_text || ''} onChange={v => updateImage(i, 'alt_text', v)} />
             </FieldRow>
             <FieldRow label="Caption">
-              <TextInput value={img.caption} onChange={v => updateImage(i, 'caption', v)} />
+              <TextInput value={img.caption || ''} onChange={v => updateImage(i, 'caption', v)} />
             </FieldRow>
           </div>
+          <FieldRow label="Subtitle (optional)">
+            <TextInput value={img.subtitle || ''} onChange={v => updateImage(i, 'subtitle', v)} placeholder="Small text under caption" />
+          </FieldRow>
         </div>
       ))}
       <button

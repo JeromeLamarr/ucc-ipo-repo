@@ -112,6 +112,7 @@ export function getDefaultContent(sectionType: string): Record<string, any> {
         subheadline: 'Add your description here',
         cta_text: 'Get Started',
         cta_link: '/register',
+        hero_style: {},
       };
     case 'features':
       return {
@@ -128,7 +129,7 @@ export function getDefaultContent(sectionType: string): Record<string, any> {
         ],
       };
     case 'gallery':
-      return { title: 'Gallery', images: [] };
+      return { title: 'Gallery', subtitle: '', images: [] };
     case 'steps':
       return {
         title: '',
@@ -246,6 +247,13 @@ function CMSButton({
   );
 }
 
+const HEADLINE_SIZE_MAP: Record<string, string> = {
+  sm: 'text-2xl', md: 'text-3xl', lg: 'text-4xl', xl: 'text-5xl', '2xl': 'text-6xl',
+};
+const SUB_SIZE_MAP: Record<string, string> = {
+  sm: 'text-sm', md: 'text-base', lg: 'text-lg',
+};
+
 function HeroSection({ content, branding, sectionStyle: _ss }: { content: Record<string, any>; branding: CmsBranding; sectionStyle?: SectionStyle | null }) {
   const headline = content.headline || 'Welcome';
   const highlight = content.headline_highlight || '';
@@ -257,6 +265,11 @@ function HeroSection({ content, branding, sectionStyle: _ss }: { content: Record
   const imagePosition = content.image_position || 'center';
   const overlay = content.image_overlay || 0;
   const primary = branding.primaryColor;
+  const hs = content.hero_style || {};
+
+  const headlineSizeClass = HEADLINE_SIZE_MAP[hs.headlineSize] || 'text-4xl sm:text-5xl';
+  const highlightSizeClass = HEADLINE_SIZE_MAP[hs.highlightSize] || headlineSizeClass;
+  const subSizeClass = SUB_SIZE_MAP[hs.subheadlineSize] || 'text-xl';
 
   const button: CMSButtonType = content.button || {
     text: content.cta_text || 'Get Started',
@@ -264,19 +277,19 @@ function HeroSection({ content, branding, sectionStyle: _ss }: { content: Record
   };
 
   const headlineEl = (
-    <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+    <h1 className={`${headlineSizeClass} font-bold mb-6 leading-tight`} style={{ color: hs.headlineColor || '#111827' }}>
       {headline}
       {highlight && (
-        <><br /><span style={{ color: primary }}>{highlight}</span></>
+        <><br /><span className={highlightSizeClass} style={{ color: hs.highlightColor || primary }}>{highlight}</span></>
       )}
     </h1>
   );
 
   const headlineWhiteEl = (
-    <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight drop-shadow-lg">
+    <h1 className={`${headlineSizeClass} font-bold mb-6 leading-tight drop-shadow-lg`} style={{ color: hs.headlineColor || '#ffffff' }}>
       {headline}
       {highlight && (
-        <><br /><span style={{ color: primary }}>{highlight}</span></>
+        <><br /><span className={highlightSizeClass} style={{ color: hs.highlightColor || primary }}>{highlight}</span></>
       )}
     </h1>
   );
@@ -295,7 +308,11 @@ function HeroSection({ content, branding, sectionStyle: _ss }: { content: Record
         )}
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           {headlineWhiteEl}
-          {subheadline && <p className="text-xl text-white/90 max-w-3xl mx-auto mb-8">{subheadline}</p>}
+          {subheadline && (
+            <p className={`${subSizeClass} max-w-3xl mx-auto mb-8 opacity-90`} style={{ color: hs.subheadlineColor || '#ffffff' }}>
+              {subheadline}
+            </p>
+          )}
           <CMSButton button={button} bgColor={primary} />
         </div>
       </div>
@@ -311,7 +328,11 @@ function HeroSection({ content, branding, sectionStyle: _ss }: { content: Record
     const txtEl = (
       <div>
         {headlineEl}
-        {subheadline && <p className="text-lg text-gray-600 mb-8">{subheadline}</p>}
+        {subheadline && (
+          <p className={`${subSizeClass} mb-8`} style={{ color: hs.subheadlineColor || '#4B5563' }}>
+            {subheadline}
+          </p>
+        )}
         <CMSButton button={button} bgColor={primary} />
       </div>
     );
@@ -327,7 +348,11 @@ function HeroSection({ content, branding, sectionStyle: _ss }: { content: Record
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
       {headlineEl}
-      {subheadline && <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">{subheadline}</p>}
+      {subheadline && (
+        <p className={`${subSizeClass} max-w-3xl mx-auto mb-8`} style={{ color: hs.subheadlineColor || '#4B5563' }}>
+          {subheadline}
+        </p>
+      )}
       <CMSButton button={button} bgColor={primary} />
     </div>
   );
@@ -533,10 +558,17 @@ function GallerySection({ content, sectionStyle: _ss }: { content: Record<string
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      {content.title && <h2 className="text-3xl font-bold text-gray-900 text-center mb-10">{content.title}</h2>}
+      {content.title && (
+        <h2 className="text-3xl font-bold text-gray-900 text-center mb-2">{content.title}</h2>
+      )}
+      {content.subtitle && (
+        <p className="text-gray-500 text-center mb-10 max-w-2xl mx-auto">{content.subtitle}</p>
+      )}
+      {content.title && !content.subtitle && <div className="mb-10" />}
       <div className={`grid ${cols} gap-4 lg:gap-6`}>
         {images.map((img: any, i: number) => {
           if (!img?.url) return null;
+          const hasFooter = img.caption || img.subtitle;
           return (
             <div key={i} className="rounded-xl overflow-hidden shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="h-48 sm:h-56 bg-gray-100">
@@ -550,7 +582,12 @@ function GallerySection({ content, sectionStyle: _ss }: { content: Record<string
                   }}
                 />
               </div>
-              {img.caption && <p className="p-3 text-sm text-gray-700 text-center bg-white">{img.caption}</p>}
+              {hasFooter && (
+                <div className="px-3 py-2 bg-white text-center">
+                  {img.caption && <p className="text-sm text-gray-700 font-medium">{img.caption}</p>}
+                  {img.subtitle && <p className="text-xs text-gray-400 mt-0.5">{img.subtitle}</p>}
+                </div>
+              )}
             </div>
           );
         })}
