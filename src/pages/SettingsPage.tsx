@@ -99,7 +99,7 @@ export function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-3">Settings</h1>
@@ -125,9 +125,9 @@ export function SettingsPage() {
       )}
 
       {/* Settings Container */}
-      <div className="rounded-2xl border shadow-lg overflow-hidden" style={{ background: `linear-gradient(135deg, ${primaryColor}08, #6366f120)`, borderColor: `${primaryColor}40` }}>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {/* Tabs */}
-        <div className="border-b" style={{ borderBottomColor: `${primaryColor}40`, background: `linear-gradient(to right, ${primaryColor}08, #6366f108)` }}>
+        <div className="border-b border-gray-200 bg-gray-50">
           <div className="flex gap-1 p-4 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -154,7 +154,7 @@ export function SettingsPage() {
         </div>
 
         {/* Content */}
-        <div className="p-8">
+        <div className="p-4 lg:p-8">
           {activeTab === 'profile' && (
             <form onSubmit={handleProfileUpdate} className="space-y-8 max-w-2xl">
               <div>

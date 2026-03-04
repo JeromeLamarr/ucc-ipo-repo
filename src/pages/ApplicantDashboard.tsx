@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranding } from '../hooks/useBranding';
-import { FileText, Clock, CheckCircle, XCircle, Plus, Edit, AlertCircle, Trash2 } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, Plus, Edit, AlertCircle, Trash2, Eye } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from '../lib/statusLabels';
 import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
@@ -171,7 +171,7 @@ export function ApplicantDashboard() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       {/* Pending Approval Banner */}
       {profile && profile.is_approved === false && (
         <div className="bg-amber-50 border-2 border-amber-200 border-dotted rounded-xl p-6 md:p-8">
@@ -268,12 +268,13 @@ export function ApplicantDashboard() {
 
       {/* Draft Submissions Section */}
       {drafts.length > 0 && (
-        <div className="rounded-2xl border shadow-lg overflow-hidden" style={{ background: 'linear-gradient(135deg, #f5991808, #d97706108)', borderColor: '#f5991840' }}>
-          <div className="p-6 border-b" style={{ borderBottomColor: '#f5991840', background: 'linear-gradient(to right, #f5991808, #d97706108)' }}>
-            <h2 className="text-2xl font-bold text-gray-900">Draft Submissions ({drafts.length})</h2>
-            <p className="text-sm text-gray-600 mt-2 font-medium">Auto-saved drafts waiting to be completed and submitted</p>
+        <div className="bg-white rounded-xl shadow-sm border border-amber-200 p-4 lg:p-6">
+          <div className="mb-4 lg:mb-6">
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Draft Submissions ({drafts.length})</h2>
+            <p className="text-gray-600 text-xs lg:text-sm mt-1">Auto-saved drafts waiting to be completed and submitted</p>
           </div>
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead style={{ background: 'linear-gradient(to right, #f5991820, #d97706120)', borderBottomColor: '#f5991840' }} className="border-b">
                 <tr>
@@ -341,6 +342,60 @@ export function ApplicantDashboard() {
             </table>
           </div>
 
+          {/* Mobile Card View */}
+          <div className="lg:hidden space-y-4">
+            {paginatedDrafts.map((draft) => (
+              <div key={draft.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-gray-900 mb-1">
+                      {draft.title || <span className="text-gray-500 italic">Untitled Draft</span>}
+                    </h3>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 capitalize">
+                      {draft.category}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center text-gray-600">
+                    <span className="font-medium w-24">Progress:</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-amber-600 h-2 rounded-full"
+                          style={{ width: `${((draft.current_step || 1) / 6) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-gray-600">{draft.current_step || 1}/6</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <span className="font-medium w-24">Last Saved:</span>
+                    <span className="text-xs">{formatDateTime(draft.updated_at)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100">
+                  <Link
+                    to="/dashboard/submit"
+                    className="flex-1 text-center px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium inline-flex items-center justify-center gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Continue
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => deleteDraft(draft.id)}
+                    disabled={deletingDraftId === draft.id}
+                    className="flex-1 text-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deletingDraftId === draft.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {draftsTotalPages > 1 && (
             <Pagination
               currentPage={draftsCurrentPage}
@@ -358,11 +413,12 @@ export function ApplicantDashboard() {
       )}
 
       {/* Submitted Records Section */}
-      <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl border border-blue-200/40 shadow-lg overflow-hidden">
-        <div className="p-6 border-b border-blue-200/40 bg-gradient-to-r from-blue-50/50 to-indigo-50/30">
-          <h2 className="text-2xl font-bold text-gray-900">Recent Submissions</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
+        <div className="mb-4 lg:mb-6">
+          <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Recent Submissions</h2>
         </div>
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gradient-to-r from-blue-100/30 to-indigo-100/30 border-b border-blue-200/40">
               <tr>
@@ -459,9 +515,77 @@ export function ApplicantDashboard() {
           </table>
         </div>
 
-        {recordsTotalPages > 1 && (
-          <Pagination
-            currentPage={recordsCurrentPage}
+        {/* Mobile Card View */}
+        <div className="lg:hidden space-y-4">
+          {records.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p className="text-lg font-medium">No submissions yet</p>
+              <p className="text-sm mt-1">Get started by creating your first IP submission</p>
+              <Link
+                to="/dashboard/submit"
+                className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+                Create Submission
+              </Link>
+            </div>
+          ) : (
+            paginatedRecords.map((record) => (
+              <div key={record.id} className={`bg-white border rounded-lg p-4 hover:shadow-md transition-shadow ${needsRevision(record.status) ? 'border-l-4 border-orange-400' : 'border-gray-200'}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      to={`/dashboard/submissions/${record.id}`}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-700 block mb-1"
+                    >
+                      {record.title}
+                    </Link>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+                        {record.category}
+                      </span>
+                      <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(record.status)}`}>
+                        {getStatusLabel(record.status)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {needsRevision(record.status) && (
+                  <div className="flex items-center gap-1 mb-2 text-xs text-orange-700">
+                    <AlertCircle className="h-3 w-3" />
+                    <span>{getRevisionMessage(record)}</span>
+                  </div>
+                )}
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center text-gray-600">
+                    <span className="font-medium w-24">Submitted:</span>
+                    <span>{formatDate(record.created_at)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100">
+                  {needsRevision(record.status) && (
+                    <Link
+                      to={`/dashboard/submissions/${record.id}`}
+                      className="flex-1 text-center px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium inline-flex items-center justify-center gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Revise
+                    </Link>
+                  )}
+                  <Link
+                    to={`/dashboard/submissions/${record.id}`}
+                    className={`${needsRevision(record.status) ? 'flex-1' : 'w-full'} text-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium inline-flex items-center justify-center gap-2`}
+                  >
+                    <Eye className="h-4 w-4" />
+                    View Details
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
             totalPages={recordsTotalPages}
             onPageChange={setRecordsCurrentPage}
             itemsPerPage={recordsItemsPerPage}

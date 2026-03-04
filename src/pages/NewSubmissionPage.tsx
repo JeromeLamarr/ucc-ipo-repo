@@ -1025,13 +1025,13 @@ export function NewSubmissionPage() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="mb-8">
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div>
         <h1 className="text-3xl font-bold text-gray-900">New IP Submission</h1>
         <p className="text-gray-600 mt-2">Complete all sections to submit your intellectual property</p>
       </div>
 
-      <div className="mb-8 overflow-x-auto">
+      <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="flex items-center justify-between min-w-max">
           {steps.map((s, idx) => (
             <div key={s.num} className="flex items-center flex-shrink-0">
@@ -1058,7 +1058,7 @@ export function NewSubmissionPage() {
       </div>
 
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
           <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <span className="text-sm">{error}</span>
         </div>
@@ -1066,7 +1066,7 @@ export function NewSubmissionPage() {
 
       {/* Draft Recovery Modal */}
       {showDraftRecover && (
-        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <FileText className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -1087,7 +1087,7 @@ export function NewSubmissionPage() {
       )}
 
       {/* Autosave Indicator */}
-      <div className="mb-6 flex items-center justify-end gap-2 text-sm">
+      <div className="flex items-center justify-end gap-2 text-sm">
         {autoSaveStatus === 'saving' && (
           <div className="flex items-center gap-1 text-gray-600">
             <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-blue-600 rounded-full"></div>
