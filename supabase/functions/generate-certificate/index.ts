@@ -1048,7 +1048,6 @@ Deno.serve(async (req: Request) => {
         );
       }
       creator = creatorData;
-    }      );
     }
 
     // Fetch co-creators
