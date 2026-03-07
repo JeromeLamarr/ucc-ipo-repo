@@ -253,7 +253,7 @@ export function MaterialsRequestAction({
               ) : (
                 <>
                   <Send className="h-4 w-4" />
-                  {hasRequested ? 'Requested' : 'Request Materials'}
+                  {hasRequested ? 'Requested' : 'Require Materials'}
                 </>
               )}
             </button>

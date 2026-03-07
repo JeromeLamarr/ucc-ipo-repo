@@ -865,7 +865,7 @@ export function SupervisorReviewPage() {
                         className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors"
                       >
                         <AlertCircle className="h-5 w-5" />
-                        Request Revision
+                        Revision
                       </button>
                       <button
                         onClick={() => openReviewModal('reject')}
