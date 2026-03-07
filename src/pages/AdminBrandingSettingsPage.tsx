@@ -134,7 +134,11 @@ export function AdminBrandingSettingsPage() {
   const [hasFooterChanges, setHasFooterChanges] = useState(false);
   const [newLinkLabel, setNewLinkLabel] = useState('');
   const [newLinkUrl, setNewLinkUrl] = useState('');
-  const [linkSaving, setLinkSaving] = useState(false);
+  const [linksSaving, setLinksSaving] = useState(false);
+  const [linksSuccess, setLinksSuccess] = useState(false);
+  const [linksError, setLinksError] = useState<string | null>(null);
+  const [hasLinkChanges, setHasLinkChanges] = useState(false);
+  const [linksToDelete, setLinksToDelete] = useState<string[]>([]);
 
   // ── Init: branding ──
   useEffect(() => {
@@ -289,34 +293,68 @@ export function AdminBrandingSettingsPage() {
     setHasFooterChanges(true);
   };
 
-  // ── Footer links ──
-  const handleAddLink = async () => {
+  // ── Footer links (staged – all changes are local until Save Links is clicked) ──
+  const handleAddLink = () => {
     if (!newLinkLabel.trim() || !newLinkUrl.trim()) return;
-    setLinkSaving(true);
     const groupLinks = footerLinks.filter((l) => l.group_name === activeLinksTab);
-    const result = await upsertFooterLink({
-      group_name: activeLinksTab,
-      label: newLinkLabel.trim(),
-      url: newLinkUrl.trim(),
-      sort_order: groupLinks.length + 1,
-      is_enabled: true,
-    });
-    if (result) {
-      setFooterLinks((prev) => [...prev, result]);
-      setNewLinkLabel('');
-      setNewLinkUrl('');
+    setFooterLinks((prev) => [
+      ...prev,
+      {
+        id: `temp-${Date.now()}`,
+        group_name: activeLinksTab,
+        label: newLinkLabel.trim(),
+        url: newLinkUrl.trim(),
+        sort_order: groupLinks.length + 1,
+        is_enabled: true,
+      } as FooterLink,
+    ]);
+    setNewLinkLabel('');
+    setNewLinkUrl('');
+    setHasLinkChanges(true);
+  };
+
+  const handleDeleteLink = (id: string) => {
+    setFooterLinks((prev) => prev.filter((l) => l.id !== id));
+    if (!id.startsWith('temp-')) {
+      setLinksToDelete((prev) => [...prev, id]);
     }
-    setLinkSaving(false);
+    setHasLinkChanges(true);
   };
 
-  const handleDeleteLink = async (id: string) => {
-    const ok = await deleteFooterLink(id);
-    if (ok) setFooterLinks((prev) => prev.filter((l) => l.id !== id));
+  const handleToggleLink = (link: FooterLink) => {
+    setFooterLinks((prev) =>
+      prev.map((l) => (l.id === link.id ? { ...l, is_enabled: !l.is_enabled } : l)),
+    );
+    setHasLinkChanges(true);
   };
 
-  const handleToggleLink = async (link: FooterLink) => {
-    const updated = await upsertFooterLink({ ...link, is_enabled: !link.is_enabled });
-    if (updated) setFooterLinks((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+  const handleSaveLinks = async () => {
+    setLinksSaving(true);
+    setLinksError(null);
+    setLinksSuccess(false);
+    try {
+      for (const id of linksToDelete) {
+        await deleteFooterLink(id);
+      }
+      for (const link of footerLinks) {
+        if (link.id.startsWith('temp-')) {
+          const { id: _id, ...rest } = link;
+          await upsertFooterLink(rest);
+        } else {
+          await upsertFooterLink(link);
+        }
+      }
+      const fresh = await fetchFooterLinks();
+      setFooterLinks(fresh);
+      setLinksToDelete([]);
+      setHasLinkChanges(false);
+      setLinksSuccess(true);
+      setTimeout(() => setLinksSuccess(false), 3000);
+    } catch (err) {
+      setLinksError(err instanceof Error ? err.message : 'Failed to save links');
+    } finally {
+      setLinksSaving(false);
+    }
   };
 
   const tabLinks = footerLinks
@@ -813,18 +851,44 @@ export function AdminBrandingSettingsPage() {
               />
               <button
                 onClick={handleAddLink}
-                disabled={linkSaving || !newLinkLabel.trim() || !newLinkUrl.trim()}
+                disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2 flex-shrink-0 transition-colors"
               >
-                {linkSaving ? <Loader size={14} className="animate-spin" /> : <Plus size={14} />}
+                <Plus size={14} />
                 Add
               </button>
             </div>
           </div>
         </CardContent>
+        <CardFooter>
+          <div className="space-y-3">
+            {linksError && (
+              <div className="flex items-center gap-2 text-sm text-red-600">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                {linksError}
+              </div>
+            )}
+            {linksSuccess && (
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                Links saved successfully
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button
+                variant="primary"
+                onClick={handleSaveLinks}
+                disabled={!hasLinkChanges || linksSaving}
+                icon={linksSaving ? <Loader className="h-4 w-4 animate-spin" /> : undefined}
+              >
+                {linksSaving ? 'Saving…' : 'Save Links'}
+              </Button>
+            </div>
+          </div>
+        </CardFooter>
       </Card>
 
-      {/* ── Info card ── */}
+      {/* ── Info card ── */
       <Card variant="outlined" className="p-4">
         <div className="flex gap-3">
           <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
