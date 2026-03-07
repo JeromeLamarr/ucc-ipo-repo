@@ -39,37 +39,25 @@ export async function fetchFooterSettings(): Promise<FooterSettings> {
 export async function updateFooterSettings(
   updates: Database['public']['Tables']['site_footer_settings']['Update'],
 ): Promise<FooterSettings | null> {
-  const { id: _id, updated_at: _ts, ...fields } = updates as any;
-  const payload = { ...fields, updated_at: new Date().toISOString() };
+  const u = updates as any;
 
-  const { data, error, count } = await supabase
-    .from('site_footer_settings' as any)
-    .update(payload as any)
-    .eq('id', 1)
-    .select()
-    .returns<FooterSettings[]>();
+  const { data, error } = await (supabase as any).rpc('update_footer_settings', {
+    p_about_text:       u.about_text       ?? null,
+    p_contact_email:    u.contact_email    ?? null,
+    p_contact_phone:    u.contact_phone    ?? null,
+    p_contact_address:  u.contact_address  ?? null,
+    p_copyright_text:   u.copyright_text   ?? null,
+    p_show_quick_links: u.show_quick_links ?? true,
+    p_show_support:     u.show_support     ?? true,
+    p_show_contact:     u.show_contact     ?? true,
+  });
 
   if (error) {
-    const isTableMissing =
-      error.code === '42P01' ||
-      error.message?.includes('does not exist') ||
-      error.message?.includes('relation');
-
-    if (isTableMissing) {
-      console.warn('[updateFooterSettings] Table not found — run migration.');
-      return { ...DEFAULT_FOOTER_SETTINGS, ...updates } as FooterSettings;
-    }
-
-    console.error('[updateFooterSettings] DB error:', error.code, error.message);
+    console.error('[updateFooterSettings] RPC error:', error.code, error.message);
     throw new Error(error.message || 'Failed to save footer settings');
   }
 
-  if (!data || (data as any[]).length === 0) {
-    console.error('[updateFooterSettings] No rows updated — RLS may be blocking. count:', count);
-    throw new Error('No rows were updated. You may not have permission to update footer settings.');
-  }
-
-  return (data as any[])[0] as FooterSettings;
+  return (data as FooterSettings) ?? null;
 }
 
 // ── Links CRUD ─────────────────────────────────────────────────────────────
@@ -91,28 +79,27 @@ export async function fetchFooterLinks(): Promise<FooterLink[]> {
 export async function upsertFooterLink(
   link: Database['public']['Tables']['site_footer_links']['Insert'],
 ): Promise<FooterLink | null> {
-  const payload = { ...link, updated_at: new Date().toISOString() };
-  const { data, error } = await supabase
-    .from('site_footer_links' as any)
-    .upsert(payload as any)
-    .select()
-    .single();
+  const { data, error } = await (supabase as any).rpc('upsert_footer_link', {
+    p_id:         (link as any).id   ?? null,
+    p_group_name: link.group_name,
+    p_label:      link.label,
+    p_url:        link.url,
+    p_sort_order: link.sort_order ?? 0,
+    p_is_enabled: link.is_enabled ?? true,
+  });
 
   if (error) {
-    console.error('[upsertFooterLink] Error:', error);
+    console.error('[upsertFooterLink] RPC error:', error);
     return null;
   }
   return data as FooterLink;
 }
 
 export async function deleteFooterLink(id: string): Promise<boolean> {
-  const { error } = await supabase
-    .from('site_footer_links' as any)
-    .delete()
-    .eq('id', id);
+  const { error } = await (supabase as any).rpc('delete_footer_link', { p_id: id });
 
   if (error) {
-    console.error('[deleteFooterLink] Error:', error);
+    console.error('[deleteFooterLink] RPC error:', error);
     return false;
   }
   return true;
