@@ -57,6 +57,24 @@ serve(async (req) => {
 
     console.log(`[delete-draft] User ${user.id} deleting draft`);
 
+    // Resolve internal users.id from auth_user_id
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .single();
+
+    if (profileError || !userProfile) {
+      console.error("[delete-draft] Error resolving user profile:", profileError);
+      return new Response(
+        JSON.stringify({ error: "User profile not found" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const internalUserId = userProfile.id;
+    console.log(`[delete-draft] Resolved internal user ID: ${internalUserId}`);
+
     // Parse request body
     const payload: DeleteDraftPayload = await req.json();
     const { draftId } = payload;
@@ -75,7 +93,7 @@ serve(async (req) => {
       .from("ip_records")
       .select("id, status, applicant_id")
       .eq("id", draftId)
-      .eq("applicant_id", user.id)
+      .eq("applicant_id", internalUserId)
       .eq("status", "draft")
       .single();
 
@@ -101,7 +119,7 @@ serve(async (req) => {
       .from("ip_records")
       .delete()
       .eq("id", draftId)
-      .eq("applicant_id", user.id)
+      .eq("applicant_id", internalUserId)
       .eq("status", "draft")
       .select();
 
