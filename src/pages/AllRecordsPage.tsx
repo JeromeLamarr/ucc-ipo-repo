@@ -201,7 +201,7 @@ export function AllRecordsPage() {
         </button>
       </div>
 
-      {/* WORKFLOW IP RECORDS SECTION */}}
+      {/* WORKFLOW IP RECORDS SECTION */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
         <div className="mb-4 lg:mb-6">
           <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Workflow IP Records ({filteredRecords.length})</h2>
