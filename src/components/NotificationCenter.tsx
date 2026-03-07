@@ -117,7 +117,7 @@ export function NotificationCenter() {
             className="fixed inset-0 z-30"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-40 max-h-[600px] flex flex-col">
+          <div className="absolute right-0 top-full mt-2 w-[calc(100vw-24px)] max-w-md sm:w-[420px] bg-white rounded-xl shadow-xl border border-gray-200 z-40 max-h-[70vh] flex flex-col overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="font-bold text-gray-900">Notifications</h3>
               <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export function NotificationCenter() {
               </div>
             </div>
 
-            <div className="overflow-y-auto flex-1">
+            <div className="overflow-y-auto max-h-[60vh] flex-1">
               {notifications.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
                   <Bell className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -176,7 +176,7 @@ export function NotificationCenter() {
                             )}
                           </div>
                           {notification.message && (
-                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                            <p className="text-sm text-gray-600 mt-1 break-words line-clamp-3">
                               {notification.message}
                             </p>
                           )}
