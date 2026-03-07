@@ -56,7 +56,7 @@ export function CertificateSignatoriesSettings() {
     setMessage(null);
 
     try {
-      const payload: any = {
+      const payload = {
         research_head_name: form.research_head_name.trim(),
         research_head_position: form.research_head_position.trim(),
         president_name: form.president_name.trim(),
@@ -65,13 +65,20 @@ export function CertificateSignatoriesSettings() {
         updated_at: new Date().toISOString(),
       };
 
-      if (form.id) {
-        payload.id = form.id;
-      }
+      let error: any;
 
-      const { error } = await supabase
-        .from('certificate_signatories')
-        .upsert(payload, { onConflict: 'id' });
+      if (form.id) {
+        // Row exists — use UPDATE to avoid RLS INSERT check
+        ({ error } = await supabase
+          .from('certificate_signatories')
+          .update(payload)
+          .eq('id', form.id));
+      } else {
+        // No row yet — insert (fallback, should rarely happen after migration seed)
+        ({ error } = await supabase
+          .from('certificate_signatories')
+          .insert(payload));
+      }
 
       if (error) throw error;
 
