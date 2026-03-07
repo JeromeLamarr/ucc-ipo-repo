@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranding } from '../hooks/useBranding';
 import { supabase } from '../lib/supabase';
-import { User, Lock, Bell, Shield, Save, AlertCircle, CheckCircle, Palette } from 'lucide-react';
+import { User, Lock, Bell, Shield, Save, AlertCircle, CheckCircle, Palette, PenLine } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { AdminBrandingSettingsPage } from './AdminBrandingSettingsPage';
+import { CertificateSignatoriesSettings } from '../components/CertificateSignatoriesSettings';
 
 export function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
@@ -12,8 +13,8 @@ export function SettingsPage() {
   const [searchParams] = useSearchParams();
   
   // Read ?tab query param, default to profile
-  const tabFromUrl = (searchParams.get('tab') as 'profile' | 'password' | 'notifications' | 'branding') || 'profile';
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'branding'>(tabFromUrl);
+  const tabFromUrl = (searchParams.get('tab') as 'profile' | 'password' | 'notifications' | 'branding' | 'signatories') || 'profile';
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'branding' | 'signatories'>(tabFromUrl);
   
   // Update activeTab when URL query param changes
   useEffect(() => {
@@ -96,6 +97,7 @@ export function SettingsPage() {
     { id: 'password', label: 'Password', icon: Lock },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     ...(profile?.role === 'admin' ? [{ id: 'branding', label: 'Branding', icon: Palette }] : []),
+    ...(profile?.role === 'admin' ? [{ id: 'signatories', label: 'Certificate Signatories', icon: PenLine }] : []),
   ];
 
   return (
@@ -335,6 +337,12 @@ export function SettingsPage() {
           {activeTab === 'branding' && profile?.role === 'admin' && (
             <div className="space-y-8">
               <AdminBrandingSettingsPage />
+            </div>
+          )}
+
+          {activeTab === 'signatories' && profile?.role === 'admin' && (
+            <div className="space-y-8">
+              <CertificateSignatoriesSettings />
             </div>
           )}
         </div>

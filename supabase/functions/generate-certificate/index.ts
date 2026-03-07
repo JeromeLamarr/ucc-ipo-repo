@@ -187,7 +187,12 @@ async function generateCertificatePDF(
   coCreators: Array<{ name: string; role: string }>,
   evaluation: { total_score: number; recommendation: string } | null,
   trackingId: string,
-  supervisorName: string
+  supervisorName: string,
+  researchHeadName: string,
+  researchHeadPosition: string,
+  presidentName: string,
+  presidentPosition: string,
+  supervisorTitle: string
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4 size (210mm x 297mm)
@@ -659,13 +664,13 @@ async function generateCertificatePDF(
 
   // Row 1: Names (just below signature line)
   drawCenteredSigText(supervisorName, sig1Center, sigLineY - 12, 7.5);
-  drawCenteredSigText("Teodoro Macaraeg", sig2Center, sigLineY - 12, 7.5);
-  drawCenteredSigText("Atty. Jared", sig3Center, sigLineY - 12, 7.5);
+  drawCenteredSigText(researchHeadName, sig2Center, sigLineY - 12, 7.5);
+  drawCenteredSigText(presidentName, sig3Center, sigLineY - 12, 7.5);
 
   // Row 2: Titles
-  drawCenteredSigText("Supervisor", sig1Center, sigLineY - 23, 8);
-  drawCenteredSigText("Research Department Head", sig2Center, sigLineY - 23, 8);
-  drawCenteredSigText("President", sig3Center, sigLineY - 23, 8);
+  drawCenteredSigText(supervisorTitle, sig1Center, sigLineY - 23, 8);
+  drawCenteredSigText(researchHeadPosition, sig2Center, sigLineY - 23, 8);
+  drawCenteredSigText(presidentPosition, sig3Center, sigLineY - 23, 8);
 
   yPosition = moveDown(yPosition, spaceAfterMainText);
 
@@ -1081,6 +1086,30 @@ Deno.serve(async (req: Request) => {
       console.warn("Warning: No evaluation found for this record");
     }
 
+    // Fetch certificate signatory settings from DB
+    let researchHeadName = 'Teodoro Macaraeg';
+    let researchHeadPosition = 'Research Department Head';
+    let presidentName = 'Atty. Jared';
+    let presidentPosition = 'President';
+    let supervisorTitle = 'Supervisor';
+    try {
+      const { data: sigSettings } = await supabase
+        .from('certificate_signatories')
+        .select('research_head_name, research_head_position, president_name, president_position, supervisor_title')
+        .limit(1)
+        .maybeSingle();
+
+      if (sigSettings) {
+        researchHeadName = sigSettings.research_head_name || researchHeadName;
+        researchHeadPosition = sigSettings.research_head_position || researchHeadPosition;
+        presidentName = sigSettings.president_name || presidentName;
+        presidentPosition = sigSettings.president_position || presidentPosition;
+        supervisorTitle = sigSettings.supervisor_title || supervisorTitle;
+      }
+    } catch (sigErr) {
+      console.warn('[generate-certificate] Could not fetch signatory settings, using defaults:', sigErr);
+    }
+
     // Fetch supervisor assigned to this record
     let supervisorName = 'Assigned Supervisor';
     try {
@@ -1128,7 +1157,12 @@ Deno.serve(async (req: Request) => {
         recommendation: "",
       },
       trackingId,
-      supervisorName
+      supervisorName,
+      researchHeadName,
+      researchHeadPosition,
+      presidentName,
+      presidentPosition,
+      supervisorTitle
     );
 
     // Calculate checksum
