@@ -186,7 +186,8 @@ async function generateCertificatePDF(
   creator: UserData,
   coCreators: Array<{ name: string; role: string }>,
   evaluation: { total_score: number; recommendation: string } | null,
-  trackingId: string
+  trackingId: string,
+  supervisorName: string
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4 size (210mm x 297mm)
@@ -646,17 +647,25 @@ async function generateCertificatePDF(
   page.drawLine({ start: { x: sig2X, y: sigLineY }, end: { x: sig2X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
   page.drawLine({ start: { x: sig3X, y: sigLineY }, end: { x: sig3X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
 
-  // Signature titles
-  page.drawText("Director", { x: sig1X + 53, y: sigLineY - 13, size: 8, color: darkColor });
-  page.drawText("Dean", { x: sig2X + 58, y: sigLineY - 13, size: 8, color: darkColor });
-  page.drawText("President", { x: sig3X + 50, y: sigLineY - 13, size: 8, color: darkColor });
+  // Signatory section — centered using real font measurement
+  const sig1Center = sig1X + sigLineLength / 2;
+  const sig2Center = sig2X + sigLineLength / 2;
+  const sig3Center = sig3X + sigLineLength / 2;
 
-  yPosition = moveDown(yPosition, 20);
+  const drawCenteredSigText = (text: string, centerX: number, y: number, size: number) => {
+    const w = helveticaBold.widthOfTextAtSize(text, size);
+    page.drawText(text, { x: centerX - w / 2, y, size, color: darkColor, font: helveticaBold });
+  };
 
-  // Department/office info
-  page.drawText("IP Office", { x: sig1X + 53, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("College of Computer Studies", { x: sig2X + 25, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("Office of the President", { x: sig3X + 35, y: yPosition - 5, size: 6.5, color: darkColor });
+  // Row 1: Names (just below signature line)
+  drawCenteredSigText(supervisorName, sig1Center, sigLineY - 12, 7.5);
+  drawCenteredSigText("Teodoro Macaraeg", sig2Center, sigLineY - 12, 7.5);
+  drawCenteredSigText("Atty. Jared", sig3Center, sigLineY - 12, 7.5);
+
+  // Row 2: Titles
+  drawCenteredSigText("Supervisor", sig1Center, sigLineY - 23, 8);
+  drawCenteredSigText("Research Department Head", sig2Center, sigLineY - 23, 8);
+  drawCenteredSigText("President", sig3Center, sigLineY - 23, 8);
 
   yPosition = moveDown(yPosition, spaceAfterMainText);
 
@@ -1072,6 +1081,30 @@ Deno.serve(async (req: Request) => {
       console.warn("Warning: No evaluation found for this record");
     }
 
+    // Fetch supervisor assigned to this record
+    let supervisorName = 'Assigned Supervisor';
+    try {
+      const { data: recordWithSupervisor } = await supabase
+        .from('ip_records')
+        .select('supervisor_id')
+        .eq('id', record_id)
+        .maybeSingle();
+
+      if (recordWithSupervisor?.supervisor_id) {
+        const { data: supervisorData } = await supabase
+          .from('users')
+          .select('full_name')
+          .eq('id', recordWithSupervisor.supervisor_id)
+          .maybeSingle();
+
+        if (supervisorData?.full_name) {
+          supervisorName = supervisorData.full_name;
+        }
+      }
+    } catch (supErr) {
+      console.warn('[generate-certificate] Could not fetch supervisor:', supErr);
+    }
+
     // Generate or use existing tracking ID
     let trackingId = (ipRecord as IPRecord).tracking_id;
     if (!trackingId) {
@@ -1094,7 +1127,8 @@ Deno.serve(async (req: Request) => {
         total_score: 0,
         recommendation: "",
       },
-      trackingId
+      trackingId,
+      supervisorName
     );
 
     // Calculate checksum
