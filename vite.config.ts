@@ -8,6 +8,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    watch: {
+      ignored: ['**/*.md', '**/*.sql', '**/deploy/**', '**/server/**', '**/docs/**'],
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

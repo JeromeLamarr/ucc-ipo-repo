@@ -1,48 +1,4 @@
 {
   "template": "bolt-vite-react-ts",
-  "deployment": {
-    "system": "PDF Generation with Node.js Server + Supabase Edge Function",
-    "status": "production-ready",
-    "lastUpdated": "2026-02-27"
-  },
-  "deploymentAutomation": {
-    "master": "deploy/00-deploy-master.sh (interactive menu)",
-    "scripts": [
-      "deploy/01-deploy-vercel.sh (recommended - serverless, 5 min)",
-      "deploy/02-deploy-docker.sh (containerized, 10 min)",
-      "deploy/03-deploy-vps.sh (traditional server, 15 min)",
-      "deploy/04-deploy-frontend.sh (build & deploy frontend)",
-      "deploy/05-deploy-edge-function.sh (deploy to Supabase)"
-    ],
-    "preparation": [
-      "prepare-deployment.sh (Linux/Mac)",
-      "prepare-deployment.bat (Windows)"
-    ]
-  },
-  "configuration": {
-    "templates": [
-      "server/.env.template (Node server credentials)",
-      ".env.production.template (Frontend environment)",
-      "supabase/functions/generate-full-record-documentation-pdf/.env.template (Edge Function)"
-    ]
-  },
-  "documentation": {
-    "quickStart": "START_DEPLOYMENT_HERE.md",
-    "stepByStep": "DEPLOYMENT_PLAYBOOK.md",
-    "reference": "PRODUCTION_PDF_DEPLOYMENT.md",
-    "emergency": "PDF_GENERATION_QUICK_REFERENCE.md",
-    "testing": "PDF_GENERATION_TESTING_CHECKLIST.md"
-  },
-  "architecture": {
-    "frontend": "React/Vite with PDF download button",
-    "pdfServer": "Node.js/Express with Playwright (port 3000)",
-    "edgeFunction": "Supabase proxy (optional fallback)",
-    "database": "Supabase PostgreSQL",
-    "storage": "Supabase Storage (certificates bucket)"
-  },
-  "security": {
-    "authentication": "Supabase JWT",
-    "authorization": "Admin-only role enforcement",
-    "encryption": "HTTPS in production"
-  }
+  "projectId": "mqfftubqlwiemtxpagps"
 }
