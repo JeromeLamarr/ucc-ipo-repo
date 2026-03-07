@@ -253,12 +253,12 @@ export function FullDisclosureManager({
     if (disclosure) {
       return (
         <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-indigo-100 p-3 rounded-lg">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="bg-indigo-100 p-3 rounded-lg flex-shrink-0">
                 <FileText className="h-6 w-6 text-indigo-600" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="font-bold text-gray-900">Full Disclosure Generated</h3>
                 <p className="text-sm text-gray-600 mt-1">
                   Generated: {new Date(disclosure.generated_at).toLocaleString()}
@@ -272,10 +272,10 @@ export function FullDisclosureManager({
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={handleDownloadDisclosure}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 w-full sm:w-auto"
             >
               <Download className="h-4 w-4" />
               Download
@@ -283,7 +283,7 @@ export function FullDisclosureManager({
             <button
               onClick={handleSendDisclosureEmail}
               disabled={sending}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 w-full sm:w-auto"
             >
               {sending ? (
                 <>
@@ -300,7 +300,7 @@ export function FullDisclosureManager({
             <button
               onClick={handleRegenerateDisclosure}
               disabled={generating}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50 w-full sm:w-auto"
               title="Generate a new disclosure to replace the current one"
             >
               {generating ? (

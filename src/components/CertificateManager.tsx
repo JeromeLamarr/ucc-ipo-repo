@@ -434,14 +434,14 @@ export function CertificateManager({
     if (certificate) {
       return (
         <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-green-100 p-3 rounded-lg">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="bg-green-100 p-3 rounded-lg flex-shrink-0">
                 <Award className="h-6 w-6 text-green-600" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 className="font-bold text-gray-900">Certificate Generated</h3>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-gray-600 mt-1 break-all">
                   Certificate No: {certificate.certificate_number}
                 </p>
                 <p className="text-sm text-gray-600">
@@ -449,13 +449,13 @@ export function CertificateManager({
                 </p>
               </div>
             </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
               <a
                 href={`${certificate.pdf_url || `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/certificates/${certificate.file_path || ''}`}?t=${Date.now()}`}
                 download
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 w-full sm:w-auto"
                 onClick={(e) => {
                   if (!certificate.pdf_url && !certificate.file_path) {
                     e.preventDefault();
@@ -469,7 +469,7 @@ export function CertificateManager({
               <button
                 onClick={handleSendCertificateEmail}
                 disabled={sending}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 w-full sm:w-auto"
               >
                 {sending ? (
                   <>
@@ -486,7 +486,7 @@ export function CertificateManager({
               <button
                 onClick={handleRegenerateCertificate}
                 disabled={generating}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50 w-full sm:w-auto"
                 title="Generate a new certificate to replace the current one"
               >
                 {generating ? (
