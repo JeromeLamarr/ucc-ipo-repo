@@ -15,7 +15,6 @@ import {
   User as UserIcon,
   ClipboardList,
   Star,
-  PieChart,
   UserCheck,
   Archive,
   Globe,
@@ -111,12 +110,6 @@ const navItems: NavItem[] = [
     label: 'SLA Policies',
     path: '/dashboard/sla-policies',
     icon: Clock,
-    roles: ['admin'],
-  },
-  {
-    label: 'Analytics',
-    path: '/dashboard/analytics',
-    icon: PieChart,
     roles: ['admin'],
   },
   {

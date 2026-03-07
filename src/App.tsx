@@ -81,7 +81,6 @@ function DashboardRouter() {
         <Route path="assignments" element={<AssignmentManagementPage />} />
         <Route path="departments" element={<DepartmentManagementPage />} />
         <Route path="sla-policies" element={<AdminSLAManagement />} />
-        <Route path="analytics" element={<AdminDashboard />} />
       </Routes>
     </DashboardLayout>
   );
