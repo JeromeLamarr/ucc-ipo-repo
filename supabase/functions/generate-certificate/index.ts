@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
+import { PDFDocument, rgb, StandardFonts } from "npm:pdf-lib@1.17.1";
 import QRCode from "npm:qrcode@1.5.3";
 
 
@@ -158,6 +158,24 @@ function moveDown(currentY: number, amount: number): number {
   return currentY - amount;
 }
 
+// Wrap text into lines that fit within maxWidth using real font measurement
+function wrapText(font: any, text: string, fontSize: number, maxWidth: number): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (font.widthOfTextAtSize(testLine, fontSize) <= maxWidth) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
 // ============================================================
 // CERTIFICATE PDF GENERATION - ENHANCED PROFESSIONAL DESIGN
 // ============================================================
@@ -174,6 +192,9 @@ async function generateCertificatePDF(
   const page = pdfDoc.addPage([595, 842]); // A4 size (210mm x 297mm)
 
   const { width, height } = page.getSize();
+
+  // Embed font for accurate text width measurement (used for title centering/wrapping)
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   
   // ============================================================
   // MARGINS & DIMENSIONS
@@ -477,31 +498,30 @@ async function generateCertificatePDF(
   // ============================================================
   // IP TITLE - STYLED BOX
   // ============================================================
-  
-
-    // ============================================================
-  // IP TITLE - STYLED BOX
-  // ============================================================
-  const ipTitleBoxY = yPosition - 20;
+  const ipTitle = `"${ipRecord.title}"`;
+  const ipTitleFontSize = 16;
   const ipBoxX = margin + 38;
   const ipBoxWidth = contentWidth - 76;
   const ipBoxCenterX = ipBoxX + ipBoxWidth / 2;
 
+  // Wrap title using real font measurement and center each line
+  const titleLines = wrapText(helveticaBold, ipTitle, ipTitleFontSize, ipBoxWidth);
+  const titleLineSpacing = 20;
 
-  // Center IP title text in box
-  const ipTitle = `"${ipRecord.title}"`;
-  const ipTitleFontSize = 16;
-  // Estimate text width (Helvetica: ~5pt per character at size 12)
-  const ipTitleCharWidth = (ipTitle.length * 5.0) / 2;
+  for (const line of titleLines) {
+    const lineWidth = helveticaBold.widthOfTextAtSize(line, ipTitleFontSize);
+    page.drawText(line, {
+      x: ipBoxCenterX - lineWidth / 2,
+      y: yPosition - 6,
+      size: ipTitleFontSize,
+      color: accentColor,
+      font: helveticaBold,
+    });
+    yPosition = moveDown(yPosition, titleLineSpacing);
+  }
 
-  page.drawText(ipTitle, {
-    x: ipBoxCenterX - ipTitleCharWidth,
-    y: yPosition - 6,
-    size: ipTitleFontSize,
-    color: accentColor,
-  });
-
-  yPosition = moveDown(yPosition, 30);
+  // Bottom padding after title block (30px total for single-line, scales with extra lines)
+  yPosition = moveDown(yPosition, 10);
   // ============================================================
   // ABSTRACT SECTION
   // ============================================================
