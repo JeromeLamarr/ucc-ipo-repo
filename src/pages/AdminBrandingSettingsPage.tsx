@@ -888,7 +888,7 @@ export function AdminBrandingSettingsPage() {
         </CardFooter>
       </Card>
 
-      {/* ── Info card ── */
+      {/* ── Info card ── */}
       <Card variant="outlined" className="p-4">
         <div className="flex gap-3">
           <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
