@@ -68,11 +68,15 @@ export function CertificateSignatoriesSettings() {
       let error: any;
 
       if (form.id) {
-        // Row exists — use UPDATE to avoid RLS INSERT check
-        ({ error } = await supabase
-          .from('certificate_signatories')
-          .update(payload)
-          .eq('id', form.id));
+        // Use SECURITY DEFINER RPC to bypass RLS recursion issues
+        ({ error } = await supabase.rpc('update_certificate_signatories', {
+          p_id:                     form.id,
+          p_research_head_name:     payload.research_head_name,
+          p_research_head_position: payload.research_head_position,
+          p_president_name:         payload.president_name,
+          p_president_position:     payload.president_position,
+          p_supervisor_title:       payload.supervisor_title,
+        }));
       } else {
         // No row yet — insert (fallback, should rarely happen after migration seed)
         ({ error } = await supabase
