@@ -40,6 +40,9 @@ export function UserManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // Row selection state
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+
   const [formData, setFormData] = useState({
     email: '',
     fullName: '',
@@ -259,6 +262,11 @@ export function UserManagement() {
   const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
+  const toggleUserRow = (id: string) =>
+    setSelectedUserIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleSelectAllUsers = () =>
+    setSelectedUserIds(selectedUserIds.length === paginatedUsers.length ? [] : paginatedUsers.map(u => u.id));
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -318,6 +326,15 @@ export function UserManagement() {
           <table className="w-full">
             <thead style={{ background: `linear-gradient(to right, ${primaryColor}08, #6366f108)` }}>
               <tr>
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={paginatedUsers.length > 0 && selectedUserIds.length === paginatedUsers.length}
+                    onChange={toggleSelectAllUsers}
+                    aria-label="Select all users"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
                 </th>
@@ -338,7 +355,7 @@ export function UserManagement() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No users found</p>
                   </td>
@@ -346,6 +363,15 @@ export function UserManagement() {
               ) : (
                 paginatedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-4 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={selectedUserIds.includes(user.id)}
+                        onChange={() => toggleUserRow(user.id)}
+                        aria-label={`Select user ${user.full_name}`}
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{user.full_name}</div>

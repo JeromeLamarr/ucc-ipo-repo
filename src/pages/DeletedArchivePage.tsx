@@ -34,6 +34,10 @@ export function DeletedArchivePage() {
   const [workflowCurrentPage, setWorkflowCurrentPage] = useState(1);
   const [workflowItemsPerPage, setWorkflowItemsPerPage] = useState(10);
 
+  // Row selection state
+  const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
+  const [selectedDeletedWorkflowIds, setSelectedDeletedWorkflowIds] = useState<string[]>([]);
+
   useEffect(() => {
     fetchDeletedRecords();
   }, []);
@@ -147,6 +151,16 @@ export function DeletedArchivePage() {
   const paginatedDeletedWorkflow = filteredDeletedWorkflow.slice(workflowStartIndex, workflowEndIndex);
   const workflowTotalPages = Math.ceil(filteredDeletedWorkflow.length / workflowItemsPerPage);
 
+  const toggleDraftRow = (id: string) =>
+    setSelectedDraftIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleSelectAllDrafts = () =>
+    setSelectedDraftIds(selectedDraftIds.length === paginatedDeletedDrafts.length ? [] : paginatedDeletedDrafts.map(r => r.id));
+
+  const toggleDeletedWorkflowRow = (id: string) =>
+    setSelectedDeletedWorkflowIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleSelectAllDeletedWorkflow = () =>
+    setSelectedDeletedWorkflowIds(selectedDeletedWorkflowIds.length === paginatedDeletedWorkflow.length ? [] : paginatedDeletedWorkflow.map(r => r.id));
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -196,6 +210,15 @@ export function DeletedArchivePage() {
           <table className="w-full">
             <thead className="bg-red-50">
               <tr>
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={paginatedDeletedDrafts.length > 0 && selectedDraftIds.length === paginatedDeletedDrafts.length}
+                    onChange={toggleSelectAllDrafts}
+                    aria-label="Select all deleted drafts"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicant</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
@@ -206,7 +229,7 @@ export function DeletedArchivePage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedDeletedDrafts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No deleted drafts found</p>
                   </td>
@@ -214,6 +237,15 @@ export function DeletedArchivePage() {
               ) : (
                 paginatedDeletedDrafts.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-4 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={selectedDraftIds.includes(record.id)}
+                        onChange={() => toggleDraftRow(record.id)}
+                        aria-label={`Select draft ${record.title}`}
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">{record.title}</div>
                     </td>
@@ -326,6 +358,15 @@ export function DeletedArchivePage() {
           <table className="w-full">
             <thead className="bg-red-50">
               <tr>
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={paginatedDeletedWorkflow.length > 0 && selectedDeletedWorkflowIds.length === paginatedDeletedWorkflow.length}
+                    onChange={toggleSelectAllDeletedWorkflow}
+                    aria-label="Select all deleted workflow records"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applicant</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
@@ -339,7 +380,7 @@ export function DeletedArchivePage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedDeletedWorkflow.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No deleted workflow records found</p>
                   </td>
@@ -347,6 +388,15 @@ export function DeletedArchivePage() {
               ) : (
                 paginatedDeletedWorkflow.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-4 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={selectedDeletedWorkflowIds.includes(record.id)}
+                        onChange={() => toggleDeletedWorkflowRow(record.id)}
+                        aria-label={`Select record ${record.title}`}
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">{record.title}</div>
                     </td>

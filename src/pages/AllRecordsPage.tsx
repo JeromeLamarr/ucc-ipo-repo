@@ -35,6 +35,9 @@ export function AllRecordsPage() {
   const [draftsCurrentPage, setDraftsCurrentPage] = useState(1);
   const [draftsItemsPerPage, setDraftsItemsPerPage] = useState(10);
 
+  // Row selection state
+  const [selectedWorkflowIds, setSelectedWorkflowIds] = useState<string[]>([]);
+
   useEffect(() => {
     fetchRecords();
   }, []);
@@ -169,6 +172,11 @@ export function AllRecordsPage() {
   const paginatedWorkflowRecords = filteredRecords.slice(workflowStartIndex, workflowEndIndex);
   const workflowTotalPages = Math.ceil(filteredRecords.length / workflowItemsPerPage);
 
+  const toggleWorkflowRow = (id: string) =>
+    setSelectedWorkflowIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleSelectAllWorkflow = () =>
+    setSelectedWorkflowIds(selectedWorkflowIds.length === paginatedWorkflowRecords.length ? [] : paginatedWorkflowRecords.map(r => r.id));
+
   // Calculate paginated draft records
   const draftsStartIndex = (draftsCurrentPage - 1) * draftsItemsPerPage;
   const draftsEndIndex = draftsStartIndex + draftsItemsPerPage;
@@ -261,6 +269,15 @@ export function AllRecordsPage() {
           <table className="w-full">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={paginatedWorkflowRecords.length > 0 && selectedWorkflowIds.length === paginatedWorkflowRecords.length}
+                    onChange={toggleSelectAllWorkflow}
+                    aria-label="Select all workflow records"
+                  />
+                </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Title
                 </th>
@@ -290,7 +307,7 @@ export function AllRecordsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No workflow records found</p>
                   </td>
@@ -298,6 +315,15 @@ export function AllRecordsPage() {
               ) : (
                 paginatedWorkflowRecords.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={selectedWorkflowIds.includes(record.id)}
+                        onChange={() => toggleWorkflowRow(record.id)}
+                        aria-label={`Select record ${record.title}`}
+                      />
+                    </td>
                     <td className="px-3 py-3">
                       <div className="text-sm font-medium text-gray-900 max-w-xs truncate" title={record.title}>
                         {record.title}
