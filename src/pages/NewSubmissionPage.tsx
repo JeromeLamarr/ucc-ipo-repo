@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect, useRef } from 'react';
+import { useState, FormEvent, useEffect, useRef, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -1031,28 +1031,30 @@ export function NewSubmissionPage() {
         <p className="text-gray-600 mt-2">Complete all sections to submit your intellectual property</p>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div className="flex items-center justify-between min-w-max">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="flex items-start w-full">
           {steps.map((s, idx) => (
-            <div key={s.num} className="flex items-center flex-shrink-0">
-              <div
-                className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold ${
-                  step >= s.num ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-                }`}
-              >
-                {s.num}
+            <Fragment key={s.num}>
+              <div className="flex flex-col items-center flex-1 min-w-0">
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0 ${
+                    step >= s.num ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                  }`}
+                >
+                  {s.num}
+                </div>
+                <span className="mt-1.5 text-center text-xs font-medium text-gray-600 leading-tight w-full px-0.5 break-words">
+                  {s.label}
+                </span>
               </div>
               {idx < steps.length - 1 && (
                 <div
-                  className={`w-16 h-1 mx-2 ${step > s.num ? 'bg-blue-600' : 'bg-gray-200'}`}
+                  className={`h-1 mt-4 flex-shrink-0 w-3 sm:w-6 ${
+                    step > s.num ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
                 />
               )}
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between mt-3 text-xs font-medium text-gray-600 min-w-max">
-          {steps.map(s => (
-            <span key={s.num} className="w-12 text-center">{s.label}</span>
+            </Fragment>
           ))}
         </div>
       </div>
