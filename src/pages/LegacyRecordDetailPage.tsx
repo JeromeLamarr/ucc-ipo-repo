@@ -329,14 +329,18 @@ export function LegacyRecordDetailPage() {
   const handleDeleteRecord = async () => {
     setDeleteLoading(true);
     try {
-      const { error: deleteError } = await supabase
+      const { error: archiveError } = await supabase
         .from('legacy_ip_records')
-        .delete()
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          deleted_by_admin_id: profile?.id ?? null,
+        })
         .eq('id', id);
-      if (deleteError) throw deleteError;
+      if (archiveError) throw archiveError;
       navigate('/dashboard/legacy-records');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete record.');
+      setError(err instanceof Error ? err.message : 'Failed to archive record.');
     } finally {
       setDeleteLoading(false);
       setShowDeleteConfirm(false);

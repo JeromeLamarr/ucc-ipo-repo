@@ -67,6 +67,7 @@ export function LegacyRecordsPage() {
       const { data, error } = await supabase
         .from('legacy_ip_records')
         .select('*')
+        .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -107,13 +108,20 @@ export function LegacyRecordsPage() {
   const handleDeleteRecord = async (id: string) => {
     setDeleteLoading(true);
     try {
-      const { error } = await supabase.from('legacy_ip_records').delete().eq('id', id);
+      const { error } = await supabase
+        .from('legacy_ip_records')
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          deleted_by_admin_id: profile!.id,
+        })
+        .eq('id', id);
       if (error) throw error;
       setRecords((prev) => prev.filter((r) => r.id !== id));
       setDeleteConfirmation(null);
     } catch (err) {
-      console.error('Error deleting legacy record:', err);
-      alert('Failed to delete record. Please try again.');
+      console.error('Error archiving legacy record:', err);
+      alert('Failed to archive record. Please try again.');
     } finally {
       setDeleteLoading(false);
     }
@@ -137,22 +145,26 @@ export function LegacyRecordsPage() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // ─── Bulk delete ──────────────────────────────────────────────────────────
+  // ─── Bulk archive (soft delete) ───────────────────────────────────────────
   const handleBulkDelete = async () => {
     setBulkDeleteLoading(true);
     try {
       const ids = [...selectedIds];
       const { error } = await supabase
         .from('legacy_ip_records')
-        .delete()
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          deleted_by_admin_id: profile!.id,
+        })
         .in('id', ids);
       if (error) throw error;
       setRecords((prev) => prev.filter((r) => !selectedIds.has(r.id)));
       clearSelection();
       setBulkDeleteConfirm(false);
     } catch (err) {
-      console.error('Bulk delete error:', err);
-      alert('Failed to delete selected records. Please try again.');
+      console.error('Bulk archive error:', err);
+      alert('Failed to archive selected records. Please try again.');
     } finally {
       setBulkDeleteLoading(false);
     }

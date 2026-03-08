@@ -11,6 +11,8 @@ type IpRecord = Database['public']['Tables']['ip_records']['Row'] & {
   evaluator?: Database['public']['Tables']['users']['Row'];
 };
 
+type DeletedLegacyRecord = Database['public']['Tables']['legacy_ip_records']['Row'];
+
 type IpStatus = Database['public']['Tables']['ip_records']['Row']['status'];
 type IpCategory = Database['public']['Tables']['ip_records']['Row']['category'];
 
@@ -24,6 +26,7 @@ export function DeletedArchivePage() {
     type: 'restore' | 'delete_forever';
     id: string;
     title: string;
+    recordType?: 'legacy';
   } | null>(null);
 
   // Pagination states for deleted drafts
@@ -34,12 +37,19 @@ export function DeletedArchivePage() {
   const [workflowCurrentPage, setWorkflowCurrentPage] = useState(1);
   const [workflowItemsPerPage, setWorkflowItemsPerPage] = useState(10);
 
+  // Deleted legacy records
+  const [deletedLegacyRecords, setDeletedLegacyRecords] = useState<DeletedLegacyRecord[]>([]);
+  const [legacyCurrentPage, setLegacyCurrentPage] = useState(1);
+  const [legacyItemsPerPage, setLegacyItemsPerPage] = useState(10);
+
   // Row selection state
   const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
   const [selectedDeletedWorkflowIds, setSelectedDeletedWorkflowIds] = useState<string[]>([]);
+  const [selectedLegacyIds, setSelectedLegacyIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetchDeletedRecords();
+    fetchDeletedLegacyRecords();
   }, []);
 
   const fetchDeletedRecords = async () => {
@@ -117,6 +127,61 @@ export function DeletedArchivePage() {
     }
   };
 
+  // ─── Legacy record archive helpers ────────────────────────────────────────
+
+  const fetchDeletedLegacyRecords = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('legacy_ip_records')
+        .select('*')
+        .eq('is_deleted', true)
+        .order('deleted_at', { ascending: false });
+
+      if (error) throw error;
+      setDeletedLegacyRecords(data || []);
+    } catch (error) {
+      console.error('Error fetching deleted legacy records:', error);
+    }
+  };
+
+  const handleRestoreLegacyRecord = async (recordId: string) => {
+    try {
+      const { error } = await supabase
+        .from('legacy_ip_records')
+        .update({
+          is_deleted: false,
+          deleted_at: null,
+          deleted_by_admin_id: null,
+        })
+        .eq('id', recordId);
+
+      if (error) throw error;
+
+      await fetchDeletedLegacyRecords();
+      setConfirmAction(null);
+    } catch (error) {
+      console.error('Error restoring legacy record:', error);
+      alert('Failed to restore legacy record. Please try again.');
+    }
+  };
+
+  const handleDeleteLegacyForever = async (recordId: string) => {
+    try {
+      const { error } = await supabase
+        .from('legacy_ip_records')
+        .delete()
+        .eq('id', recordId);
+
+      if (error) throw error;
+
+      await fetchDeletedLegacyRecords();
+      setConfirmAction(null);
+    } catch (error) {
+      console.error('Error permanently deleting legacy record:', error);
+      alert('Failed to permanently delete legacy record. Please try again.');
+    }
+  };
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -160,6 +225,20 @@ export function DeletedArchivePage() {
     setSelectedDeletedWorkflowIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const toggleSelectAllDeletedWorkflow = () =>
     setSelectedDeletedWorkflowIds(selectedDeletedWorkflowIds.length === paginatedDeletedWorkflow.length ? [] : paginatedDeletedWorkflow.map(r => r.id));
+
+  // ─── Legacy records filter + pagination ───────────────────────────────────
+  const filteredDeletedLegacy = deletedLegacyRecords.filter((record) =>
+    record.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const legacyStartIndex = (legacyCurrentPage - 1) * legacyItemsPerPage;
+  const paginatedDeletedLegacy = filteredDeletedLegacy.slice(legacyStartIndex, legacyStartIndex + legacyItemsPerPage);
+  const legacyTotalPages = Math.ceil(filteredDeletedLegacy.length / legacyItemsPerPage);
+
+  const toggleLegacyRow = (id: string) =>
+    setSelectedLegacyIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleSelectAllLegacy = () =>
+    setSelectedLegacyIds(selectedLegacyIds.length === paginatedDeletedLegacy.length ? [] : paginatedDeletedLegacy.map(r => r.id));
 
   if (loading) {
     return (
@@ -527,8 +606,164 @@ export function DeletedArchivePage() {
         />
       </div>
 
+      {/* DELETED LEGACY IP RECORDS SECTION */}
+      <div className="bg-white rounded-xl shadow-sm border border-amber-200 p-4 lg:p-6">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-gray-900">
+            Deleted Legacy Records ({filteredDeletedLegacy.length})
+          </h2>
+          <p className="text-gray-600 text-sm mt-1">Archived historical IP records</p>
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-amber-50">
+              <tr>
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={paginatedDeletedLegacy.length > 0 && selectedLegacyIds.length === paginatedDeletedLegacy.length}
+                    onChange={toggleSelectAllLegacy}
+                    aria-label="Select all deleted legacy records"
+                  />
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IPOPHIL No.</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deleted</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {paginatedDeletedLegacy.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>No deleted legacy records found</p>
+                  </td>
+                </tr>
+              ) : (
+                paginatedDeletedLegacy.map((record) => (
+                  <tr key={record.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-4 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        checked={selectedLegacyIds.includes(record.id)}
+                        onChange={() => toggleLegacyRow(record.id)}
+                        aria-label={`Select legacy record ${record.title}`}
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">{record.title}</div>
+                      <div className="text-xs text-amber-600 font-medium">Legacy Record</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 capitalize">{record.category}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 capitalize">{record.legacy_source.replace('_', ' ')}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {record.ipophil_application_no || '—'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {record.deleted_at ? formatDate(record.deleted_at) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setConfirmAction({ type: 'restore', id: record.id, title: record.title, recordType: 'legacy' })}
+                          className="text-green-600 hover:text-green-700 font-medium inline-flex items-center gap-1"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Restore
+                        </button>
+                        <button
+                          onClick={() => setConfirmAction({ type: 'delete_forever', id: record.id, title: record.title, recordType: 'legacy' })}
+                          className="text-red-600 hover:text-red-700 font-medium inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete Permanently
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="lg:hidden space-y-4">
+          {paginatedDeletedLegacy.length === 0 ? (
+            <div className="py-12 text-center text-gray-500">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No deleted legacy records found</p>
+            </div>
+          ) : (
+            paginatedDeletedLegacy.map((record) => (
+              <div key={record.id} className="bg-white rounded-xl border border-amber-200 p-4 space-y-3">
+                <div className="font-medium text-gray-900">{record.title}</div>
+                <div className="text-xs text-amber-600 font-medium">Legacy Record</div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <div className="text-gray-500">Category</div>
+                    <div className="font-medium text-gray-900 capitalize">{record.category}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Source</div>
+                    <div className="font-medium text-gray-900 capitalize">{record.legacy_source.replace('_', ' ')}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">IPOPHIL No.</div>
+                    <div className="font-medium text-gray-900">{record.ipophil_application_no || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Deleted</div>
+                    <div className="font-medium text-gray-900">{record.deleted_at ? formatDate(record.deleted_at) : '-'}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setConfirmAction({ type: 'restore', id: record.id, title: record.title, recordType: 'legacy' })}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm border border-green-200 text-green-600 rounded-lg hover:bg-green-50 transition"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Restore
+                  </button>
+                  <button
+                    onClick={() => setConfirmAction({ type: 'delete_forever', id: record.id, title: record.title, recordType: 'legacy' })}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Permanently
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <Pagination
+          currentPage={legacyCurrentPage}
+          totalPages={legacyTotalPages}
+          onPageChange={setLegacyCurrentPage}
+          itemsPerPage={legacyItemsPerPage}
+          onItemsPerPageChange={(count) => {
+            setLegacyItemsPerPage(count);
+            setLegacyCurrentPage(1);
+          }}
+          totalItems={filteredDeletedLegacy.length}
+        />
+      </div>
+
       {/* Global Empty State — only when nothing exists at all */}
-      {deletedDrafts.length === 0 && deletedWorkflow.length === 0 && (
+      {deletedDrafts.length === 0 && deletedWorkflow.length === 0 && deletedLegacyRecords.length === 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
           <FileText className="h-16 w-16 mx-auto mb-4 text-gray-300" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No Deleted Records</h3>
@@ -557,10 +792,18 @@ export function DeletedArchivePage() {
               </button>
               <button
                 onClick={() => {
-                  if (confirmAction.type === 'restore') {
-                    handleRestoreRecord(confirmAction.id);
+                  if (confirmAction.recordType === 'legacy') {
+                    if (confirmAction.type === 'restore') {
+                      handleRestoreLegacyRecord(confirmAction.id);
+                    } else {
+                      handleDeleteLegacyForever(confirmAction.id);
+                    }
                   } else {
-                    handleDeleteForever(confirmAction.id);
+                    if (confirmAction.type === 'restore') {
+                      handleRestoreRecord(confirmAction.id);
+                    } else {
+                      handleDeleteForever(confirmAction.id);
+                    }
                   }
                 }}
                 className={`px-4 py-2 text-white rounded-lg font-medium ${

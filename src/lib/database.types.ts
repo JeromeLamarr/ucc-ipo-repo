@@ -625,6 +625,9 @@ export interface Database {
           updated_by_admin_id: string | null;
           created_at: string;
           updated_at: string;
+          is_deleted: boolean;
+          deleted_at: string | null;
+          deleted_by_admin_id: string | null;
         };
         Insert: {
           id?: string;
@@ -641,6 +644,9 @@ export interface Database {
           updated_by_admin_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          is_deleted?: boolean;
+          deleted_at?: string | null;
+          deleted_by_admin_id?: string | null;
         };
         Update: {
           id?: string;
@@ -657,6 +663,9 @@ export interface Database {
           updated_by_admin_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          is_deleted?: boolean;
+          deleted_at?: string | null;
+          deleted_by_admin_id?: string | null;
         };
       };
     };
