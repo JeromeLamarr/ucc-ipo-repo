@@ -148,12 +148,31 @@ export function AllRecordsPage() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Title', 'Applicant', 'Category', 'Status', 'Supervisor', 'Evaluator', 'Created'];
-    const rows = filteredRecords.map((record) => [
+    // If rows are selected, export only those; otherwise export all filtered records
+    const exportSource =
+      selectedWorkflowIds.length > 0
+        ? filteredRecords.filter((r) => selectedWorkflowIds.includes(r.id))
+        : filteredRecords;
+
+    const headers = [
+      'Tracking ID',
+      'Reference Number',
+      'Title',
+      'Applicant',
+      'Category',
+      'Status',
+      'Supervisor',
+      'Evaluator',
+      'Date Filed',
+    ];
+
+    const rows = exportSource.map((record) => [
+      record.tracking_id ?? '',
+      record.reference_number ?? '',
       record.title,
       record.applicant?.full_name || '',
       record.category,
-      record.status,
+      getStatusLabel(record.status),
       record.supervisor?.full_name || 'Not assigned',
       record.evaluator?.full_name || 'Not assigned',
       new Date(record.created_at).toLocaleDateString(),
@@ -161,17 +180,30 @@ export function AllRecordsPage() {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(',')),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    // Build a descriptive filename reflecting active filters
+    const parts = ['ip-records'];
+    if (selectedWorkflowIds.length > 0) parts.push(`selected-${selectedWorkflowIds.length}`);
+    if (statusFilter !== 'all') parts.push(statusFilter);
+    if (categoryFilter !== 'all') parts.push(categoryFilter);
+    if (dateFrom) parts.push(`from-${dateFrom}`);
+    if (dateTo) parts.push(`to-${dateTo}`);
+    parts.push(new Date().toISOString().split('T')[0]);
+    const filename = `${parts.join('_')}.csv`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ip-workflow-records-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = filename;
     a.click();
     window.URL.revokeObjectURL(url);
   };
+
+  const exportCount = selectedWorkflowIds.length > 0 ? selectedWorkflowIds.length : filteredRecords.length;
+  const exportLabel = selectedWorkflowIds.length > 0 ? `Export Selected (${exportCount})` : `Export Filtered (${exportCount})`;
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -220,7 +252,7 @@ export function AllRecordsPage() {
           className="flex items-center justify-center gap-2 px-4 lg:px-6 py-2 lg:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm lg:text-base"
         >
           <Download className="h-4 w-4 lg:h-5 lg:w-5" />
-          Export CSV
+          {exportLabel}
         </button>
       </div>
 
