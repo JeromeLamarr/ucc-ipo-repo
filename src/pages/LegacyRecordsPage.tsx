@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { FileText, Search, Filter, Eye, Plus, Archive, Trash2 } from 'lucide-react';
+import { Search, Eye, Plus, Archive, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
@@ -30,6 +30,13 @@ export function LegacyRecordsPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Row selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Bulk delete
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
 
   // Redirect if not admin
   useEffect(() => {
@@ -119,6 +126,38 @@ export function LegacyRecordsPage() {
     setSourceFilter('all');
   };
 
+  // ─── Row selection helpers (non-paginated-dependent) ──────────────────────
+  const toggleRow = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  // ─── Bulk delete ──────────────────────────────────────────────────────────
+  const handleBulkDelete = async () => {
+    setBulkDeleteLoading(true);
+    try {
+      const ids = [...selectedIds];
+      const { error } = await supabase
+        .from('legacy_ip_records')
+        .delete()
+        .in('id', ids);
+      if (error) throw error;
+      setRecords((prev) => prev.filter((r) => !selectedIds.has(r.id)));
+      clearSelection();
+      setBulkDeleteConfirm(false);
+    } catch (err) {
+      console.error('Bulk delete error:', err);
+      alert('Failed to delete selected records. Please try again.');
+    } finally {
+      setBulkDeleteLoading(false);
+    }
+  };
+
   const categories = ['patent', 'trademark', 'copyright', 'trade_secret', 'software', 'design', 'other'] as IpCategory[];
   const sources = ['old_system', 'physical_archive', 'email', 'manual_entry', 'other'];
 
@@ -127,11 +166,39 @@ export function LegacyRecordsPage() {
     setCurrentPage(1);
   }, [searchTerm, categoryFilter, sourceFilter]);
 
+  // Clear selection when filters or page change (selections from another page/filter are confusing)
+  useEffect(() => {
+    clearSelection();
+  }, [searchTerm, categoryFilter, sourceFilter, currentPage]);
+
   const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
   const paginatedRecords = filteredRecords.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  // ─── Selection helpers that depend on paginatedRecords ───────────────────
+  const allCurrentPageSelected =
+    paginatedRecords.length > 0 && paginatedRecords.every((r) => selectedIds.has(r.id));
+
+  const someCurrentPageSelected =
+    paginatedRecords.some((r) => selectedIds.has(r.id)) && !allCurrentPageSelected;
+
+  const toggleSelectAll = () => {
+    if (allCurrentPageSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        paginatedRecords.forEach((r) => next.delete(r.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        paginatedRecords.forEach((r) => next.add(r.id));
+        return next;
+      });
+    }
+  };
 
   if (!profile || profile.role !== 'admin') {
     return null;
@@ -212,6 +279,26 @@ export function LegacyRecordsPage() {
               {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''} found
             </p>
           </div>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-3 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+              <span className="text-sm font-medium text-amber-800">
+                {selectedIds.size} record{selectedIds.size !== 1 ? 's' : ''} selected
+              </span>
+              <button
+                onClick={() => setBulkDeleteConfirm(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                Delete Selected
+              </button>
+              <button
+                onClick={clearSelection}
+                className="text-sm text-amber-700 hover:text-amber-900 underline"
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -263,8 +350,18 @@ export function LegacyRecordsPage() {
             {/* Desktop table */}
             <div className="hidden lg:block overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
+                    <th className="px-3 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                        checked={allCurrentPageSelected}
+                        ref={(el) => { if (el) el.indeterminate = someCurrentPageSelected; }}
+                        onChange={toggleSelectAll}
+                        aria-label="Select all records on this page"
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inventor / Author</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
@@ -275,7 +372,19 @@ export function LegacyRecordsPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedRecords.map((record) => (
-                    <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={record.id}
+                      className={`hover:bg-gray-50 transition-colors${selectedIds.has(record.id) ? ' bg-amber-50' : ''}`}
+                    >
+                      <td className="px-3 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                          checked={selectedIds.has(record.id)}
+                          onChange={() => toggleRow(record.id)}
+                          aria-label={`Select record: ${record.title}`}
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-medium text-gray-900">{record.title}</span>
                       </td>
@@ -324,12 +433,28 @@ export function LegacyRecordsPage() {
             {/* Mobile cards */}
             <div className="lg:hidden space-y-4">
               {paginatedRecords.map((record) => (
-                <div key={record.id} className="bg-white rounded-xl border border-amber-200 p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="font-medium text-gray-900">{record.title}</div>
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 shrink-0">
-                      {record.category}
-                    </span>
+                <div
+                  key={record.id}
+                  className={`rounded-xl border p-4 space-y-3 transition-colors${
+                    selectedIds.has(record.id)
+                      ? ' bg-amber-50 border-amber-400'
+                      : ' bg-white border-amber-200'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 shrink-0"
+                      checked={selectedIds.has(record.id)}
+                      onChange={() => toggleRow(record.id)}
+                      aria-label={`Select record: ${record.title}`}
+                    />
+                    <div className="flex-1 flex items-start justify-between gap-2">
+                      <div className="font-medium text-gray-900">{record.title}</div>
+                      <span className="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 shrink-0">
+                        {record.category}
+                      </span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
@@ -381,6 +506,42 @@ export function LegacyRecordsPage() {
           </>
         )}
       </div>
+      {/* Bulk Delete Confirmation Modal */}
+      {bulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4 w-full">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Delete Selected Records</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to permanently delete{' '}
+              <strong>{selectedIds.size} record{selectedIds.size !== 1 ? 's' : ''}</strong>?{' '}
+              This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setBulkDeleteConfirm(false)}
+                disabled={bulkDeleteLoading}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleteLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+              >
+                {bulkDeleteLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Delete {selectedIds.size} Record{selectedIds.size !== 1 ? 's' : ''} Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Single Delete Confirmation Modal */}
       {deleteConfirmation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4 w-full">
