@@ -84,6 +84,7 @@ export function AddLegacyRecordPage() {
             abstract: formData.abstract,
             legacy_source: formData.legacy_source,
             original_filing_date: formData.date_created,
+            ipophil_application_no: formData.ipophil_application_no || null,
             remarks: formData.remarks,
             details: {
               creator_name: formData.inventor_name,
