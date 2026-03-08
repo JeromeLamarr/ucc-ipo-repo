@@ -108,20 +108,25 @@ export function LegacyRecordsPage() {
   const handleDeleteRecord = async (id: string) => {
     setDeleteLoading(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('legacy_ip_records')
         .update({
           is_deleted: true,
           deleted_at: new Date().toISOString(),
           deleted_by_admin_id: profile!.id,
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select('id');
       if (error) throw error;
-      setRecords((prev) => prev.filter((r) => r.id !== id));
+      if (!data || data.length === 0) {
+        throw new Error('Record not found or you do not have permission to delete it.');
+      }
+      // Re-fetch from DB for ground truth (do not rely on optimistic state)
+      await fetchRecords();
       setDeleteConfirmation(null);
     } catch (err) {
       console.error('Error archiving legacy record:', err);
-      alert('Failed to archive record. Please try again.');
+      alert(err instanceof Error ? err.message : 'Failed to archive record. Please try again.');
     } finally {
       setDeleteLoading(false);
     }
@@ -150,21 +155,30 @@ export function LegacyRecordsPage() {
     setBulkDeleteLoading(true);
     try {
       const ids = [...selectedIds];
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('legacy_ip_records')
         .update({
           is_deleted: true,
           deleted_at: new Date().toISOString(),
           deleted_by_admin_id: profile!.id,
         })
-        .in('id', ids);
+        .in('id', ids)
+        .select('id');
       if (error) throw error;
-      setRecords((prev) => prev.filter((r) => !selectedIds.has(r.id)));
+      if (!data || data.length === 0) {
+        throw new Error('No records were archived. You may not have permission or the records were not found.');
+      }
+      if (data.length < ids.length) {
+        // Partial success — some records were archived, some were not
+        console.warn(`Bulk archive: expected ${ids.length} rows, only ${data.length} were archived.`);
+      }
+      // Re-fetch from DB for ground truth
+      await fetchRecords();
       clearSelection();
       setBulkDeleteConfirm(false);
     } catch (err) {
       console.error('Bulk archive error:', err);
-      alert('Failed to archive selected records. Please try again.');
+      alert(err instanceof Error ? err.message : 'Failed to archive selected records. Please try again.');
     } finally {
       setBulkDeleteLoading(false);
     }
