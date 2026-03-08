@@ -146,16 +146,12 @@ export function DeletedArchivePage() {
 
   const handleRestoreLegacyRecord = async (recordId: string) => {
     try {
-      const { error } = await supabase
-        .from('legacy_ip_records')
-        .update({
-          is_deleted: false,
-          deleted_at: null,
-          deleted_by_admin_id: null,
-        })
-        .eq('id', recordId);
-
+      const { data: success, error } = await supabase.rpc(
+        'restore_legacy_ip_record',
+        { p_id: recordId }
+      );
       if (error) throw error;
+      if (!success) throw new Error('Record not found or already active.');
 
       await fetchDeletedLegacyRecords();
       setConfirmAction(null);
@@ -167,12 +163,12 @@ export function DeletedArchivePage() {
 
   const handleDeleteLegacyForever = async (recordId: string) => {
     try {
-      const { error } = await supabase
-        .from('legacy_ip_records')
-        .delete()
-        .eq('id', recordId);
-
+      const { data: success, error } = await supabase.rpc(
+        'hard_delete_legacy_ip_record',
+        { p_id: recordId }
+      );
       if (error) throw error;
+      if (!success) throw new Error('Record not found.');
 
       await fetchDeletedLegacyRecords();
       setConfirmAction(null);

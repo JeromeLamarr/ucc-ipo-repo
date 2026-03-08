@@ -329,17 +329,12 @@ export function LegacyRecordDetailPage() {
   const handleDeleteRecord = async () => {
     setDeleteLoading(true);
     try {
-      const { data, error: archiveError } = await supabase
-        .from('legacy_ip_records')
-        .update({
-          is_deleted: true,
-          deleted_at: new Date().toISOString(),
-          deleted_by_admin_id: profile?.id ?? null,
-        })
-        .eq('id', id)
-        .select('id');
+      const { data: archivedCount, error: archiveError } = await supabase.rpc(
+        'archive_legacy_ip_records',
+        { p_ids: [id!], p_deleted_by: profile?.id ?? null }
+      );
       if (archiveError) throw archiveError;
-      if (!data || data.length === 0) {
+      if (!archivedCount || archivedCount === 0) {
         throw new Error('Record not found or you do not have permission to delete it.');
       }
       navigate('/dashboard/legacy-records');

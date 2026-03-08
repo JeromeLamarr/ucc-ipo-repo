@@ -108,20 +108,14 @@ export function LegacyRecordsPage() {
   const handleDeleteRecord = async (id: string) => {
     setDeleteLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('legacy_ip_records')
-        .update({
-          is_deleted: true,
-          deleted_at: new Date().toISOString(),
-          deleted_by_admin_id: profile!.id,
-        })
-        .eq('id', id)
-        .select('id');
+      const { data: archivedCount, error } = await supabase.rpc(
+        'archive_legacy_ip_records',
+        { p_ids: [id], p_deleted_by: profile!.id }
+      );
       if (error) throw error;
-      if (!data || data.length === 0) {
+      if (!archivedCount || archivedCount === 0) {
         throw new Error('Record not found or you do not have permission to delete it.');
       }
-      // Re-fetch from DB for ground truth (do not rely on optimistic state)
       await fetchRecords();
       setDeleteConfirmation(null);
     } catch (err) {
@@ -155,24 +149,17 @@ export function LegacyRecordsPage() {
     setBulkDeleteLoading(true);
     try {
       const ids = [...selectedIds];
-      const { data, error } = await supabase
-        .from('legacy_ip_records')
-        .update({
-          is_deleted: true,
-          deleted_at: new Date().toISOString(),
-          deleted_by_admin_id: profile!.id,
-        })
-        .in('id', ids)
-        .select('id');
+      const { data: archivedCount, error } = await supabase.rpc(
+        'archive_legacy_ip_records',
+        { p_ids: ids, p_deleted_by: profile!.id }
+      );
       if (error) throw error;
-      if (!data || data.length === 0) {
+      if (!archivedCount || archivedCount === 0) {
         throw new Error('No records were archived. You may not have permission or the records were not found.');
       }
-      if (data.length < ids.length) {
-        // Partial success — some records were archived, some were not
-        console.warn(`Bulk archive: expected ${ids.length} rows, only ${data.length} were archived.`);
+      if (archivedCount < ids.length) {
+        console.warn(`Bulk archive: expected ${ids.length} rows, only ${archivedCount} were archived.`);
       }
-      // Re-fetch from DB for ground truth
       await fetchRecords();
       clearSelection();
       setBulkDeleteConfirm(false);
