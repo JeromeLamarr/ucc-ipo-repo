@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import ExcelJS from 'exceljs';
+import * as XLSX from 'xlsx';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { FileText, Search, Filter, Eye, Download, Plus, Award, Trash2, MoreVertical } from 'lucide-react';
@@ -148,26 +148,13 @@ export function AllRecordsPage() {
     setFilteredDrafts(drafts);
   };
 
-  const exportToExcel = async () => {
+  const exportToExcel = () => {
     const exportSource =
       selectedWorkflowIds.length > 0
         ? filteredRecords.filter((r) => selectedWorkflowIds.includes(r.id))
         : filteredRecords;
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'UCC IPO System';
-    workbook.created = new Date();
-
-    const sheet = workbook.addWorksheet('IP Records');
-
-    // ── Metadata rows ────────────────────────────────────────────────
-    const metaStyle: Partial<ExcelJS.Style> = {
-      font: { italic: true, size: 10, color: { argb: 'FF6B7280' } },
-    };
-
-    const genRow = sheet.addRow(['Generated:', new Date().toLocaleString()]);
-    genRow.eachCell((c) => Object.assign(c, metaStyle));
-
+    // ── Active filter description ─────────────────────────────────
     const filterParts: string[] = [];
     if (searchTerm) filterParts.push(`Search: "${searchTerm}"`);
     if (statusFilter !== 'all') filterParts.push(`Status: ${getStatusLabel(statusFilter)}`);
@@ -176,91 +163,62 @@ export function AllRecordsPage() {
     if (dateTo) filterParts.push(`To: ${dateTo}`);
     if (selectedWorkflowIds.length > 0) filterParts.push(`Selection: ${selectedWorkflowIds.length} rows`);
 
-    const filterRow = sheet.addRow([
-      'Active Filters:',
-      filterParts.length > 0 ? filterParts.join('  |  ') : 'None',
+    // ── Sheet data ────────────────────────────────────────────────
+    const metaRows = [
+      ['UCC Intellectual Property Office – IP Records Export'],
+      ['Generated:', new Date().toLocaleString()],
+      ['Active Filters:', filterParts.length > 0 ? filterParts.join('  |  ') : 'None'],
+      ['Total Records:', exportSource.length],
+      [], // spacer
+      // Header
+      ['Tracking ID', 'Reference Number', 'Title', 'Applicant', 'Category', 'Status', 'Supervisor', 'Evaluator', 'Date Filed'],
+    ];
+
+    const dataRows = exportSource.map((record) => [
+      record.tracking_id ?? '',
+      record.reference_number ?? '',
+      record.title,
+      record.applicant?.full_name || '',
+      record.category,
+      getStatusLabel(record.status),
+      record.supervisor?.full_name || 'Not assigned',
+      record.evaluator?.full_name || 'Not assigned',
+      new Date(record.created_at).toLocaleDateString(),
     ]);
-    filterRow.eachCell((c) => Object.assign(c, metaStyle));
 
-    const totalRow = sheet.addRow(['Total Records:', exportSource.length]);
-    totalRow.getCell(1).font = { bold: true, size: 10 };
-    totalRow.getCell(2).font = { bold: true, size: 10 };
+    const allRows = [...metaRows, ...dataRows];
 
-    sheet.addRow([]); // blank spacer
+    // ── Build worksheet ───────────────────────────────────────────
+    const ws = XLSX.utils.aoa_to_sheet(allRows);
 
-    // ── Header row (row 5) ───────────────────────────────────────────
-    const HEADER_FILL: ExcelJS.Fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF16A34A' }, // green-600
-    };
-    const HEADER_BORDER: Partial<ExcelJS.Borders> = {
-      top:    { style: 'thin', color: { argb: 'FF15803D' } },
-      bottom: { style: 'thin', color: { argb: 'FF15803D' } },
-      left:   { style: 'thin', color: { argb: 'FF15803D' } },
-      right:  { style: 'thin', color: { argb: 'FF15803D' } },
-    };
+    // Column widths (characters)
+    ws['!cols'] = [
+      { wch: 18 }, // Tracking ID
+      { wch: 20 }, // Reference Number
+      { wch: 44 }, // Title
+      { wch: 26 }, // Applicant
+      { wch: 15 }, // Category
+      { wch: 28 }, // Status
+      { wch: 26 }, // Supervisor
+      { wch: 26 }, // Evaluator
+      { wch: 14 }, // Date Filed
+    ];
 
-    const headerRow = sheet.addRow([
-      'Tracking ID', 'Reference Number', 'Title', 'Applicant',
-      'Category', 'Status', 'Supervisor', 'Evaluator', 'Date Filed',
-    ]);
-    headerRow.height = 24;
-    headerRow.eachCell((cell) => {
-      cell.fill = HEADER_FILL;
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border = HEADER_BORDER;
+    // Auto-filter on the header row (row index 5 = 6th row, 1-based row 6)
+    const headerRowNum = metaRows.length; // 0-based index of header row
+    const headerRef = XLSX.utils.encode_range({
+      s: { r: headerRowNum, c: 0 },
+      e: { r: headerRowNum, c: 8 },
     });
+    ws['!autofilter'] = { ref: headerRef };
 
-    // ── Data rows ────────────────────────────────────────────────────
-    const EVEN_FILL: ExcelJS.Fill = {
-      type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' }, // green-50
-    };
-    const ODD_FILL: ExcelJS.Fill = {
-      type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' },
-    };
-    const DATA_BORDER: Partial<ExcelJS.Borders> = {
-      top:    { style: 'hair', color: { argb: 'FFD1FAE5' } },
-      bottom: { style: 'hair', color: { argb: 'FFD1FAE5' } },
-      left:   { style: 'hair', color: { argb: 'FFD1FAE5' } },
-      right:  { style: 'hair', color: { argb: 'FFD1FAE5' } },
-    };
+    // Freeze rows above + including the header
+    ws['!freeze'] = { xSplit: 0, ySplit: headerRowNum + 1 } as never;
 
-    exportSource.forEach((record, idx) => {
-      const row = sheet.addRow([
-        record.tracking_id ?? '',
-        record.reference_number ?? '',
-        record.title,
-        record.applicant?.full_name || '',
-        record.category,
-        getStatusLabel(record.status),
-        record.supervisor?.full_name || 'Not assigned',
-        record.evaluator?.full_name || 'Not assigned',
-        new Date(record.created_at).toLocaleDateString(),
-      ]);
-      row.height = 18;
-      row.eachCell({ includeEmpty: true }, (cell, colNum) => {
-        cell.fill = idx % 2 === 0 ? EVEN_FILL : ODD_FILL;
-        cell.border = DATA_BORDER;
-        cell.alignment = {
-          vertical: 'middle',
-          horizontal: colNum === 9 ? 'center' : 'left',
-          wrapText: colNum === 3, // wrap Title column
-        };
-        cell.font = { size: 10 };
-      });
-    });
+    // ── Workbook & download ───────────────────────────────────────
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'IP Records');
 
-    // ── Column widths ────────────────────────────────────────────────
-    const colWidths = [16, 18, 42, 24, 14, 26, 24, 24, 14];
-    colWidths.forEach((w, i) => { sheet.getColumn(i + 1).width = w; });
-
-    // ── Auto-filter & freeze pane ────────────────────────────────────
-    sheet.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: 9 } };
-    sheet.views = [{ state: 'frozen', ySplit: 5 } as ExcelJS.WorksheetView];
-
-    // ── Filename ─────────────────────────────────────────────────────
     const parts = ['ip-records'];
     if (selectedWorkflowIds.length > 0) parts.push(`selected-${selectedWorkflowIds.length}`);
     if (statusFilter !== 'all') parts.push(statusFilter);
@@ -270,17 +228,7 @@ export function AllRecordsPage() {
     parts.push(new Date().toISOString().split('T')[0]);
     const filename = `${parts.join('_')}.xlsx`;
 
-    // ── Download ─────────────────────────────────────────────────────
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    XLSX.writeFile(wb, filename);
   };
 
   const exportCount = selectedWorkflowIds.length > 0 ? selectedWorkflowIds.length : filteredRecords.length;
