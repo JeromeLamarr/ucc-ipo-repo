@@ -26,6 +26,8 @@ export function AllRecordsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<IpStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<IpCategory | 'all'>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Pagination states for workflow records
   const [workflowCurrentPage, setWorkflowCurrentPage] = useState(1);
@@ -44,7 +46,8 @@ export function AllRecordsPage() {
 
   useEffect(() => {
     filterRecords();
-  }, [records, searchTerm, statusFilter, categoryFilter]);
+    setWorkflowCurrentPage(1);
+  }, [records, searchTerm, statusFilter, categoryFilter, dateFrom, dateTo]);
 
   const fetchRecords = async () => {
     try {
@@ -123,6 +126,18 @@ export function AllRecordsPage() {
 
     if (categoryFilter !== 'all') {
       filtered = filtered.filter((record) => record.category === categoryFilter);
+    }
+
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      filtered = filtered.filter((record) => new Date(record.created_at) >= from);
+    }
+
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((record) => new Date(record.created_at) <= to);
     }
 
     console.log('Filtered workflow records:', filtered.length);
@@ -216,54 +231,92 @@ export function AllRecordsPage() {
           <p className="text-gray-600 text-xs lg:text-sm mt-1">Active submissions in the evaluation workflow</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4 mb-4 lg:mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by title or applicant..."
-              className="w-full pl-9 lg:pl-10 pr-3 lg:pr-4 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+        <div className="space-y-3 mb-4 lg:mb-6">
+          {/* Row 1: Search, Status, Category */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by title or applicant..."
+                className="w-full pl-9 lg:pl-10 pr-3 lg:pr-4 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as IpStatus | 'all')}
+                className="w-full pl-9 lg:pl-10 pr-8 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+              >
+                <option value="all">All Statuses</option>
+                <option value="submitted">Submitted</option>
+                <option value="waiting_supervisor">Waiting Supervisor</option>
+                <option value="supervisor_revision">Revision Requested – Supervisor</option>
+                <option value="supervisor_approved">Supervisor Approved</option>
+                <option value="waiting_evaluation">Waiting Evaluation</option>
+                <option value="evaluator_revision">Revision Requested – Evaluator</option>
+                <option value="evaluator_approved">Evaluator Approved</option>
+                <option value="preparing_legal">Preparing for Legal Filing</option>
+                <option value="ready_for_filing">Ready for Filing</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value as IpCategory | 'all')}
+                className="w-full pl-9 lg:pl-10 pr-8 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+              >
+                <option value="all">All Categories</option>
+                <option value="patent">Patent</option>
+                <option value="copyright">Copyright</option>
+                <option value="trademark">Trademark</option>
+                <option value="design">Industrial Design</option>
+                <option value="utility_model">Utility Model</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
           </div>
 
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as IpStatus | 'all')}
-              className="w-full pl-9 lg:pl-10 pr-8 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-            >
-              <option value="all">All Statuses</option>
-              <option value="submitted">Submitted</option>
-              <option value="waiting_supervisor">Waiting Supervisor</option>
-              <option value="supervisor_revision">Revision Requested – Supervisor</option>
-              <option value="supervisor_approved">Supervisor Approved</option>
-              <option value="waiting_evaluation">Waiting Evaluation</option>
-              <option value="evaluator_revision">Revision Requested – Evaluator</option>
-              <option value="evaluator_approved">Evaluator Approved</option>
-              <option value="preparing_legal">Preparing for Legal Filing</option>
-              <option value="ready_for_filing">Ready for Filing</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value as IpCategory | 'all')}
-              className="w-full pl-9 lg:pl-10 pr-8 py-2 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-            >
-              <option value="all">All Categories</option>
-              <option value="patent">Patent</option>
-              <option value="copyright">Copyright</option>
-              <option value="trademark">Trademark</option>
-              <option value="design">Industrial Design</option>
-              <option value="utility_model">Utility Model</option>
-              <option value="other">Other</option>
-            </select>
+          {/* Row 2: Date Range */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <span className="text-sm font-medium text-gray-600 whitespace-nowrap">Date Range:</span>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  max={dateTo || undefined}
+                  className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <label className="text-xs text-gray-500 whitespace-nowrap">To</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  min={dateFrom || undefined}
+                  className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              {(dateFrom || dateTo) && (
+                <button
+                  onClick={() => { setDateFrom(''); setDateTo(''); }}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline whitespace-nowrap"
+                >
+                  Clear dates
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
