@@ -113,6 +113,15 @@ export function PublicNavigation() {
                     {page.nav_label || page.title}
                   </a>
                 ))}
+                <button
+                  onClick={() => {
+                    navigate('/ip-search');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-sm whitespace-nowrap"
+                >
+                  IP Search
+                </button>
               </div>
             </div>
           )}
@@ -174,7 +183,16 @@ export function PublicNavigation() {
                   {page.nav_label || page.title}
                 </a>
               ))}
-              
+              <button
+                onClick={() => {
+                  navigate('/ip-search');
+                  setMobileMenuOpen(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 font-medium text-sm rounded-lg transition-colors"
+              >
+                IP Search
+              </button>
+
               {/* Mobile Auth Buttons */}
               <div className="pt-2 px-4 flex flex-col gap-2 border-t border-gray-200">
                 <button
