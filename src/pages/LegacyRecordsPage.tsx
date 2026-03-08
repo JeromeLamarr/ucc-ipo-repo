@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Search, Eye, Plus, Archive, Trash2 } from 'lucide-react';
+import { Search, Eye, Plus, Archive, Trash2, Download, Filter } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
@@ -22,6 +22,8 @@ export function LegacyRecordsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<IpCategory | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Delete
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string; title: string } | null>(null);
@@ -59,7 +61,7 @@ export function LegacyRecordsPage() {
 
   useEffect(() => {
     filterRecords();
-  }, [records, searchTerm, categoryFilter, sourceFilter]);
+  }, [records, searchTerm, categoryFilter, sourceFilter, dateFrom, dateTo]);
 
   const fetchRecords = async () => {
     setFetchError(null);
@@ -100,10 +102,22 @@ export function LegacyRecordsPage() {
       filtered = filtered.filter((record) => record.legacy_source === sourceFilter);
     }
 
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      filtered = filtered.filter((record) => new Date(record.created_at) >= from);
+    }
+
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((record) => new Date(record.created_at) <= to);
+    }
+
     setFilteredRecords(filtered);
   };
 
-  const hasActiveFilters = inputSearch !== '' || categoryFilter !== 'all' || sourceFilter !== 'all';
+  const hasActiveFilters = inputSearch !== '' || categoryFilter !== 'all' || sourceFilter !== 'all' || dateFrom !== '' || dateTo !== '';
 
   const handleDeleteRecord = async (id: string) => {
     setDeleteLoading(true);
@@ -131,7 +145,102 @@ export function LegacyRecordsPage() {
     setSearchTerm('');
     setCategoryFilter('all');
     setSourceFilter('all');
+    setDateFrom('');
+    setDateTo('');
   };
+
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+  const exportToExcel = () => {
+    const exportSource =
+      selectedIds.size > 0
+        ? filteredRecords.filter((r) => selectedIds.has(r.id))
+        : filteredRecords;
+
+    const filterParts: string[] = [];
+    if (searchTerm) filterParts.push(`Search: "${searchTerm}"`);
+    if (categoryFilter !== 'all') filterParts.push(`Category: ${categoryFilter}`);
+    if (sourceFilter !== 'all') filterParts.push(`Source: ${sourceFilter}`);
+    if (dateFrom) filterParts.push(`From: ${dateFrom}`);
+    if (dateTo) filterParts.push(`To: ${dateTo}`);
+    if (selectedIds.size > 0) filterParts.push(`Selection: ${selectedIds.size} rows`);
+
+    const esc = (v: unknown) =>
+      String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const metaCell = (label: string, value: unknown) =>
+      `<tr>
+        <td style="font-style:italic;color:#6B7280;font-size:11px;padding:3px 8px;">${esc(label)}</td>
+        <td style="font-style:italic;color:#6B7280;font-size:11px;padding:3px 8px;" colspan="6">${esc(value)}</td>
+      </tr>`;
+
+    const headers = ['Title', 'Inventor / Author', 'Category', 'Source', 'IPOPHIL App. No.', 'Filing Date', 'Date Created'];
+    const headerRow = headers
+      .map(h => `<th style="background:#B45309;color:#fff;font-weight:bold;font-size:12px;padding:8px 10px;text-align:center;border:1px solid #92400E;white-space:nowrap;">${h}</th>`)
+      .join('');
+
+    const dataRows = exportSource.map((record, idx) => {
+      const det = record.details as { creator_name?: string } | null;
+      const bg = idx % 2 === 0 ? '#FFFBEB' : '#FFFFFF';
+      const cells = [
+        record.title,
+        det?.creator_name || 'N/A',
+        record.category,
+        record.legacy_source || 'N/A',
+        record.ipophil_application_no || '',
+        record.original_filing_date || '',
+        formatDate(record.created_at),
+      ];
+      return `<tr>${cells.map((c, i) =>
+        `<td style="background:${bg};padding:6px 10px;border:1px solid #FDE68A;font-size:11px;${
+          i === 0 ? 'max-width:320px;word-wrap:break-word;' : 'white-space:nowrap;'
+        }">${esc(c)}</td>`
+      ).join('')}</tr>`;
+    }).join('');
+
+    const html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office"
+            xmlns:x="urn:schemas-microsoft-com:office:excel"
+            xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="UTF-8"/>
+      <style>
+        body { font-family: Calibri, Arial, sans-serif; }
+        table { border-collapse: collapse; width: 100%; }
+      </style>
+      </head>
+      <body>
+        <table>
+          <tr><td colspan="7" style="font-size:14px;font-weight:bold;padding:8px;color:#B45309;">UCC Intellectual Property Office &ndash; Legacy IP Records</td></tr>
+          ${metaCell('Generated:', new Date().toLocaleString())}
+          ${metaCell('Active Filters:', filterParts.length > 0 ? filterParts.join('  |  ') : 'None')}
+          ${metaCell('Total Records:', exportSource.length)}
+          <tr><td colspan="7" style="padding:4px;"></td></tr>
+          <tr>${headerRow}</tr>
+          ${dataRows}
+        </table>
+      </body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+
+    const parts = ['legacy-ip-records'];
+    if (selectedIds.size > 0) parts.push(`selected-${selectedIds.size}`);
+    if (categoryFilter !== 'all') parts.push(categoryFilter);
+    if (sourceFilter !== 'all') parts.push(sourceFilter);
+    if (dateFrom) parts.push(`from-${dateFrom}`);
+    if (dateTo) parts.push(`to-${dateTo}`);
+    parts.push(new Date().toISOString().split('T')[0]);
+    a.download = `${parts.join('_')}.xls`;
+
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCount = selectedIds.size > 0 ? selectedIds.size : filteredRecords.length;
+  const exportLabel = selectedIds.size > 0 ? `Export Selected (${exportCount})` : `Export (${exportCount})`;
 
   // ─── Row selection helpers (non-paginated-dependent) ──────────────────────
   const toggleRow = (id: string) => {
@@ -177,12 +286,12 @@ export function LegacyRecordsPage() {
   // Reset to page 1 whenever filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, categoryFilter, sourceFilter]);
+  }, [searchTerm, categoryFilter, sourceFilter, dateFrom, dateTo]);
 
   // Clear selection when filters or page change (selections from another page/filter are confusing)
   useEffect(() => {
     clearSelection();
-  }, [searchTerm, categoryFilter, sourceFilter, currentPage]);
+  }, [searchTerm, categoryFilter, sourceFilter, dateFrom, dateTo, currentPage]);
 
   const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
   const paginatedRecords = filteredRecords.slice(
@@ -228,17 +337,28 @@ export function LegacyRecordsPage() {
             <p className="text-gray-600 mt-1">Digitized historical intellectual property records</p>
           </div>
         </div>
-        <Link
-          to="/dashboard/legacy-records/new"
-          className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Add New Legacy Record
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={exportToExcel}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors text-sm font-medium"
+            title="Export filtered records to Excel"
+          >
+            <Download className="w-4 h-4" aria-hidden="true" />
+            {exportLabel}
+          </button>
+          <Link
+            to="/dashboard/legacy-records/new"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Add New Legacy Record
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6 space-y-3">
+        {/* Row 1: Search, Category, Source */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" aria-hidden="true" />
@@ -252,34 +372,87 @@ export function LegacyRecordsPage() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
           </div>
-          <select
-            id="legacy-category-filter"
-            aria-label="Filter by IP category"
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value as IpCategory | 'all')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-          >
-            <option value="all">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat.replace('_', ' ').toUpperCase()}
-              </option>
-            ))}
-          </select>
-          <select
-            id="legacy-source-filter"
-            aria-label="Filter by legacy source"
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-          >
-            <option value="all">All Sources</option>
-            <option value="old_system">Old System</option>
-            <option value="physical_archive">Physical Archive</option>
-            <option value="email">Email</option>
-            <option value="manual_entry">Manual Entry</option>
-            <option value="other">Other</option>
-          </select>
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" aria-hidden="true" />
+            <select
+              id="legacy-category-filter"
+              aria-label="Filter by IP category"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as IpCategory | 'all')}
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent appearance-none"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat.replace('_', ' ').toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" aria-hidden="true" />
+            <select
+              id="legacy-source-filter"
+              aria-label="Filter by legacy source"
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent appearance-none"
+            >
+              <option value="all">All Sources</option>
+              <option value="old_system">Old System</option>
+              <option value="physical_archive">Physical Archive</option>
+              <option value="email">Email</option>
+              <option value="manual_entry">Manual Entry</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Row 2: Date Range */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <span className="text-sm font-medium text-gray-600 whitespace-nowrap">Date Range:</span>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                max={dateTo || undefined}
+                title="Filter from date"
+                aria-label="Filter records from date"
+                className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <label className="text-xs text-gray-500 whitespace-nowrap">To</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                min={dateFrom || undefined}
+                title="Filter to date"
+                aria-label="Filter records to date"
+                className="flex-1 sm:flex-none px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              />
+            </div>
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={() => { setDateFrom(''); setDateTo(''); }}
+                className="text-xs text-amber-600 hover:text-amber-800 underline whitespace-nowrap"
+              >
+                Clear dates
+              </button>
+            )}
+          </div>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-xs text-gray-500 hover:text-gray-700 underline whitespace-nowrap ml-auto"
+            >
+              Clear all filters
+            </button>
+          )}
         </div>
       </div>
 
@@ -414,7 +587,7 @@ export function LegacyRecordsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-600">
-                          {new Date(record.created_at).toLocaleDateString()}
+                          {formatDate(record.created_at)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -480,7 +653,7 @@ export function LegacyRecordsPage() {
                     </div>
                     <div className="col-span-2">
                       <div className="text-gray-500">Date Created</div>
-                      <div className="font-medium text-gray-900">{new Date(record.created_at).toLocaleDateString()}</div>
+                      <div className="font-medium text-gray-900">{formatDate(record.created_at)}</div>
                     </div>
                   </div>
                   <div className="flex gap-2">
