@@ -12,6 +12,24 @@
 
 import { supabase } from '../lib/supabase';
 
+// ─── Official external database links ────────────────────────────────────────
+// Update these constants to change where IPOPHL / WIPO cards point.
+// Do NOT scrape or proxy these URLs — cards are destination links only.
+
+const OFFICIAL_IP_DATABASE_LINKS = {
+  IPOPHL: {
+    TRADEMARK:
+      'https://wipopublish.ipophil.gov.ph/wipopublish-search/public/trademarks',
+    PATENTS_DESIGNS:
+      'https://wipopublish.ipophil.gov.ph/wipopublish-search/public/patents',
+  },
+  WIPO: {
+    BRAND_DB: 'https://branddb.wipo.int',
+    PATENTSCOPE: 'https://patentscope.wipo.int/search/en/search.jsf',
+    DESIGN_DB: 'https://designdb.wipo.int',
+  },
+};
+
 // ─── Public types ─────────────────────────────────────────────────────────────
 
 export type SearchSource = 'university' | 'ipophil' | 'international';
@@ -179,14 +197,14 @@ const IPOPHL_CARDS: DestinationCard[] = [
     title: 'IPOPHL Trademark Search',
     description:
       'Search the official IPOPHL trademark registry for registered and pending trademark applications.',
-    baseUrl: 'https://www.ipophil.gov.ph/services/trademark/',
+    baseUrl: OFFICIAL_IP_DATABASE_LINKS.IPOPHL.TRADEMARK,
   },
   {
     id: 'ipophil-patent',
     title: 'IPOPHL Patent, Utility Model & Industrial Design Search',
     description:
       'Search the IPOPHL database for patents, utility model registrations, and industrial designs filed in the Philippines.',
-    baseUrl: 'https://www.ipophil.gov.ph/services/patents/',
+    baseUrl: OFFICIAL_IP_DATABASE_LINKS.IPOPHL.PATENTS_DESIGNS,
   },
   {
     id: 'ipophil-copyright',
@@ -242,7 +260,7 @@ const WIPO_CARDS: DestinationCard[] = [
     title: 'WIPO PATENTSCOPE',
     description:
       'Search millions of international patent applications filed under the Patent Cooperation Treaty (PCT) and national collections of participating offices.',
-    baseUrl: 'https://patentscope.wipo.int/search/en/search.jsf',
+    baseUrl: OFFICIAL_IP_DATABASE_LINKS.WIPO.PATENTSCOPE,
     queryParam: 'query',
   },
   {
@@ -250,7 +268,7 @@ const WIPO_CARDS: DestinationCard[] = [
     title: 'WIPO Global Brand Database',
     description:
       'Search trademark records from WIPO member states, the Madrid System, and regional offices around the world.',
-    baseUrl: 'https://branddb.wipo.int/en/quicksearch',
+    baseUrl: OFFICIAL_IP_DATABASE_LINKS.WIPO.BRAND_DB,
     queryParam: 'by=brandName&v',
   },
   {
@@ -258,7 +276,7 @@ const WIPO_CARDS: DestinationCard[] = [
     title: 'WIPO Global Design Database',
     description:
       'Search industrial designs registered via the Hague System and national offices from over 40 countries.',
-    baseUrl: 'https://www.wipo.int/designdb/en/',
+    baseUrl: OFFICIAL_IP_DATABASE_LINKS.WIPO.DESIGN_DB,
   },
 ];
 
