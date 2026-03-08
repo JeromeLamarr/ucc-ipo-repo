@@ -21,6 +21,7 @@ import {
   type SearchIPType,
   type PublicSearchResult,
 } from '../services/publicIPSearchService';
+import { PublicIPRecordModal } from '../components/PublicIPRecordModal';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -95,9 +96,11 @@ function SourceBadge({ source, badge }: { source: SearchSource; badge: string })
 function UniversityResultCard({
   result,
   primaryColor,
+  onViewRecord,
 }: {
   result: PublicSearchResult;
   primaryColor: string;
+  onViewRecord: () => void;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-3">
@@ -125,8 +128,8 @@ function UniversityResultCard({
 
       <div className="mt-auto pt-1">
         {result.url && result.url !== '#' ? (
-          <a
-            href={result.url}
+          <button
+            onClick={onViewRecord}
             className="inline-flex items-center gap-1.5 text-sm font-semibold transition-colors"
             style={{ color: primaryColor }}
             onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
@@ -134,7 +137,7 @@ function UniversityResultCard({
           >
             {result.actionLabel}
             <ArrowRight className="h-4 w-4" />
-          </a>
+          </button>
         ) : (
           <span className="text-xs text-gray-400 italic">Record link unavailable</span>
         )}
@@ -256,6 +259,7 @@ export function PublicIPSearchPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [lastSearchedSource, setLastSearchedSource] = useState<SearchSource | null>(null);
   const [lastSearchedQuery, setLastSearchedQuery] = useState('');
+  const [selectedTrackingId, setSelectedTrackingId] = useState<string | null>(null);
 
   const handleSearch = useCallback(async () => {
     setLoading(true);
@@ -490,6 +494,12 @@ export function PublicIPSearchPage() {
                         key={result.id}
                         result={result}
                         primaryColor={primaryColor}
+                        onViewRecord={() => {
+                          const id = result.url.startsWith('/ip-records/')
+                            ? result.url.replace('/ip-records/', '')
+                            : null;
+                          if (id) setSelectedTrackingId(id);
+                        }}
                       />
                     ) : (
                       <OfficialSearchCard
@@ -521,6 +531,12 @@ export function PublicIPSearchPage() {
       </div>
 
       <Footer />
+
+      <PublicIPRecordModal
+        trackingId={selectedTrackingId}
+        onClose={() => setSelectedTrackingId(null)}
+        primaryColor={primaryColor}
+      />
     </div>
   );
 }
