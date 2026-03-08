@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { FileText, Search, Filter, Eye, Plus, Archive } from 'lucide-react';
+import { FileText, Search, Filter, Eye, Plus, Archive, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
@@ -15,10 +15,15 @@ export function LegacyRecordsPage() {
   const [records, setRecords] = useState<LegacyRecord[]>([]);
   const [filteredRecords, setFilteredRecords] = useState<LegacyRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<IpCategory | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+
+  // Delete
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string; title: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -42,6 +47,7 @@ export function LegacyRecordsPage() {
   }, [records, searchTerm, categoryFilter, sourceFilter]);
 
   const fetchRecords = async () => {
+    setFetchError(null);
     try {
       const { data, error } = await supabase
         .from('legacy_ip_records')
@@ -52,6 +58,7 @@ export function LegacyRecordsPage() {
       setRecords(data || []);
     } catch (error) {
       console.error('Error fetching legacy records:', error);
+      setFetchError('Unable to load legacy records. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -73,10 +80,34 @@ export function LegacyRecordsPage() {
     }
 
     if (sourceFilter !== 'all') {
-      filtered = filtered.filter((record) => record.details?.legacy_source === sourceFilter);
+      // Use the top-level indexed column, not the JSONB details field
+      filtered = filtered.filter((record) => record.legacy_source === sourceFilter);
     }
 
     setFilteredRecords(filtered);
+  };
+
+  const hasActiveFilters = searchTerm !== '' || categoryFilter !== 'all' || sourceFilter !== 'all';
+
+  const handleDeleteRecord = async (id: string) => {
+    setDeleteLoading(true);
+    try {
+      const { error } = await supabase.from('legacy_ip_records').delete().eq('id', id);
+      if (error) throw error;
+      setRecords((prev) => prev.filter((r) => r.id !== id));
+      setDeleteConfirmation(null);
+    } catch (err) {
+      console.error('Error deleting legacy record:', err);
+      alert('Failed to delete record. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('all');
+    setSourceFilter('all');
   };
 
   const categories = ['patent', 'trademark', 'copyright', 'trade_secret', 'software', 'design', 'other'] as IpCategory[];
@@ -169,20 +200,48 @@ export function LegacyRecordsPage() {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-gray-500">
-            <p>Loading legacy records...</p>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+          </div>
+        ) : fetchError ? (
+          <div className="py-12 text-center">
+            <Archive className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-900 font-medium mb-1">Failed to load records</p>
+            <p className="text-gray-500 text-sm mb-4">{fetchError}</p>
+            <button
+              onClick={fetchRecords}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+            >
+              Try again
+            </button>
           </div>
         ) : filteredRecords.length === 0 ? (
           <div className="py-12 text-center">
             <Archive className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600">No legacy records found.</p>
-            <Link
-              to="/dashboard/legacy-records/new"
-              className="mt-4 inline-flex items-center gap-2 text-amber-600 hover:text-amber-700 font-medium"
-            >
-              <Plus className="w-4 h-4" />
-              Create the first legacy record
-            </Link>
+            {hasActiveFilters ? (
+              <>
+                <p className="text-gray-900 font-medium mb-1">No records match your search or filters.</p>
+                <p className="text-gray-500 text-sm mb-4">Try adjusting the filters or clearing your search.</p>
+                <button
+                  onClick={clearFilters}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors text-sm font-medium"
+                >
+                  Clear all filters
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-900 font-medium mb-1">No legacy records yet.</p>
+                <p className="text-gray-500 text-sm mb-4">Start digitising historical IP records by adding the first one.</p>
+                <Link
+                  to="/dashboard/legacy-records/new"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add the first legacy record
+                </Link>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -214,7 +273,7 @@ export function LegacyRecordsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600">{record.details?.legacy_source || 'N/A'}</span>
+                        <span className="text-sm text-gray-600">{record.legacy_source || 'N/A'}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-600">
@@ -222,13 +281,22 @@ export function LegacyRecordsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Link
-                          to={`/dashboard/legacy-records/${record.id}`}
-                          className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 font-medium"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          <Link
+                            to={`/dashboard/legacy-records/${record.id}`}
+                            className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 font-medium"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View
+                          </Link>
+                          <button
+                            onClick={() => setDeleteConfirmation({ id: record.id, title: record.title })}
+                            className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 font-medium"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -253,20 +321,29 @@ export function LegacyRecordsPage() {
                     </div>
                     <div>
                       <div className="text-gray-500">Source</div>
-                      <div className="font-medium text-gray-900">{record.details?.legacy_source || 'N/A'}</div>
+                      <div className="font-medium text-gray-900">{record.legacy_source || 'N/A'}</div>
                     </div>
                     <div className="col-span-2">
                       <div className="text-gray-500">Date Created</div>
                       <div className="font-medium text-gray-900">{new Date(record.created_at).toLocaleDateString()}</div>
                     </div>
                   </div>
-                  <Link
-                    to={`/dashboard/legacy-records/${record.id}`}
-                    className="flex w-full items-center justify-center gap-2 px-3 py-2 text-sm border border-amber-200 text-amber-600 rounded-lg hover:bg-amber-50 transition"
-                  >
-                    <Eye className="w-4 h-4" />
-                    View
-                  </Link>
+                  <div className="flex gap-2">
+                    <Link
+                      to={`/dashboard/legacy-records/${record.id}`}
+                      className="flex flex-1 items-center justify-center gap-2 px-3 py-2 text-sm border border-amber-200 text-amber-600 rounded-lg hover:bg-amber-50 transition"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View
+                    </Link>
+                    <button
+                      onClick={() => setDeleteConfirmation({ id: record.id, title: record.title })}
+                      className="flex items-center justify-center gap-2 px-3 py-2 text-sm border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -285,6 +362,39 @@ export function LegacyRecordsPage() {
           </>
         )}
       </div>
+      {deleteConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4 w-full">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Delete Legacy Record</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to permanently delete{' '}
+              <strong>&ldquo;{deleteConfirmation.title}&rdquo;</strong>?{' '}
+              This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirmation(null)}
+                disabled={deleteLoading}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteRecord(deleteConfirmation.id)}
+                disabled={deleteLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+              >
+                {deleteLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

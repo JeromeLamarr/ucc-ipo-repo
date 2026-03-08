@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Archive, FileText, Download, RefreshCw, Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { Archive, FileText, Download, RefreshCw, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 
 type LegacyRecord = Database['public']['Tables']['legacy_ip_records']['Row'];
@@ -16,6 +16,8 @@ export function LegacyRecordDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [documents, setDocuments] = useState<any[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
 
@@ -274,11 +276,6 @@ export function LegacyRecordDetailPage() {
     }
   };
 
-  const handleSendEmail = async (documentType: 'disclosure' | 'certificate') => {
-    // Placeholder for email sending
-    setError('Email sending not yet implemented');
-  };
-
   const handleDownloadUploadedFile = async (file: any) => {
     try {
       const { data, error } = await supabase.storage
@@ -300,6 +297,23 @@ export function LegacyRecordDetailPage() {
     } catch (err) {
       console.error('Download error:', err);
       setError(err instanceof Error ? err.message : 'Failed to download file');
+    }
+  };
+
+  const handleDeleteRecord = async () => {
+    setDeleteLoading(true);
+    try {
+      const { error: deleteError } = await supabase
+        .from('legacy_ip_records')
+        .delete()
+        .eq('id', id);
+      if (deleteError) throw deleteError;
+      navigate('/dashboard/legacy-records');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete record.');
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -345,8 +359,13 @@ export function LegacyRecordDetailPage() {
                 <h1 className="text-3xl font-bold text-gray-900">{record.title}</h1>
                 <p className="text-gray-600 mt-1">Legacy IP Record</p>
               </div>
-            </div>
-          </div>
+            </div>            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Record
+            </button>          </div>
         </div>
       </div>
 
@@ -590,14 +609,6 @@ export function LegacyRecordDetailPage() {
                         <Download className="w-4 h-4" />
                         Download
                       </button>
-                      <button
-                        onClick={() => handleSendEmail(doc.document_type)}
-                        disabled={actionLoading}
-                        className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors text-sm"
-                      >
-                        <Mail className="w-4 h-4" />
-                        Email
-                      </button>
                     </div>
                   </div>
                 ))}
@@ -652,6 +663,40 @@ export function LegacyRecordDetailPage() {
           </button>
         </div>
       </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm mx-4 w-full">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Delete Legacy Record</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to permanently delete{' '}
+              <strong>&ldquo;{record.title}&rdquo;</strong>?{' '}
+              This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteLoading}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteRecord}
+                disabled={deleteLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+              >
+                {deleteLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
