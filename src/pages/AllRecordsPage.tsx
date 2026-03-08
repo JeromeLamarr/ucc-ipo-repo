@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import * as XLSX from 'xlsx';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { FileText, Search, Filter, Eye, Download, Plus, Award, Trash2, MoreVertical } from 'lucide-react';
@@ -154,7 +153,6 @@ export function AllRecordsPage() {
         ? filteredRecords.filter((r) => selectedWorkflowIds.includes(r.id))
         : filteredRecords;
 
-    // ── Active filter description ─────────────────────────────────
     const filterParts: string[] = [];
     if (searchTerm) filterParts.push(`Search: "${searchTerm}"`);
     if (statusFilter !== 'all') filterParts.push(`Status: ${getStatusLabel(statusFilter)}`);
@@ -163,61 +161,66 @@ export function AllRecordsPage() {
     if (dateTo) filterParts.push(`To: ${dateTo}`);
     if (selectedWorkflowIds.length > 0) filterParts.push(`Selection: ${selectedWorkflowIds.length} rows`);
 
-    // ── Sheet data ────────────────────────────────────────────────
-    const metaRows = [
-      ['UCC Intellectual Property Office – IP Records Export'],
-      ['Generated:', new Date().toLocaleString()],
-      ['Active Filters:', filterParts.length > 0 ? filterParts.join('  |  ') : 'None'],
-      ['Total Records:', exportSource.length],
-      [], // spacer
-      // Header
-      ['Tracking ID', 'Reference Number', 'Title', 'Applicant', 'Category', 'Status', 'Supervisor', 'Evaluator', 'Date Filed'],
-    ];
+    const esc = (v: unknown) =>
+      String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    const dataRows = exportSource.map((record) => [
-      record.tracking_id ?? '',
-      record.reference_number ?? '',
-      record.title,
-      record.applicant?.full_name || '',
-      record.category,
-      getStatusLabel(record.status),
-      record.supervisor?.full_name || 'Not assigned',
-      record.evaluator?.full_name || 'Not assigned',
-      new Date(record.created_at).toLocaleDateString(),
-    ]);
+    const metaCell = (label: string, value: unknown) =>
+      `<tr>
+        <td style="font-style:italic;color:#6B7280;font-size:11px;padding:3px 8px;">${esc(label)}</td>
+        <td style="font-style:italic;color:#6B7280;font-size:11px;padding:3px 8px;" colspan="8">${esc(value)}</td>
+      </tr>`;
 
-    const allRows = [...metaRows, ...dataRows];
+    const headers = ['Tracking ID','Reference Number','Title','Applicant','Category','Status','Supervisor','Evaluator','Date Filed'];
+    const headerRow = headers
+      .map(h => `<th style="background:#16A34A;color:#fff;font-weight:bold;font-size:12px;padding:8px 10px;text-align:center;border:1px solid #15803D;white-space:nowrap;">${h}</th>`)
+      .join('');
 
-    // ── Build worksheet ───────────────────────────────────────────
-    const ws = XLSX.utils.aoa_to_sheet(allRows);
+    const dataRows = exportSource.map((record, idx) => {
+      const bg = idx % 2 === 0 ? '#F0FDF4' : '#FFFFFF';
+      const cells = [
+        record.tracking_id ?? '',
+        record.reference_number ?? '',
+        record.title,
+        record.applicant?.full_name || '',
+        record.category,
+        getStatusLabel(record.status),
+        record.supervisor?.full_name || 'Not assigned',
+        record.evaluator?.full_name || 'Not assigned',
+        new Date(record.created_at).toLocaleDateString(),
+      ];
+      return `<tr>${cells.map((c, i) =>
+        `<td style="background:${bg};padding:6px 10px;border:1px solid #D1FAE5;font-size:11px;${
+          i === 2 ? 'max-width:320px;word-wrap:break-word;' : 'white-space:nowrap;'
+        }">${esc(c)}</td>`
+      ).join('')}</tr>`;
+    }).join('');
 
-    // Column widths (characters)
-    ws['!cols'] = [
-      { wch: 18 }, // Tracking ID
-      { wch: 20 }, // Reference Number
-      { wch: 44 }, // Title
-      { wch: 26 }, // Applicant
-      { wch: 15 }, // Category
-      { wch: 28 }, // Status
-      { wch: 26 }, // Supervisor
-      { wch: 26 }, // Evaluator
-      { wch: 14 }, // Date Filed
-    ];
+    const html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office"
+            xmlns:x="urn:schemas-microsoft-com:office:excel"
+            xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="UTF-8"/>
+      <style>
+        body { font-family: Calibri, Arial, sans-serif; }
+        table { border-collapse: collapse; width: 100%; }
+      </style>
+      </head>
+      <body>
+        <table>
+          <tr><td colspan="9" style="font-size:14px;font-weight:bold;padding:8px;color:#15803D;">UCC Intellectual Property Office &ndash; IP Records</td></tr>
+          ${metaCell('Generated:', new Date().toLocaleString())}
+          ${metaCell('Active Filters:', filterParts.length > 0 ? filterParts.join('  |  ') : 'None')}
+          ${metaCell('Total Records:', exportSource.length)}
+          <tr><td colspan="9" style="padding:4px;"></td></tr>
+          <tr>${headerRow}</tr>
+          ${dataRows}
+        </table>
+      </body></html>`;
 
-    // Auto-filter on the header row (row index 5 = 6th row, 1-based row 6)
-    const headerRowNum = metaRows.length; // 0-based index of header row
-    const headerRef = XLSX.utils.encode_range({
-      s: { r: headerRowNum, c: 0 },
-      e: { r: headerRowNum, c: 8 },
-    });
-    ws['!autofilter'] = { ref: headerRef };
-
-    // Freeze rows above + including the header
-    ws['!freeze'] = { xSplit: 0, ySplit: headerRowNum + 1 } as never;
-
-    // ── Workbook & download ───────────────────────────────────────
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'IP Records');
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
 
     const parts = ['ip-records'];
     if (selectedWorkflowIds.length > 0) parts.push(`selected-${selectedWorkflowIds.length}`);
@@ -226,9 +229,10 @@ export function AllRecordsPage() {
     if (dateFrom) parts.push(`from-${dateFrom}`);
     if (dateTo) parts.push(`to-${dateTo}`);
     parts.push(new Date().toISOString().split('T')[0]);
-    const filename = `${parts.join('_')}.xlsx`;
+    a.download = `${parts.join('_')}.xls`;
 
-    XLSX.writeFile(wb, filename);
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const exportCount = selectedWorkflowIds.length > 0 ? selectedWorkflowIds.length : filteredRecords.length;
