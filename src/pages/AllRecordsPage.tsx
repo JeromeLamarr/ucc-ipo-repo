@@ -238,9 +238,12 @@ export function AllRecordsPage() {
               <option value="all">All Statuses</option>
               <option value="submitted">Submitted</option>
               <option value="waiting_supervisor">Waiting Supervisor</option>
+              <option value="supervisor_revision">Revision Requested – Supervisor</option>
               <option value="supervisor_approved">Supervisor Approved</option>
               <option value="waiting_evaluation">Waiting Evaluation</option>
+              <option value="evaluator_revision">Revision Requested – Evaluator</option>
               <option value="evaluator_approved">Evaluator Approved</option>
+              <option value="preparing_legal">Preparing for Legal Filing</option>
               <option value="ready_for_filing">Ready for Filing</option>
               <option value="rejected">Rejected</option>
             </select>
