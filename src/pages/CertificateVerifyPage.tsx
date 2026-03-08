@@ -318,18 +318,7 @@ export function CertificateVerifyPage() {
                 </div>
               </div>
 
-              {/* Action Button */}
-              <div className="pt-6">
-                <a
-                  href={certificate.pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 px-6 rounded-lg hover:shadow-lg transition text-center"
-                  title="View the complete certificate PDF (publicly accessible)"
-                >
-                  Download Full Certificate
-                </a>
-              </div>
+
             </div>
           </div>
         )}
