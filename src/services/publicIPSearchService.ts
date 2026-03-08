@@ -172,7 +172,7 @@ export async function searchUniversityRecords(
       subtitle: [categoryLabel, refNum].filter(Boolean).join(' · '),
       description: trimAbstract(record.abstract),
       type: record.category,
-      url: record.tracking_id ? `/verify/${record.tracking_id}` : '#',
+      url: record.tracking_id ? `/ip-records/${record.tracking_id}` : '#',
       actionLabel: 'View Record',
       isExternal: false,
       year,

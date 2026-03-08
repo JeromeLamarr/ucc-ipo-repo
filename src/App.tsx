@@ -36,6 +36,7 @@ import { DisclosureVerifyPage } from '@pages/DisclosureVerifyPage';
 import { PendingApprovalPage } from '@pages/PendingApprovalPage';
 import { ForgotPasswordPage } from '@pages/ForgotPasswordPage';
 import { PublicIPSearchPage } from '@pages/PublicIPSearchPage';
+import { PublicIPRecordPage } from '@pages/PublicIPRecordPage';
 import { useEffect } from 'react';
 import { ensureHomeCMSPageExists } from '@lib/cmsSetup';
 
@@ -106,6 +107,7 @@ function App() {
           <Route path="/verify/:trackingId" element={<CertificateVerifyPage />} />
           <Route path="/verify-disclosure/:trackingId" element={<DisclosureVerifyPage />} />
           <Route path="/ip-search" element={<PublicIPSearchPage />} />
+          <Route path="/ip-records/:trackingId" element={<PublicIPRecordPage />} />
           <Route
             path="/pending-approval"
             element={
