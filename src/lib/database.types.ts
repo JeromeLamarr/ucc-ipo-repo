@@ -609,6 +609,56 @@ export interface Database {
           updated_at?: string;
         };
       };
+      legacy_ip_records: {
+        Row: {
+          id: string;
+          title: string;
+          category: string;
+          abstract: string | null;
+          details: Json;
+          legacy_source: string;
+          digitized_at: string;
+          original_filing_date: string | null;
+          ipophil_application_no: string | null;
+          remarks: string | null;
+          created_by_admin_id: string;
+          updated_by_admin_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          category: string;
+          abstract?: string | null;
+          details?: Json;
+          legacy_source: string;
+          digitized_at?: string;
+          original_filing_date?: string | null;
+          ipophil_application_no?: string | null;
+          remarks?: string | null;
+          created_by_admin_id: string;
+          updated_by_admin_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          category?: string;
+          abstract?: string | null;
+          details?: Json;
+          legacy_source?: string;
+          digitized_at?: string;
+          original_filing_date?: string | null;
+          ipophil_application_no?: string | null;
+          remarks?: string | null;
+          created_by_admin_id?: string;
+          updated_by_admin_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {};
     Functions: {};

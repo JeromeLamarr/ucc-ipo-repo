@@ -17,6 +17,8 @@ export function LegacyRecordsPage() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
+  // inputSearch: live input value; searchTerm: debounced value used for filtering
+  const [inputSearch, setInputSearch] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<IpCategory | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
@@ -41,6 +43,12 @@ export function LegacyRecordsPage() {
       fetchRecords();
     }
   }, [profile]);
+
+  // Debounce: update searchTerm 350 ms after the user stops typing
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchTerm(inputSearch), 350);
+    return () => clearTimeout(timer);
+  }, [inputSearch]);
 
   useEffect(() => {
     filterRecords();
@@ -87,7 +95,7 @@ export function LegacyRecordsPage() {
     setFilteredRecords(filtered);
   };
 
-  const hasActiveFilters = searchTerm !== '' || categoryFilter !== 'all' || sourceFilter !== 'all';
+  const hasActiveFilters = inputSearch !== '' || categoryFilter !== 'all' || sourceFilter !== 'all';
 
   const handleDeleteRecord = async (id: string) => {
     setDeleteLoading(true);
@@ -105,6 +113,7 @@ export function LegacyRecordsPage() {
   };
 
   const clearFilters = () => {
+    setInputSearch('');
     setSearchTerm('');
     setCategoryFilter('all');
     setSourceFilter('all');
@@ -152,16 +161,20 @@ export function LegacyRecordsPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" aria-hidden="true" />
             <input
-              type="text"
+              type="search"
+              id="legacy-search"
+              aria-label="Search by title or inventor name"
               placeholder="Title or inventor name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={inputSearch}
+              onChange={(e) => setInputSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
           </div>
           <select
+            id="legacy-category-filter"
+            aria-label="Filter by IP category"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as IpCategory | 'all')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
@@ -174,6 +187,8 @@ export function LegacyRecordsPage() {
             ))}
           </select>
           <select
+            id="legacy-source-filter"
+            aria-label="Filter by legacy source"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
@@ -284,16 +299,18 @@ export function LegacyRecordsPage() {
                         <div className="flex items-center gap-3">
                           <Link
                             to={`/dashboard/legacy-records/${record.id}`}
+                            aria-label={`View record: ${record.title}`}
                             className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 font-medium"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-4 h-4" aria-hidden="true" />
                             View
                           </Link>
                           <button
                             onClick={() => setDeleteConfirmation({ id: record.id, title: record.title })}
+                            aria-label={`Delete record: ${record.title}`}
                             className="inline-flex items-center gap-1 text-red-500 hover:text-red-700 font-medium"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" aria-hidden="true" />
                             Delete
                           </button>
                         </div>
@@ -331,16 +348,18 @@ export function LegacyRecordsPage() {
                   <div className="flex gap-2">
                     <Link
                       to={`/dashboard/legacy-records/${record.id}`}
+                      aria-label={`View record: ${record.title}`}
                       className="flex flex-1 items-center justify-center gap-2 px-3 py-2 text-sm border border-amber-200 text-amber-600 rounded-lg hover:bg-amber-50 transition"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-4 h-4" aria-hidden="true" />
                       View
                     </Link>
                     <button
                       onClick={() => setDeleteConfirmation({ id: record.id, title: record.title })}
+                      aria-label={`Delete record: ${record.title}`}
                       className="flex items-center justify-center gap-2 px-3 py-2 text-sm border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
                       Delete
                     </button>
                   </div>

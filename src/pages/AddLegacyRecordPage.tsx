@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Archive, AlertCircle, CheckCircle } from 'lucide-react';
+import { Archive, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 
 type IpCategory = Database['public']['Tables']['ip_records']['Row']['category'];
@@ -28,6 +28,7 @@ export function AddLegacyRecordPage() {
     advantages: '',
     date_created: new Date().toISOString().split('T')[0],
     legacy_source: 'old_system',
+    ipophil_application_no: '',
     remarks: '',
   });
 
@@ -148,8 +149,17 @@ export function AddLegacyRecordPage() {
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="mb-3">
+            <Link
+              to="/dashboard/legacy-records"
+              className="inline-flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700 font-medium"
+            >
+              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              Back to Legacy Records
+            </Link>
+          </div>
           <div className="flex items-center gap-3">
-            <Archive className="w-8 h-8 text-amber-600" />
+            <Archive className="w-8 h-8 text-amber-600" aria-hidden="true" />
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Add New Legacy Record</h1>
               <p className="text-gray-600 mt-1">Digitize historical intellectual property records</p>
@@ -182,10 +192,11 @@ export function AddLegacyRecordPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Creator / Inventor Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="inventor-name" className="block text-sm font-medium text-gray-700 mb-1">
                     Creator Name <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="inventor-name"
                     type="text"
                     name="inventor_name"
                     value={formData.inventor_name}
@@ -195,8 +206,9 @@ export function AddLegacyRecordPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Creator Email</label>
+                  <label htmlFor="inventor-email" className="block text-sm font-medium text-gray-700 mb-1">Creator Email</label>
                   <input
+                    id="inventor-email"
                     type="email"
                     name="inventor_email"
                     value={formData.inventor_email}
@@ -212,10 +224,11 @@ export function AddLegacyRecordPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Intellectual Property Information</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="record-title" className="block text-sm font-medium text-gray-700 mb-1">
                     Title <span className="text-red-500">*</span>
                   </label>
                   <input
+                    id="record-title"
                     type="text"
                     name="title"
                     value={formData.title}
@@ -226,10 +239,11 @@ export function AddLegacyRecordPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="record-category" className="block text-sm font-medium text-gray-700 mb-1">
                       Category <span className="text-red-500">*</span>
                     </label>
                     <select
+                      id="record-category"
                       name="category"
                       value={formData.category}
                       onChange={handleInputChange}
@@ -244,8 +258,9 @@ export function AddLegacyRecordPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date Created</label>
+                    <label htmlFor="date-created" className="block text-sm font-medium text-gray-700 mb-1">Date Created</label>
                     <input
+                      id="date-created"
                       type="date"
                       name="date_created"
                       value={formData.date_created}
@@ -255,8 +270,9 @@ export function AddLegacyRecordPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Abstract / Description</label>
+                  <label htmlFor="record-abstract" className="block text-sm font-medium text-gray-700 mb-1">Abstract / Description</label>
                   <textarea
+                    id="record-abstract"
                     name="abstract"
                     value={formData.abstract}
                     onChange={handleInputChange}
@@ -265,8 +281,9 @@ export function AddLegacyRecordPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Keywords (comma-separated)</label>
+                  <label htmlFor="record-keywords" className="block text-sm font-medium text-gray-700 mb-1">Keywords (comma-separated)</label>
                   <input
+                    id="record-keywords"
                     type="text"
                     name="keywords"
                     value={formData.keywords}
@@ -283,8 +300,9 @@ export function AddLegacyRecordPage() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Legacy Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Source of Record</label>
+                  <label htmlFor="legacy-source" className="block text-sm font-medium text-gray-700 mb-1">Source of Record</label>
                   <select
+                    id="legacy-source"
                     name="legacy_source"
                     value={formData.legacy_source}
                     onChange={handleInputChange}
@@ -297,10 +315,23 @@ export function AddLegacyRecordPage() {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label htmlFor="ipophil-no" className="block text-sm font-medium text-gray-700 mb-1">IPOPHIL Application No.</label>
+                  <input
+                    id="ipophil-no"
+                    type="text"
+                    name="ipophil_application_no"
+                    value={formData.ipophil_application_no}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 4-2010-012345"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
               </div>
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Remarks / Notes</label>
+                <label htmlFor="record-remarks" className="block text-sm font-medium text-gray-700 mb-1">Remarks / Notes</label>
                 <textarea
+                  id="record-remarks"
                   name="remarks"
                   value={formData.remarks}
                   onChange={handleInputChange}
