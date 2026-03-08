@@ -19,9 +19,9 @@ import { supabase } from '../lib/supabase';
 const OFFICIAL_IP_DATABASE_LINKS = {
   IPOPHL: {
     TRADEMARK:
-      'https://wipopublish.ipophil.gov.ph/wipopublish-search/public/trademarks',
+      'https://branddb.wipo.int/en/IPO-PH/advancedsearch',
     PATENTS_DESIGNS:
-      'https://wipopublish.ipophil.gov.ph/wipopublish-search/public/patents',
+      'https://www.ipophil.gov.ph/services/patents/',
   },
   WIPO: {
     BRAND_DB: 'https://branddb.wipo.int',
