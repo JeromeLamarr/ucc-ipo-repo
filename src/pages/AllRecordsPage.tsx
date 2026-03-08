@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ExcelJS from 'exceljs';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { FileText, Search, Filter, Eye, Download, Plus, Award, Trash2, MoreVertical } from 'lucide-react';
@@ -147,43 +148,119 @@ export function AllRecordsPage() {
     setFilteredDrafts(drafts);
   };
 
-  const exportToCSV = () => {
-    // If rows are selected, export only those; otherwise export all filtered records
+  const exportToExcel = async () => {
     const exportSource =
       selectedWorkflowIds.length > 0
         ? filteredRecords.filter((r) => selectedWorkflowIds.includes(r.id))
         : filteredRecords;
 
-    const headers = [
-      'Tracking ID',
-      'Reference Number',
-      'Title',
-      'Applicant',
-      'Category',
-      'Status',
-      'Supervisor',
-      'Evaluator',
-      'Date Filed',
-    ];
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'UCC IPO System';
+    workbook.created = new Date();
 
-    const rows = exportSource.map((record) => [
-      record.tracking_id ?? '',
-      record.reference_number ?? '',
-      record.title,
-      record.applicant?.full_name || '',
-      record.category,
-      getStatusLabel(record.status),
-      record.supervisor?.full_name || 'Not assigned',
-      record.evaluator?.full_name || 'Not assigned',
-      new Date(record.created_at).toLocaleDateString(),
+    const sheet = workbook.addWorksheet('IP Records');
+
+    // ── Metadata rows ────────────────────────────────────────────────
+    const metaStyle: Partial<ExcelJS.Style> = {
+      font: { italic: true, size: 10, color: { argb: 'FF6B7280' } },
+    };
+
+    const genRow = sheet.addRow(['Generated:', new Date().toLocaleString()]);
+    genRow.eachCell((c) => Object.assign(c, metaStyle));
+
+    const filterParts: string[] = [];
+    if (searchTerm) filterParts.push(`Search: "${searchTerm}"`);
+    if (statusFilter !== 'all') filterParts.push(`Status: ${getStatusLabel(statusFilter)}`);
+    if (categoryFilter !== 'all') filterParts.push(`Category: ${categoryFilter}`);
+    if (dateFrom) filterParts.push(`From: ${dateFrom}`);
+    if (dateTo) filterParts.push(`To: ${dateTo}`);
+    if (selectedWorkflowIds.length > 0) filterParts.push(`Selection: ${selectedWorkflowIds.length} rows`);
+
+    const filterRow = sheet.addRow([
+      'Active Filters:',
+      filterParts.length > 0 ? filterParts.join('  |  ') : 'None',
     ]);
+    filterRow.eachCell((c) => Object.assign(c, metaStyle));
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
-    ].join('\n');
+    const totalRow = sheet.addRow(['Total Records:', exportSource.length]);
+    totalRow.getCell(1).font = { bold: true, size: 10 };
+    totalRow.getCell(2).font = { bold: true, size: 10 };
 
-    // Build a descriptive filename reflecting active filters
+    sheet.addRow([]); // blank spacer
+
+    // ── Header row (row 5) ───────────────────────────────────────────
+    const HEADER_FILL: ExcelJS.Fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF16A34A' }, // green-600
+    };
+    const HEADER_BORDER: Partial<ExcelJS.Borders> = {
+      top:    { style: 'thin', color: { argb: 'FF15803D' } },
+      bottom: { style: 'thin', color: { argb: 'FF15803D' } },
+      left:   { style: 'thin', color: { argb: 'FF15803D' } },
+      right:  { style: 'thin', color: { argb: 'FF15803D' } },
+    };
+
+    const headerRow = sheet.addRow([
+      'Tracking ID', 'Reference Number', 'Title', 'Applicant',
+      'Category', 'Status', 'Supervisor', 'Evaluator', 'Date Filed',
+    ]);
+    headerRow.height = 24;
+    headerRow.eachCell((cell) => {
+      cell.fill = HEADER_FILL;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = HEADER_BORDER;
+    });
+
+    // ── Data rows ────────────────────────────────────────────────────
+    const EVEN_FILL: ExcelJS.Fill = {
+      type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' }, // green-50
+    };
+    const ODD_FILL: ExcelJS.Fill = {
+      type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' },
+    };
+    const DATA_BORDER: Partial<ExcelJS.Borders> = {
+      top:    { style: 'hair', color: { argb: 'FFD1FAE5' } },
+      bottom: { style: 'hair', color: { argb: 'FFD1FAE5' } },
+      left:   { style: 'hair', color: { argb: 'FFD1FAE5' } },
+      right:  { style: 'hair', color: { argb: 'FFD1FAE5' } },
+    };
+
+    exportSource.forEach((record, idx) => {
+      const row = sheet.addRow([
+        record.tracking_id ?? '',
+        record.reference_number ?? '',
+        record.title,
+        record.applicant?.full_name || '',
+        record.category,
+        getStatusLabel(record.status),
+        record.supervisor?.full_name || 'Not assigned',
+        record.evaluator?.full_name || 'Not assigned',
+        new Date(record.created_at).toLocaleDateString(),
+      ]);
+      row.height = 18;
+      row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+        cell.fill = idx % 2 === 0 ? EVEN_FILL : ODD_FILL;
+        cell.border = DATA_BORDER;
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: colNum === 9 ? 'center' : 'left',
+          wrapText: colNum === 3, // wrap Title column
+        };
+        cell.font = { size: 10 };
+      });
+    });
+
+    // ── Column widths ────────────────────────────────────────────────
+    const colWidths = [16, 18, 42, 24, 14, 26, 24, 24, 14];
+    colWidths.forEach((w, i) => { sheet.getColumn(i + 1).width = w; });
+
+    // ── Auto-filter & freeze pane ────────────────────────────────────
+    sheet.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: 9 } };
+    sheet.views = [{ state: 'frozen', ySplit: 5 } as ExcelJS.WorksheetView];
+
+    // ── Filename ─────────────────────────────────────────────────────
     const parts = ['ip-records'];
     if (selectedWorkflowIds.length > 0) parts.push(`selected-${selectedWorkflowIds.length}`);
     if (statusFilter !== 'all') parts.push(statusFilter);
@@ -191,9 +268,13 @@ export function AllRecordsPage() {
     if (dateFrom) parts.push(`from-${dateFrom}`);
     if (dateTo) parts.push(`to-${dateTo}`);
     parts.push(new Date().toISOString().split('T')[0]);
-    const filename = `${parts.join('_')}.csv`;
+    const filename = `${parts.join('_')}.xlsx`;
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // ── Download ─────────────────────────────────────────────────────
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -248,7 +329,7 @@ export function AllRecordsPage() {
           </p>
         </div>
         <button
-          onClick={exportToCSV}
+          onClick={exportToExcel}
           className="flex items-center justify-center gap-2 px-4 lg:px-6 py-2 lg:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm lg:text-base"
         >
           <Download className="h-4 w-4 lg:h-5 lg:w-5" />
