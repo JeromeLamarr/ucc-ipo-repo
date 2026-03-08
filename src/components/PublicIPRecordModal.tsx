@@ -9,56 +9,11 @@
  */
 
 import { useEffect, useState } from 'react';
-import {
-  X,
-  BookOpen,
-  Calendar,
-  FileText,
-  Hash,
-  Info,
-  Search,
-  Tag,
-  Users,
-  ExternalLink,
-} from 'lucide-react';
+import { X, Search, ExternalLink } from 'lucide-react';
 import { fetchPublicIPRecord, type PublicIPRecordDetail } from '../services/publicIPRecordService';
+import { IPRecordSummaryCard } from './IPRecordSummaryCard';
 
-// ─── Inner presentational helpers ────────────────────────────────────────────
-
-function DetailRow({ icon, label, children }: {
-  icon: React.ReactNode;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0">
-      <div className="mt-0.5 text-gray-400 flex-shrink-0">{icon}</div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
-        <div className="text-sm text-gray-800">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function StatusBadge({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-      {label}
-    </span>
-  );
-}
-
-function CategoryBadge({ label, primaryColor }: { label: string; primaryColor: string }) {
-  return (
-    <span
-      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
-      style={{ backgroundColor: `${primaryColor}18`, color: primaryColor }}
-    >
-      {label}
-    </span>
-  );
-}
+// ─── Loading skeleton ─────────────────────────────────────────────────────────
 
 function LoadingSkeleton() {
   return (
@@ -176,103 +131,22 @@ export function PublicIPRecordModal({ trackingId, onClose, primaryColor }: Publi
           )}
 
           {!loading && record && (
-            <div className="p-6 space-y-4">
-
-              {/* Title + badges */}
-              <div>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  <CategoryBadge label={record.categoryLabel} primaryColor={primaryColor} />
-                  <StatusBadge label={record.statusLabel} />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 leading-snug">
-                  {record.title}
-                </h3>
-              </div>
-
-              {/* Detail rows */}
-              <div className="bg-gray-50 rounded-xl px-4 divide-y divide-gray-100">
-                <DetailRow icon={<Hash className="h-4 w-4" />} label="Reference Number">
-                  <span className="font-mono font-semibold">{record.referenceNumber || '—'}</span>
-                </DetailRow>
-
-                <DetailRow icon={<BookOpen className="h-4 w-4" />} label="IP Type">
-                  {record.categoryLabel}
-                </DetailRow>
-
-                {record.filingYear && (
-                  <DetailRow icon={<Calendar className="h-4 w-4" />} label="Year Filed">
-                    {record.filingYear}
-                  </DetailRow>
-                )}
-
-                {record.inventors.length > 0 && (
-                  <DetailRow icon={<Users className="h-4 w-4" />} label="Inventors / Authors">
-                    <ul className="space-y-0.5">
-                      {record.inventors.map((inv, i) => (
-                        <li key={i}>{inv.name}</li>
-                      ))}
-                    </ul>
-                  </DetailRow>
-                )}
-
-                {record.collaborators.length > 0 && (
-                  <DetailRow icon={<Users className="h-4 w-4" />} label="Collaborators">
-                    <ul className="space-y-0.5">
-                      {record.collaborators.map((c, i) => (
-                        <li key={i}>{c.name}</li>
-                      ))}
-                    </ul>
-                  </DetailRow>
-                )}
-              </div>
-
-              {/* Abstract */}
-              {record.abstract && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                      Abstract / Summary
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-                    {record.abstract}
-                  </p>
-                </div>
-              )}
-
-              {/* Keywords */}
-              {record.keywords.length > 0 && (
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Tag className="h-4 w-4 text-gray-400" />
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                      Keywords
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {record.keywords.map((kw) => (
-                      <span
-                        key={kw}
-                        className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700"
-                      >
-                        {kw}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Public notice */}
-              <div className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700">
-                <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>
-                  <strong>Public Summary Only.</strong> This shows publicly available information
-                  for approved IP records. For official IP filings or legal matters, consult a
-                  qualified IP professional.
-                </span>
-              </div>
-
+            <div className="p-6">
+              <IPRecordSummaryCard
+                data={{
+                  title: record.title,
+                  categoryLabel: record.categoryLabel,
+                  statusLabel: record.statusLabel,
+                  referenceNumber: record.referenceNumber,
+                  filingYear: record.filingYear,
+                  inventors: record.inventors,
+                  collaborators: record.collaborators,
+                  abstract: record.abstract,
+                  keywords: record.keywords,
+                }}
+                primaryColor={primaryColor}
+                standalone={false}
+              />
             </div>
           )}
         </div>

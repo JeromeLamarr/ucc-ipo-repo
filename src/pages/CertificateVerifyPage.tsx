@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { CheckCircle, AlertCircle, Loader, Lock } from 'lucide-react';
 import { Footer } from '../components/Footer';
+import { IPRecordSummaryCard, type IPRecordSummaryData } from '../components/IPRecordSummaryCard';
+import { useBranding } from '../hooks/useBranding';
 
 // Create a public Supabase client for certificate verification
 // This uses the anon key to allow public access to verified data
@@ -21,9 +23,13 @@ interface Certificate {
 interface IPRecord {
   id: string;
   title: string;
+  abstract: string | null;
   category: string;
   status: string;
   created_at: string;
+  reference_number: string;
+  tracking_id: string | null;
+  details: Record<string, unknown> | null;
 }
 
 interface Creator {
@@ -50,8 +56,23 @@ const maskName = (fullName: string): string => {
   return `${firstName} ${lastName}`;
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  patent: 'Patent',
+  utility_model: 'Utility Model',
+  trademark: 'Trademark',
+  design: 'Industrial Design',
+  copyright: 'Copyright',
+  other: 'Other',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  ready_for_filing: 'Ready for Filing',
+  evaluator_approved: 'Evaluator Approved',
+};
+
 export function CertificateVerifyPage() {
   const { trackingId } = useParams<{ trackingId: string }>();
+  const { primaryColor } = useBranding();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
@@ -195,22 +216,45 @@ export function CertificateVerifyPage() {
                   <span className="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-3 text-sm font-semibold">1</span>
                   Intellectual Property Details
                 </h3>
-                <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                  <div>
-                    <label className="text-sm font-semibold text-gray-600">Title</label>
-                    <p className="text-gray-900 font-medium mt-1">{ipRecord.title}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-semibold text-gray-600">Category</label>
-                      <p className="text-gray-900 font-medium mt-1 capitalize">{ipRecord.category}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-semibold text-gray-600">Status</label>
-                      <p className="text-gray-900 font-medium mt-1 capitalize">{ipRecord.status}</p>
-                    </div>
-                  </div>
-                </div>
+                {(() => {
+                  const details = ipRecord.details ?? {};
+
+                  const inventors: Array<{ name: string }> = Array.isArray(details.inventors)
+                    ? (details.inventors as Array<Record<string, unknown>>)
+                        .map((inv) => ({ name: typeof inv.name === 'string' ? inv.name.trim() : '' }))
+                        .filter((inv) => inv.name !== '')
+                    : [];
+
+                  const collaborators: Array<{ name: string }> = Array.isArray(details.collaborators)
+                    ? (details.collaborators as Array<Record<string, unknown>>)
+                        .map((c) => ({ name: typeof c.name === 'string' ? c.name.trim() : '' }))
+                        .filter((c) => c.name !== '')
+                    : [];
+
+                  const keywords: string[] = Array.isArray(details.keywords)
+                    ? (details.keywords as unknown[]).filter((k): k is string => typeof k === 'string' && k.trim() !== '')
+                    : [];
+
+                  const summaryData: IPRecordSummaryData = {
+                    title: ipRecord.title,
+                    categoryLabel: CATEGORY_LABELS[ipRecord.category] ?? ipRecord.category,
+                    statusLabel: STATUS_LABELS[ipRecord.status] ?? ipRecord.status,
+                    referenceNumber: ipRecord.reference_number,
+                    filingYear: new Date(ipRecord.created_at).getFullYear().toString(),
+                    inventors,
+                    collaborators,
+                    abstract: ipRecord.abstract,
+                    keywords,
+                  };
+
+                  return (
+                    <IPRecordSummaryCard
+                      data={summaryData}
+                      primaryColor={primaryColor}
+                      standalone={false}
+                    />
+                  );
+                })()}
               </section>
 
               {/* Creator Information */}
