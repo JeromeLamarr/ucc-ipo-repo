@@ -9,8 +9,6 @@ import {
   Sparkles,
   FileText,
   Layers,
-  CheckSquare,
-  HelpCircle,
 } from 'lucide-react';
 
 const BLOCK_TYPES = [
@@ -85,22 +83,6 @@ const BLOCK_TYPES = [
     icon: Layers,
     color: 'text-cyan-600',
     bgColor: 'bg-cyan-50 hover:bg-cyan-100',
-  },
-  {
-    id: 'benefits',
-    name: 'Features / Benefits',
-    description: 'Grid of benefit cards with icons',
-    icon: CheckSquare,
-    color: 'text-emerald-600',
-    bgColor: 'bg-emerald-50 hover:bg-emerald-100',
-  },
-  {
-    id: 'faq',
-    name: 'FAQ',
-    description: 'Accordion-style frequently asked questions',
-    icon: HelpCircle,
-    color: 'text-violet-600',
-    bgColor: 'bg-violet-50 hover:bg-violet-100',
   },
 ];
 

@@ -20,7 +20,7 @@ interface CMSSection {
   order_index: number;
 }
 
-const SECTION_TYPES = ['hero', 'features', 'showcase', 'steps', 'categories', 'text-section', 'cta', 'gallery', 'tabs', 'benefits', 'faq'];
+const SECTION_TYPES = ['hero', 'features', 'showcase', 'steps', 'categories', 'text-section', 'cta', 'gallery', 'tabs'];
 
 const SECTION_TYPE_TEMPLATES: Record<string, Record<string, any>> = {
   hero: {
@@ -103,30 +103,6 @@ const SECTION_TYPE_TEMPLATES: Record<string, Record<string, any>> = {
         title: 'Tab 2',
         content: 'Another tab with content.',
       },
-    ],
-  },
-  benefits: {
-    title: 'Why Use UCC-IPO?',
-    subtitle: 'Designed to simplify intellectual property registration, monitoring, and record management for the university community.',
-    items: [
-      { title: 'Centralized IP Record Management', description: 'Store and organize intellectual property submissions in one secure and accessible platform.' },
-      { title: 'Easy Submission Process', description: 'Allow students, faculty, and researchers to submit intellectual property details and supporting documents efficiently.' },
-      { title: 'Status Tracking and Monitoring', description: 'Let applicants monitor the progress of their submissions and stay informed throughout the review process.' },
-      { title: 'Secure Document Handling', description: 'Manage sensitive files and records with controlled access and role-based permissions.' },
-      { title: 'Faster Administrative Review', description: 'Help administrators and assigned personnel review, validate, and process submissions more efficiently.' },
-      { title: 'Improved Transparency and Accessibility', description: 'Provide a clearer, more transparent workflow for intellectual property registration and documentation.' },
-    ],
-  },
-  faq: {
-    title: 'Frequently Asked Questions',
-    subtitle: 'Quick answers to common questions about using the UCC-IPO platform.',
-    items: [
-      { question: 'Who can use the UCC-IPO platform?', answer: 'Students, faculty members, researchers, and authorized university personnel may use the platform based on their assigned roles and permissions.' },
-      { question: 'What types of intellectual property can be submitted?', answer: 'The platform may accommodate various intellectual property records such as copyright, patent-related works, utility models, industrial designs, trademarks, and other university-recognized submissions.' },
-      { question: 'Do I need supporting documents when submitting?', answer: 'Yes. Applicants should provide the required supporting files and relevant documentation to help validate and process the submission properly.' },
-      { question: 'Can I track the status of my submission?', answer: 'Yes. The system allows users to monitor submission progress and receive updates during the review and documentation process.' },
-      { question: 'Is my submitted information secure?', answer: 'Yes. The platform is designed with role-based access control and secure record handling to protect sensitive intellectual property information.' },
-      { question: 'Can I update my submission after sending it?', answer: 'This depends on the submission status and system rules. In some cases, updates may only be allowed before the review process is finalized.' },
     ],
   },
 };
