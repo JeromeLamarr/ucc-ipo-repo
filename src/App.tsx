@@ -38,7 +38,7 @@ import { ForgotPasswordPage } from '@pages/ForgotPasswordPage';
 import { PublicIPSearchPage } from '@pages/PublicIPSearchPage';
 import { PublicIPRecordPage } from '@pages/PublicIPRecordPage';
 import { useEffect } from 'react';
-import { ensureHomeCMSPageExists } from '@lib/cmsSetup';
+import { ensureHomeCMSPageExists, ensureHomePageSections } from '@lib/cmsSetup';
 
 function DashboardRouter() {
   const { profile } = useAuth();
@@ -92,6 +92,8 @@ function App() {
   useEffect(() => {
     // Initialize CMS home page on app startup
     ensureHomeCMSPageExists();
+    // Ensure Benefits and FAQ sections exist on the home page
+    ensureHomePageSections();
   }, []);
 
   return (
