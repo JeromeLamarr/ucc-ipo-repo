@@ -228,6 +228,54 @@ const VALIDATION_RULES: Record<string, any> = {
       },
     ],
   },
+
+  benefits: {
+    required: [],
+    validations: [
+      {
+        field: 'items',
+        test: (value: any[]) => {
+          if (!Array.isArray(value) || value.length === 0) return false;
+          return value.every((item: any) => item.title && item.description);
+        },
+        message: 'Each benefit item must have a title and description',
+        severity: 'error',
+      },
+      {
+        field: 'items',
+        test: (value: any[]) => {
+          if (!Array.isArray(value)) return true;
+          return value.length > 0;
+        },
+        message: 'Add at least one benefit item',
+        severity: 'warning',
+      },
+    ],
+  },
+
+  faq: {
+    required: [],
+    validations: [
+      {
+        field: 'items',
+        test: (value: any[]) => {
+          if (!Array.isArray(value) || value.length === 0) return false;
+          return value.every((item: any) => item.question && item.answer);
+        },
+        message: 'Each FAQ item must have a question and answer',
+        severity: 'error',
+      },
+      {
+        field: 'items',
+        test: (value: any[]) => {
+          if (!Array.isArray(value)) return true;
+          return value.length > 0;
+        },
+        message: 'Add at least one FAQ item',
+        severity: 'warning',
+      },
+    ],
+  },
 };
 
 // ============================================================================

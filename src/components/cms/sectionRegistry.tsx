@@ -47,6 +47,8 @@ export const supportedSectionTypes: SectionTypeInfo[] = [
   { value: 'gallery', label: 'Image Gallery', description: 'Display multiple images' },
   { value: 'cta', label: 'Call to Action', description: 'Highlight CTA banner' },
   { value: 'tabs', label: 'Tabs', description: 'Tabbed content with bullet support' },
+  { value: 'benefits', label: 'Features / Benefits', description: 'Grid of benefit cards with title and description' },
+  { value: 'faq', label: 'FAQ', description: 'Accordion-style frequently asked questions' },
 ];
 
 export interface SectionValidationResult {
@@ -97,6 +99,14 @@ export function validateSection(section: CmsSection): SectionValidationResult {
     case 'tabs':
       if (!Array.isArray(content.tabs) || content.tabs.length === 0)
         errors.push('Tabs: at least one tab is required');
+      break;
+    case 'benefits':
+      if (!Array.isArray(content.items) || content.items.length === 0)
+        errors.push('Benefits: at least one item is required');
+      break;
+    case 'faq':
+      if (!Array.isArray(content.items) || content.items.length === 0)
+        errors.push('FAQ: at least one item is required');
       break;
   }
 
@@ -160,6 +170,32 @@ export function getDefaultContent(sectionType: string): Record<string, any> {
       };
     case 'tabs':
       return { title: '', tabs: [{ title: 'Tab 1', content: 'Tab content goes here.' }] };
+    case 'benefits':
+      return {
+        title: 'Why Use UCC-IPO?',
+        subtitle: 'Designed to simplify intellectual property registration, monitoring, and record management for the university community.',
+        items: [
+          { title: 'Centralized IP Record Management', description: 'Store and organize intellectual property submissions in one secure and accessible platform.' },
+          { title: 'Easy Submission Process', description: 'Allow students, faculty, and researchers to submit intellectual property details and supporting documents efficiently.' },
+          { title: 'Status Tracking and Monitoring', description: 'Let applicants monitor the progress of their submissions and stay informed throughout the review process.' },
+          { title: 'Secure Document Handling', description: 'Manage sensitive files and records with controlled access and role-based permissions.' },
+          { title: 'Faster Administrative Review', description: 'Help administrators and assigned personnel review, validate, and process submissions more efficiently.' },
+          { title: 'Improved Transparency and Accessibility', description: 'Provide a clearer, more transparent workflow for intellectual property registration and documentation.' },
+        ],
+      };
+    case 'faq':
+      return {
+        title: 'Frequently Asked Questions',
+        subtitle: 'Quick answers to common questions about using the UCC-IPO platform.',
+        items: [
+          { question: 'Who can use the UCC-IPO platform?', answer: 'Students, faculty members, researchers, and authorized university personnel may use the platform based on their assigned roles and permissions.' },
+          { question: 'What types of intellectual property can be submitted?', answer: 'The platform may accommodate various intellectual property records such as copyright, patent-related works, utility models, industrial designs, trademarks, and other university-recognized submissions.' },
+          { question: 'Do I need supporting documents when submitting?', answer: 'Yes. Applicants should provide the required supporting files and relevant documentation to help validate and process the submission properly.' },
+          { question: 'Can I track the status of my submission?', answer: 'Yes. The system allows users to monitor submission progress and receive updates during the review and documentation process.' },
+          { question: 'Is my submitted information secure?', answer: 'Yes. The platform is designed with role-based access control and secure record handling to protect sensitive intellectual property information.' },
+          { question: 'Can I update my submission after sending it?', answer: 'This depends on the submission status and system rules. In some cases, updates may only be allowed before the review process is finalized.' },
+        ],
+      };
     default:
       return {};
   }
@@ -732,6 +768,87 @@ function TabsSection({ content, branding, sectionStyle: _ss }: { content: Record
   );
 }
 
+function BenefitsSection({ content, branding, sectionStyle: _ss }: { content: Record<string, any>; branding: CmsBranding; sectionStyle?: SectionStyle | null }) {
+  const items = Array.isArray(content.items) ? content.items : [];
+  if (items.length === 0) return null;
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {content.title && (
+        <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">{content.title}</h2>
+      )}
+      {content.subtitle && (
+        <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">{content.subtitle}</p>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {items.map((item: any, i: number) => (
+          <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div
+              className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
+              style={{ backgroundColor: branding.primaryColor + '1A' }}
+            >
+              <CheckCircle size={20} style={{ color: branding.primaryColor }} />
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">{item.title || `Benefit ${i + 1}`}</h3>
+            {item.description && (
+              <p className="text-gray-600 text-sm leading-relaxed">{item.description}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FaqSection({ content, branding, sectionStyle: _ss }: { content: Record<string, any>; branding: CmsBranding; sectionStyle?: SectionStyle | null }) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const items = Array.isArray(content.items) ? content.items : [];
+  if (items.length === 0) return null;
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      {content.title && (
+        <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">{content.title}</h2>
+      )}
+      {content.subtitle && (
+        <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto">{content.subtitle}</p>
+      )}
+      <div className="space-y-3">
+        {items.map((item: any, i: number) => (
+          <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <button
+              className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+              onClick={() => setOpenIndex(openIndex === i ? null : i)}
+              aria-expanded={openIndex === i ? 'true' : 'false'}
+            >
+              <span className="font-semibold text-gray-900 pr-4 text-sm leading-snug">{item.question || `Question ${i + 1}`}</span>
+              <span
+                className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+                style={{
+                  backgroundColor: branding.primaryColor + '1A',
+                  transform: openIndex === i ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s',
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 14, height: 14, color: branding.primaryColor }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
+            </button>
+            {openIndex === i && (
+              <div className="px-6 pb-5">
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="text-gray-600 text-sm leading-relaxed">{item.answer || ''}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function UnknownSection({ sectionType }: { sectionType: string }) {
   if (import.meta.env.DEV) {
     return (
@@ -777,6 +894,10 @@ export function renderCmsSection(section: CmsSection, branding: CmsBranding): Re
         return <GallerySection content={content} sectionStyle={sectionStyle} />;
       case 'tabs':
         return <TabsSection content={content} branding={branding} sectionStyle={sectionStyle} />;
+      case 'benefits':
+        return <BenefitsSection content={content} branding={branding} sectionStyle={sectionStyle} />;
+      case 'faq':
+        return <FaqSection content={content} branding={branding} sectionStyle={sectionStyle} />;
       default:
         return <UnknownSection sectionType={section.section_type} />;
     }
