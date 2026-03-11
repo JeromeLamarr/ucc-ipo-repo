@@ -448,14 +448,6 @@ async function generateFullDisclosurePDF(
   page.drawText("AUTHORIZATION AND SIGNATURES", { x: margin + 25, y: yPosition, size: 10, color: accentColor, fontStyle: "bold" });
   yPosition = moveDown(yPosition, 20);
 
-  // Employee/Applicant Signature
-  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
-  page.drawText("Employee/Applicant Signature & Date", { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
-  page.drawText(creator.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
-  yPosition = moveDown(yPosition, 28);
-
   // Supervisor Signature (title from disclosure_signatories, name from assigned supervisor)
   page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
   yPosition = moveDown(yPosition, 10);
