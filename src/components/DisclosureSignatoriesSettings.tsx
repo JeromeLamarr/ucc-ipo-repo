@@ -161,9 +161,8 @@ export function DisclosureSignatoriesSettings() {
           <p className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: primaryColor }}>
             Research Head Column
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {field('Research Head Name', 'research_head_name')}
-            {field('Research Head Position', 'research_head_position')}
+          <div className="grid grid-cols-1 gap-4">
+            {field('Research Head Position / Title', 'research_head_position', 'Label shown under the Research Head line. The name is auto-filled from the Employee/Applicant record.')}
           </div>
         </div>
 
@@ -185,7 +184,7 @@ export function DisclosureSignatoriesSettings() {
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
           {[
             { name: '(Assigned Supervisor)', title: form.supervisor_title },
-            { name: form.research_head_name, title: form.research_head_position },
+            { name: '(Employee/Applicant)', title: form.research_head_position },
             { name: form.president_name,     title: form.president_position },
           ].map(({ name, title }, i) => (
             <div key={i} className="space-y-1">

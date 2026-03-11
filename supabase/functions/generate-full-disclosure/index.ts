@@ -466,14 +466,12 @@ async function generateFullDisclosurePDF(
   }
   yPosition = moveDown(yPosition, 28);
 
-  // Research Head Signature
+  // Research Head Signature — name auto-filled from Employee/Applicant record
   page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
   yPosition = moveDown(yPosition, 10);
   page.drawText(`${researchHeadPosition} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  if (researchHeadName) {
-    yPosition = moveDown(yPosition, 10);
-    page.drawText(researchHeadName, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
-  }
+  yPosition = moveDown(yPosition, 10);
+  page.drawText(creator.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
   yPosition = moveDown(yPosition, 28);
 
   // President Signature
