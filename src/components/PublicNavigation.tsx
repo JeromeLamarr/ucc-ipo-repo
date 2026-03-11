@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
-import { GraduationCap, Menu, X } from 'lucide-react';
+import { GraduationCap, Menu, X, Download } from 'lucide-react';
 
 interface CMSPage {
   slug: string;
@@ -20,6 +20,9 @@ export function PublicNavigation() {
   const [navError, setNavError] = useState<string | null>(null);
   const [hasScroll, setHasScroll] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<Event & { prompt: () => void; userChoice: Promise<{ outcome: string }> } | null>(null);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const installGuideRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchNavPages();
@@ -28,10 +31,40 @@ export function PublicNavigation() {
     const handleScroll = () => {
       setHasScroll(window.scrollY > 0);
     };
-    
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    // Capture PWA install prompt for the "Install App" button
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as Event & { prompt: () => void; userChoice: Promise<{ outcome: string }> });
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Close install guide when clicking outside
+    const handleClickOutside = (e: MouseEvent) => {
+      if (installGuideRef.current && !installGuideRef.current.contains(e.target as Node)) {
+        setShowInstallGuide(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') setDeferredPrompt(null);
+      setShowInstallGuide(false);
+    } else {
+      setShowInstallGuide((prev) => !prev);
+    }
+  };
 
   const fetchNavPages = async () => {
     try {
@@ -132,7 +165,35 @@ export function PublicNavigation() {
           {/* Auth Buttons - Right */}
           <div className="flex items-center gap-3 shrink-0">
             {/* Desktop buttons */}
-            <div className="hidden sm:flex gap-3">
+            <div className="hidden sm:flex gap-3 items-center">
+              {/* Install App button */}
+              <div className="relative" ref={installGuideRef}>
+                <button
+                  onClick={handleInstallClick}
+                  className="flex items-center gap-1.5 px-4 py-2 text-white rounded-lg font-semibold transition-all duration-300 hover:shadow-lg hover:scale-105 text-sm"
+                  style={{ background: 'linear-gradient(to right, #7ED957, #5bb83a)' }}
+                  title="Install UCC IPO App"
+                >
+                  <Download size={15} />
+                  <span>Install App</span>
+                </button>
+                {showInstallGuide && (
+                  <div className="absolute right-0 top-11 w-72 bg-white border border-gray-200 rounded-xl shadow-xl p-4 z-50 text-sm">
+                    <p className="font-semibold text-gray-800 mb-2">Install UCC IPO</p>
+                    <ul className="space-y-1.5 text-gray-600">
+                      <li>📱 <span className="font-medium">Android Chrome:</span> Tap the 3-dot menu → "Install app"</li>
+                      <li>🍎 <span className="font-medium">iPhone/iPad:</span> Tap Share → "Add to Home Screen"</li>
+                      <li>💻 <span className="font-medium">Desktop:</span> Click the install icon in the address bar</li>
+                    </ul>
+                    <button
+                      onClick={() => setShowInstallGuide(false)}
+                      className="mt-3 text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => navigate('/login')}
                 className="px-6 py-2 text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 font-semibold transition-all duration-300 text-sm"
@@ -195,6 +256,17 @@ export function PublicNavigation() {
 
               {/* Mobile Auth Buttons */}
               <div className="pt-2 px-4 flex flex-col gap-2 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    handleInstallClick();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg font-semibold transition-all text-sm"
+                  style={{ background: 'linear-gradient(to right, #7ED957, #5bb83a)' }}
+                >
+                  <Download size={15} />
+                  Install App
+                </button>
                 <button
                   onClick={() => {
                     navigate('/login');
