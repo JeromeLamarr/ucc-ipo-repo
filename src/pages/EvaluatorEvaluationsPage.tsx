@@ -426,6 +426,7 @@ export function EvaluatorEvaluationsPage() {
               submissionTitle: selectedRecord.title,
               submissionCategory: selectedRecord.category,
               applicantName: applicantName,
+              ...(newStatus === 'evaluator_revision' && { remarks: evaluationForm.remarks || 'Please review your submission details and resubmit the corrected information.' }),
             }),
           });
 

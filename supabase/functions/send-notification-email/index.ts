@@ -17,9 +17,10 @@ interface EmailRequest {
   submissionCategory?: string;
   applicantName?: string;
   additionalInfo?: Record<string, string>;
+  remarks?: string;
 }
 
-function generateHtmlFromMessage(title: string, message: string, additionalInfo?: Record<string, string>): string {
+function generateHtmlFromMessage(title: string, message: string, additionalInfo?: Record<string, string>, remarks?: string): string {
   const detailsHtml = additionalInfo ? Object.entries(additionalInfo)
     .filter(([, value]) => value && value !== 'Unknown')
     .map(([key, value]) => `
@@ -30,6 +31,13 @@ function generateHtmlFromMessage(title: string, message: string, additionalInfo?
       </tr>
     `)
     .join('') : '';
+
+  const remarksHtml = remarks ? `
+    <div style="background-color: #fef3c7; padding: 16px; border-radius: 6px; margin: 24px 0; border-left: 4px solid #f59e0b;">
+      <p style="color: #92400e; margin: 0 0 8px 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Supervisor / Evaluator Comment</p>
+      <p style="color: #78350f; margin: 0; font-size: 14px; line-height: 1.6;">${remarks}</p>
+    </div>
+  ` : '';
 
   return `
 <!DOCTYPE html>
@@ -65,6 +73,8 @@ function generateHtmlFromMessage(title: string, message: string, additionalInfo?
       </div>
       ` : ''}
 
+      ${remarksHtml}
+
       <div style="margin-top: 32px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
         <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px 0; font-weight: 500;">University Intellectual Property Management System</p>
         <p style="color: #9ca3af; font-size: 12px; margin: 0;">© 2025 University Central. All rights reserved.</p>
@@ -91,7 +101,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: EmailRequest = await req.json();
-    const { to, subject, html, text, title, message, submissionTitle, submissionCategory, applicantName, additionalInfo } = body;
+    const { to, subject, html, text, title, message, submissionTitle, submissionCategory, applicantName, additionalInfo, remarks } = body;
 
     console.log("Received email request:", {
       to,
@@ -128,7 +138,7 @@ Deno.serve(async (req: Request) => {
         if (submissionTitle) info['Submission Title'] = submissionTitle;
         if (submissionCategory) info['Category'] = submissionCategory;
       }
-      finalHtml = generateHtmlFromMessage(title, message, info);
+      finalHtml = generateHtmlFromMessage(title, message, info, remarks);
       finalText = `${title}\n\n${message}`;
     }
 
