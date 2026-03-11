@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Search, Eye, Plus, Archive, Trash2, Download, Filter } from 'lucide-react';
+import { Search, Eye, Plus, Archive, Trash2, Download, Filter, Upload } from 'lucide-react';
+import { LegacyBulkUploadModal } from '../components/LegacyBulkUploadModal';
 import { useAuth } from '../contexts/AuthContext';
 import { Pagination } from '../components/Pagination';
 import type { Database } from '../lib/database.types';
@@ -39,6 +40,9 @@ export function LegacyRecordsPage() {
   // Bulk delete
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+
+  // Bulk upload
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   // Redirect if not admin
   useEffect(() => {
@@ -345,6 +349,14 @@ export function LegacyRecordsPage() {
           >
             <Download className="w-4 h-4" aria-hidden="true" />
             {exportLabel}
+          </button>
+          <button
+            onClick={() => setShowBulkUpload(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors text-sm font-medium"
+            title="Bulk import legacy records from CSV"
+          >
+            <Upload className="w-4 h-4" aria-hidden="true" />
+            Bulk Upload
           </button>
           <Link
             to="/dashboard/legacy-records/new"
@@ -762,5 +774,16 @@ export function LegacyRecordsPage() {
         </div>
       )}
     </div>
+
+      {/* Bulk Upload Modal */}
+      {showBulkUpload && (
+        <LegacyBulkUploadModal
+          onClose={() => setShowBulkUpload(false)}
+          onImportComplete={() => {
+            fetchRecords();
+            setShowBulkUpload(false);
+          }}
+        />
+      )}
   );
 }
