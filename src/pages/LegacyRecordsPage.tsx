@@ -773,7 +773,6 @@ export function LegacyRecordsPage() {
           </div>
         </div>
       )}
-    </div>
 
       {/* Bulk Upload Modal */}
       {showBulkUpload && (
@@ -785,5 +784,6 @@ export function LegacyRecordsPage() {
           }}
         />
       )}
+    </div>
   );
 }
