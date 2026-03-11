@@ -128,25 +128,50 @@ interface Props {
   onImportComplete: () => void;
 }
 
+function normalizeDate(raw: string): string {
+  if (!raw) return '';
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  // M/D/YYYY or MM/DD/YYYY (US) — try this first since template has US sample
+  const us = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (us) {
+    const [, m, d, y] = us;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  // D-M-YYYY or D.M.YYYY
+  const eu = raw.match(/^(\d{1,2})[-.](\d{1,2})[-.](\d{4})$/);
+  if (eu) {
+    const [, d, m, y] = eu;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  // YYYY/MM/DD
+  const iso2 = raw.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+  if (iso2) {
+    const [, y, m, d] = iso2;
+    return `${y}-${m}-${d}`;
+  }
+  return raw; // return as-is so the YYYY-MM-DD check below can still report the error
+}
+
 function validateRow(raw: Record<string, string>, rowNum: number): ParsedRow {
   const errors: string[] = [];
 
   const title = (raw['title'] || '').trim();
   const inventor_author = (raw['inventor_author'] || '').trim();
   const category = (raw['category'] || '').trim().toLowerCase();
-  const source = (raw['source'] || '').trim().toLowerCase();
-  const original_filing_date = (raw['original_filing_date'] || '').trim();
+  // Source defaults to 'old_system' when not supplied -- all legacy records are implicitly from the old system
+  const source = (raw['source'] || '').trim().toLowerCase() || 'old_system';
+  const original_filing_date = normalizeDate((raw['original_filing_date'] || '').trim());
 
   if (!title) errors.push('title is required');
   if (!inventor_author) errors.push('inventor_author is required');
   if (!category) errors.push('category is required');
   else if (!VALID_CATEGORIES.includes(category))
     errors.push(`invalid category "${category}"  -  must be one of: ${VALID_CATEGORIES.join(', ')}`);
-  if (!source) errors.push('source is required');
-  else if (!VALID_SOURCES.includes(source))
+  if (!VALID_SOURCES.includes(source))
     errors.push(`invalid source "${source}"  -  must be one of: ${VALID_SOURCES.join(', ')}`);
   if (original_filing_date && !/^\d{4}-\d{2}-\d{2}$/.test(original_filing_date))
-    errors.push('original_filing_date must be YYYY-MM-DD');
+    errors.push(`original_filing_date must be YYYY-MM-DD (got "${original_filing_date}")`);
 
   return {
     rowNum,
@@ -339,7 +364,8 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
                   <ol className="list-decimal ml-4 space-y-1">
                     <li>Download the CSV template below. It includes a sample row with the correct column headers.</li>
                     <li>
-                      Required columns: <strong>title</strong>, <strong>inventor_author</strong>, <strong>category</strong>, <strong>source</strong>
+                      Required columns: <strong>title</strong>, <strong>inventor_author</strong>, <strong>category</strong>{' '}
+                      (<strong>source</strong> defaults to <code className="bg-amber-100 px-1 rounded text-xs">old_system</code> if omitted)
                     </li>
                     <li>
                       Valid categories:{' '}
