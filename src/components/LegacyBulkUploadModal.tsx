@@ -1,9 +1,7 @@
 ﻿import { useState, useRef } from 'react';
 import { X, Download, Upload, CheckCircle, AlertCircle, FileText, Info } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import type { Database } from '../lib/database.types';
 
-type LegacyInsert = Database['public']['Tables']['legacy_ip_records']['Insert'];
 
 const VALID_CATEGORIES = [
   'patent', 'trademark', 'copyright', 'utility_model',
@@ -304,47 +302,57 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
     setParseError('');
     const validRows = rows.filter((r) => r.isValid);
     const batchId = crypto.randomUUID();
+    let imported = 0;
+    const rowErrors: string[] = [];
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated. Please refresh and log in again.');
 
-      const insertData: LegacyInsert[] = validRows.map((row) => ({
-        title: row.title,
-        category: row.category,
-        abstract: row.abstract || null,
-        legacy_source: row.source,
-        original_filing_date: row.original_filing_date || null,
-        ipophil_application_no: row.ipophil_application_no || null,
-        remarks: row.remarks || null,
-        details: {
-          creator_name: row.inventor_author,
-          creator_email: '',
-          description: row.abstract || '',
-          keywords: row.keywords
-            ? row.keywords.split(',').map((k) => k.trim()).filter(Boolean)
-            : [],
-          technical_field: '',
-          prior_art: '',
-          problem: '',
-          solution: '',
-          advantages: '',
-          remarks: row.remarks || '',
-          bulk_import: true,
-          import_batch_id: batchId,
-          imported_at: new Date().toISOString(),
-        },
-        created_by_admin_id: user.id,
-        updated_by_admin_id: user.id,
-      }));
+      // Insert one row at a time -- mirrors exactly how AddLegacyRecordPage works,
+      // avoiding any batch-insert RLS or PostgREST edge-cases
+      for (const row of validRows) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: rowError } = await (supabase.from('legacy_ip_records') as any).insert([{
+            title: row.title,
+            category: row.category,
+            abstract: row.abstract || null,
+            legacy_source: row.source,
+            original_filing_date: row.original_filing_date || null,
+            ipophil_application_no: row.ipophil_application_no || null,
+            remarks: row.remarks || null,
+            details: {
+              creator_name: row.inventor_author,
+              creator_email: '',
+              description: row.abstract || '',
+              keywords: row.keywords
+                ? row.keywords.split(',').map((k) => k.trim()).filter(Boolean)
+                : [],
+              technical_field: '',
+              prior_art: '',
+              problem: '',
+              solution: '',
+              advantages: '',
+              remarks: row.remarks || '',
+              bulk_import: true,
+              import_batch_id: batchId,
+              imported_at: new Date().toISOString(),
+            },
+            created_by_admin_id: user.id,
+            updated_by_admin_id: user.id,
+        }]);
 
-      const { data, error } = await (supabase.from('legacy_ip_records') as any)
-        .insert(insertData)
-        .select('id') as { data: { id: string }[] | null; error: { message: string; code?: string } | null };
+        if (rowError) {
+          rowErrors.push(`Row ${row.rowNum} ("${row.title}"): ${rowError.message}`);
+        } else {
+          imported++;
+        }
+      }
 
-      if (error) throw new Error(error.message || 'Database insert failed.');
+      if (imported === 0 && rowErrors.length > 0) {
+        throw new Error(rowErrors[0]);
+      }
 
-      const imported = data?.length ?? 0;
       setSummary({
         total: rows.length,
         valid: validRows.length,
