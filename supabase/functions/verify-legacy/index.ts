@@ -164,18 +164,11 @@ Deno.serve(async (req: Request) => {
   const id = url.searchParams.get("id")?.trim();
   const type = url.searchParams.get("type") || "certificate";
 
-  const htmlHeaders = new Headers({
-    "Content-Type": "text/html; charset=utf-8",
-    "X-Content-Type-Options": "nosniff",
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "*",
-  });
+  const html = (content: string) =>
+    new Response(content, { headers: { "Content-Type": "text/html; charset=utf-8" } });
 
   if (!id) {
-    return new Response(
-      renderPage("Invalid Request", `<div class="status"><div class="status-icon err">✕</div><div><div class="status-title err">Missing ID</div><div class="status-sub">No record ID was provided in this verification link.</div></div></div><div class="body"></div>`),
-      { status: 400, headers: htmlHeaders }
-    );
+    return html(renderPage("Invalid Request", `<div class="status"><div class="status-icon err">✕</div><div><div class="status-title err">Missing ID</div><div class="status-sub">No record ID was provided in this verification link.</div></div></div><div class="body"></div>`));
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -195,21 +188,12 @@ Deno.serve(async (req: Request) => {
 
   if (error) {
     console.error("[verify-legacy] DB error:", error.message);
-    return new Response(
-      renderNotFound(id, type),
-      { status: 404, headers: htmlHeaders }
-    );
+    return html(renderNotFound(id, type));
   }
 
   if (!record) {
-    return new Response(
-      renderNotFound(id, type),
-      { status: 404, headers: htmlHeaders }
-    );
+    return html(renderNotFound(id, type));
   }
 
-  return new Response(
-    renderVerified(record, type),
-    { status: 200, headers: htmlHeaders }
-  );
+  return html(renderVerified(record, type));
 });
