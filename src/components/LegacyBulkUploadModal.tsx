@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
-import { X, Download, Upload, CheckCircle, AlertCircle, FileText } from 'lucide-react';
+﻿import { useState, useRef } from 'react';
+import { X, Download, Upload, CheckCircle, AlertCircle, FileText, Info } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
 import type { Database } from '../lib/database.types';
 
@@ -7,9 +8,43 @@ type LegacyInsert = Database['public']['Tables']['legacy_ip_records']['Insert'];
 
 const VALID_CATEGORIES = [
   'patent', 'trademark', 'copyright', 'utility_model',
-  'industrial_design', 'trade_secret', 'software', 'design', 'other',
+  'industrial_design', 'trade_secret',
 ];
-const VALID_SOURCES = ['old_system', 'physical_archive', 'manual_entry', 'email', 'other'];
+const VALID_SOURCES = ['old_system', 'physical_archive', 'manual_entry', 'email'];
+
+// Alias map: cleaned header string â†’ canonical field name
+const HEADER_ALIASES: Record<string, string> = {
+  'inventor_author': 'inventor_author',
+  'inventor/author': 'inventor_author',
+  'inventor author': 'inventor_author',
+  'inventorauthor': 'inventor_author',
+  'ipophil_application_no': 'ipophil_application_no',
+  'ipophl_application_no': 'ipophil_application_no',
+  'ipophl app no': 'ipophil_application_no',
+  'ipophl app no.': 'ipophil_application_no',
+  'ipophl application no': 'ipophil_application_no',
+  'ipophl application no.': 'ipophil_application_no',
+  'ipophil application no': 'ipophil_application_no',
+  'ipophil application no.': 'ipophil_application_no',
+  'original_filing_date': 'original_filing_date',
+  'original filing date': 'original_filing_date',
+  'filing_date': 'original_filing_date',
+  'filing date': 'original_filing_date',
+};
+
+function normalizeHeader(raw: string): string {
+  // Trim and lowercase
+  const lower = raw.trim().toLowerCase();
+  // Remove characters that are not alphanumeric, spaces, slashes, underscores, dots
+  const cleaned = lower.replace(/[^a-z0-9\s\/_\.]/g, '');
+  // Check alias on cleaned version (preserves spaces/slashes for alias lookup)
+  if (HEADER_ALIASES[cleaned]) return HEADER_ALIASES[cleaned];
+  // Convert spaces and slashes to underscores
+  const underscored = cleaned.replace(/[\s\/]+/g, '_').replace(/\.+$/, '');
+  // Check alias on underscored version
+  if (HEADER_ALIASES[underscored]) return HEADER_ALIASES[underscored];
+  return underscored;
+}
 
 interface ParsedRow {
   rowNum: number;
@@ -33,76 +68,35 @@ interface ImportSummary {
   imported: number;
 }
 
+interface FileInfo {
+  name: string;
+  type: string;
+  sheetName: string | null;
+  detectedHeaders: string[];
+}
+
 interface Props {
   onClose: () => void;
   onImportComplete: () => void;
 }
 
-// Robust CSV parser — handles quoted fields and embedded commas
-function parseCSV(text: string): string[][] {
-  const rows: string[][] = [];
-  let i = 0;
-  const n = text.length;
-
-  while (i < n) {
-    const row: string[] = [];
-    while (i < n) {
-      if (text[i] === '"') {
-        let field = '';
-        i++; // skip opening quote
-        while (i < n) {
-          if (text[i] === '"') {
-            if (i + 1 < n && text[i + 1] === '"') {
-              field += '"';
-              i += 2;
-            } else {
-              i++; // skip closing quote
-              break;
-            }
-          } else {
-            field += text[i++];
-          }
-        }
-        row.push(field.trim());
-        if (i < n && text[i] === ',') i++;
-      } else {
-        let field = '';
-        while (i < n && text[i] !== ',' && text[i] !== '\n' && text[i] !== '\r') {
-          field += text[i++];
-        }
-        row.push(field.trim());
-        if (i < n && text[i] === ',') i++;
-      }
-      if (i >= n || text[i] === '\n' || text[i] === '\r') {
-        if (i < n && text[i] === '\r') i++;
-        if (i < n && text[i] === '\n') i++;
-        break;
-      }
-    }
-    if (row.length > 0 && !(row.length === 1 && row[0] === '')) {
-      rows.push(row);
-    }
-  }
-  return rows;
-}
-
 function validateRow(raw: Record<string, string>, rowNum: number): ParsedRow {
   const errors: string[] = [];
 
-  const title = raw['title']?.trim() || '';
-  const inventor_author = (raw['inventor_author'] || raw['inventor/author'] || '').trim();
-  const category = raw['category']?.trim().toLowerCase() || '';
-  const source = raw['source']?.trim().toLowerCase() || '';
-  const original_filing_date = raw['original_filing_date']?.trim() || '';
+  const title = (raw['title'] || '').trim();
+  const inventor_author = (raw['inventor_author'] || '').trim();
+  const category = (raw['category'] || '').trim().toLowerCase();
+  const source = (raw['source'] || '').trim().toLowerCase();
+  const original_filing_date = (raw['original_filing_date'] || '').trim();
 
   if (!title) errors.push('title is required');
   if (!inventor_author) errors.push('inventor_author is required');
   if (!category) errors.push('category is required');
   else if (!VALID_CATEGORIES.includes(category))
-    errors.push(`invalid category "${category}" — must be one of: ${VALID_CATEGORIES.join(', ')}`);
+    errors.push(`invalid category "${category}" â€” must be one of: ${VALID_CATEGORIES.join(', ')}`);
   if (!source) errors.push('source is required');
   else if (!VALID_SOURCES.includes(source))
-    errors.push(`invalid source "${source}" — must be one of: ${VALID_SOURCES.join(', ')}`);
+    errors.push(`invalid source "${source}" â€” must be one of: ${VALID_SOURCES.join(', ')}`);
   if (original_filing_date && !/^\d{4}-\d{2}-\d{2}$/.test(original_filing_date))
     errors.push('original_filing_date must be YYYY-MM-DD');
 
@@ -112,11 +106,11 @@ function validateRow(raw: Record<string, string>, rowNum: number): ParsedRow {
     inventor_author,
     category,
     source,
-    abstract: raw['abstract']?.trim() || '',
-    keywords: raw['keywords']?.trim() || '',
-    ipophil_application_no: raw['ipophil_application_no']?.trim() || '',
+    abstract: (raw['abstract'] || '').trim(),
+    keywords: (raw['keywords'] || '').trim(),
+    ipophil_application_no: (raw['ipophil_application_no'] || '').trim(),
     original_filing_date,
-    remarks: raw['remarks']?.trim() || '',
+    remarks: (raw['remarks'] || '').trim(),
     isValid: errors.length === 0,
     errors,
   };
@@ -127,21 +121,79 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
   const [step, setStep] = useState<'upload' | 'preview' | 'summary'>('upload');
   const [parseError, setParseError] = useState('');
   const [rows, setRows] = useState<ParsedRow[]>([]);
+  const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [importing, setImporting] = useState(false);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
 
+  // Download a professional XLSX template with Instructions sheet
   const downloadTemplate = () => {
-    const header = 'title,inventor_author,category,source,abstract,keywords,ipophil_application_no,original_filing_date,remarks';
-    const example =
-      '"Method for Efficient Solar Energy Capture","Juan dela Cruz","patent","old_system","A novel method for capturing solar energy","solar,energy,photovoltaic","PAT-2020-001","2020-03-15","Historical patent from old filing system"';
-    const bom = '\uFEFF';
-    const blob = new Blob([bom + header + '\n' + example + '\n'], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'legacy_records_import_template.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: data template
+    const dataHeaders = [
+      'title', 'inventor_author', 'category', 'source',
+      'abstract', 'keywords', 'ipophil_application_no', 'original_filing_date', 'remarks',
+    ];
+    const sampleRow = [
+      'Method for Efficient Solar Energy Capture',
+      'Juan dela Cruz',
+      'patent',
+      'old_system',
+      'A novel method for capturing solar energy using photovoltaic cells',
+      'solar,energy,photovoltaic',
+      'PAT-2020-001',
+      '2020-03-15',
+      'Historical patent from old filing system',
+    ];
+    const dataSheet = XLSX.utils.aoa_to_sheet([dataHeaders, sampleRow]);
+    dataSheet['!cols'] = [
+      { wch: 40 }, { wch: 30 }, { wch: 22 }, { wch: 22 },
+      { wch: 55 }, { wch: 30 }, { wch: 28 }, { wch: 22 }, { wch: 40 },
+    ];
+    XLSX.utils.book_append_sheet(wb, dataSheet, 'Legacy Records Import');
+
+    // Sheet 2: Instructions
+    const instrData = [
+      ['IMPORT INSTRUCTIONS', ''],
+      ['', ''],
+      ['REQUIRED COLUMNS', 'DESCRIPTION'],
+      ['title', 'Full title of the intellectual property record (required)'],
+      ['inventor_author', 'Name(s) of inventor or author â€” separate multiple with semicolons (required)'],
+      ['category', 'IP type â€” see ALLOWED CATEGORY VALUES below (required)'],
+      ['source', 'Where the record originated â€” see ALLOWED SOURCE VALUES below (required)'],
+      ['', ''],
+      ['OPTIONAL COLUMNS', 'DESCRIPTION'],
+      ['abstract', 'Brief description or summary of the IP record'],
+      ['keywords', 'Keywords separated by commas (e.g. solar,energy,photovoltaic)'],
+      ['ipophil_application_no', 'IPOPHIL application number (e.g. PAT-2020-001)'],
+      ['original_filing_date', 'Filing date in YYYY-MM-DD format (e.g. 2020-03-15)'],
+      ['remarks', 'Additional notes or internal comments'],
+      ['', ''],
+      ['ALLOWED CATEGORY VALUES', '(use exactly as shown below)'],
+      ['patent', ''],
+      ['trademark', ''],
+      ['copyright', ''],
+      ['utility_model', ''],
+      ['industrial_design', ''],
+      ['trade_secret', ''],
+      ['', ''],
+      ['ALLOWED SOURCE VALUES', '(use exactly as shown below)'],
+      ['old_system', 'Migrated from a previous digital system'],
+      ['physical_archive', 'Retrieved from physical filing cabinet or archive'],
+      ['manual_entry', 'Manually re-entered by an administrator'],
+      ['email', 'Received via email submission'],
+      ['', ''],
+      ['NOTES', ''],
+      ['- Do not rename or reorder the column headers in the data sheet.', ''],
+      ['- Rows with missing required fields will be skipped during import.', ''],
+      ['- Dates must be formatted as YYYY-MM-DD (e.g. 2020-03-15).', ''],
+      ['- Do not modify this Instructions sheet; it is for reference only.', ''],
+    ];
+    const instrSheet = XLSX.utils.aoa_to_sheet(instrData);
+    instrSheet['!cols'] = [{ wch: 60 }, { wch: 65 }];
+    XLSX.utils.book_append_sheet(wb, instrSheet, 'Instructions');
+
+    XLSX.writeFile(wb, 'legacy_records_import_template.xlsx');
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,24 +201,74 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
     if (!file) return;
     setParseError('');
 
-    const text = await file.text();
-    const cleaned = text.startsWith('\uFEFF') ? text.slice(1) : text;
-    const rawRows = parseCSV(cleaned);
-
-    if (rawRows.length < 2) {
-      setParseError('CSV must have a header row and at least one data row.');
+    const ext = file.name.toLowerCase().split('.').pop() || '';
+    if (!['csv', 'xlsx', 'xls'].includes(ext)) {
+      setParseError('Unsupported file type. Please upload a .csv, .xlsx, or .xls file.');
       return;
     }
 
-    const headers = rawRows[0].map((h) => h.toLowerCase().trim().replace(/\s+/g, '_'));
-    const parsed: ParsedRow[] = rawRows.slice(1).map((cols, i) => {
-      const obj: Record<string, string> = {};
-      headers.forEach((h, idx) => { obj[h] = cols[idx] || ''; });
-      return validateRow(obj, i + 2);
-    });
+    try {
+      const buffer = await file.arrayBuffer();
+      // cellDates:true converts Excel date cells to JS Date objects automatically
+      const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
 
-    setRows(parsed);
-    setStep('preview');
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+
+      // sheet_to_json with header:1 gives array-of-arrays; first row is headers
+      const aoa: unknown[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+      if (aoa.length < 2) {
+        setParseError('File must have a header row and at least one data row.');
+        return;
+      }
+
+      // Normalize headers via alias map
+      const rawHeaders = (aoa[0] as unknown[]).map((h) => String(h ?? ''));
+      const normalizedHeaders = rawHeaders.map(normalizeHeader);
+
+      const detectedInfo: FileInfo = {
+        name: file.name,
+        type: ext,
+        sheetName: ['xlsx', 'xls'].includes(ext) ? sheetName : null,
+        detectedHeaders: normalizedHeaders,
+      };
+
+      // Build row objects and validate; skip fully empty rows
+      const parsed: ParsedRow[] = (aoa.slice(1) as unknown[][])
+        .map((cols, i) => {
+          const obj: Record<string, string> = {};
+          normalizedHeaders.forEach((h, idx) => {
+            const cell = cols[idx];
+            if (cell instanceof Date) {
+              // Format Date cells as YYYY-MM-DD
+              const y = cell.getFullYear();
+              const m = String(cell.getMonth() + 1).padStart(2, '0');
+              const d = String(cell.getDate()).padStart(2, '0');
+              obj[h] = `${y}-${m}-${d}`;
+            } else {
+              obj[h] = cell != null ? String(cell).trim() : '';
+            }
+          });
+          return validateRow(obj, i + 2);
+        })
+        .filter((row) =>
+          // Discard completely blank rows that may exist at the bottom of Excel sheets
+          !(row.title === '' && row.inventor_author === '' && row.category === '' && row.source === '')
+        );
+
+      if (parsed.length === 0) {
+        setParseError('No data rows found after parsing. Please check your file content.');
+        return;
+      }
+
+      setFileInfo(detectedInfo);
+      setRows(parsed);
+      setStep('preview');
+    } catch (err) {
+      console.error('File parse error:', err);
+      setParseError('Failed to parse the file. Please ensure it is a valid CSV or Excel file.');
+    }
   };
 
   const handleImport = async () => {
@@ -202,7 +304,7 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
       }));
 
       // supabase-js 2.57 / PostgrestVersion "12" has a type-inference quirk
-      // where a pre-typed array variable is not assignable to the insert overload.
+      // where a pre-typed LegacyInsert[] is not assignable to the insert overload.
       // Runtime behaviour is identical; we cast the from() result to bypass it.
       const { data, error } = await (supabase.from('legacy_ip_records') as any)
         .insert(insertData)
@@ -229,6 +331,7 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
   const reset = () => {
     setStep('upload');
     setRows([]);
+    setFileInfo(null);
     setParseError('');
     setSummary(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -254,7 +357,7 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
 
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
 
-          {/* ── Step: Upload ─────────────────────────────── */}
+          {/* â”€â”€ Step: Upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === 'upload' && (
             <>
               <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -262,23 +365,24 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
                 <div className="text-sm text-amber-800">
                   <p className="font-semibold mb-1">Before uploading:</p>
                   <ol className="list-decimal ml-4 space-y-1">
-                    <li>Download the CSV template below and fill in your records.</li>
+                    <li>Download the Excel template below. It includes a sample row and an Instructions sheet.</li>
                     <li>
                       Required columns: <strong>title</strong>, <strong>inventor_author</strong>, <strong>category</strong>, <strong>source</strong>
                     </li>
                     <li>
                       Valid categories:{' '}
                       <code className="bg-amber-100 px-1 rounded text-xs">
-                        patent · trademark · copyright · utility_model · industrial_design · trade_secret
+                        patent Â· trademark Â· copyright Â· utility_model Â· industrial_design Â· trade_secret
                       </code>
                     </li>
                     <li>
                       Valid sources:{' '}
                       <code className="bg-amber-100 px-1 rounded text-xs">
-                        old_system · physical_archive · manual_entry · email
+                        old_system Â· physical_archive Â· manual_entry Â· email
                       </code>
                     </li>
-                    <li>Upload and review the preview before confirming the import.</li>
+                    <li>Supports <strong>.xlsx</strong>, <strong>.xls</strong>, and <strong>.csv</strong> files.</li>
+                    <li>Review the preview before confirming the import.</li>
                   </ol>
                 </div>
               </div>
@@ -288,24 +392,24 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
                 className="flex items-center gap-2 px-4 py-2 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 transition-colors text-sm font-medium"
               >
                 <Download className="w-4 h-4" aria-hidden="true" />
-                Download CSV Template
+                Download Excel Template (.xlsx)
               </button>
 
               <label
-                htmlFor="bulk-csv-upload"
+                htmlFor="bulk-file-upload"
                 className="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center cursor-pointer hover:border-amber-400 hover:bg-amber-50 transition-colors block"
               >
                 <Upload className="w-8 h-8 text-gray-400 mx-auto mb-3" aria-hidden="true" />
-                <p className="text-sm text-gray-600 font-medium">Click to choose a CSV file</p>
-                <p className="text-xs text-gray-400 mt-1">Only .csv files are supported</p>
+                <p className="text-sm text-gray-600 font-medium">Click to choose a file</p>
+                <p className="text-xs text-gray-400 mt-1">Supported formats: .xlsx, .xls, .csv</p>
                 <input
-                  id="bulk-csv-upload"
+                  id="bulk-file-upload"
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                   className="hidden"
                   onChange={handleFileChange}
-                  title="Upload CSV file"
+                  title="Upload spreadsheet file"
                 />
               </label>
 
@@ -318,14 +422,36 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
             </>
           )}
 
-          {/* ── Step: Preview ────────────────────────────── */}
+          {/* â”€â”€ Step: Preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === 'preview' && (
             <>
+              {/* File info panel */}
+              {fileInfo && (
+                <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                  <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                  <div className="space-y-0.5">
+                    <p className="font-semibold mb-1">File Details</p>
+                    <p><span className="font-medium">File:</span> {fileInfo.name}</p>
+                    <p><span className="font-medium">Type:</span> {fileInfo.type.toUpperCase()}</p>
+                    {fileInfo.sheetName && (
+                      <p><span className="font-medium">Worksheet:</span> {fileInfo.sheetName}</p>
+                    )}
+                    <p>
+                      <span className="font-medium">Detected columns ({fileInfo.detectedHeaders.length}):</span>{' '}
+                      <code className="text-xs bg-blue-100 px-1 rounded break-all">
+                        {fileInfo.detectedHeaders.join(' Â· ')}
+                      </code>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Row summary */}
               <div className="flex flex-wrap items-center gap-6 text-sm">
                 <span className="text-gray-600">Total rows: <strong>{rows.length}</strong></span>
-                <span className="text-green-700">✓ Valid: <strong>{validCount}</strong></span>
+                <span className="text-green-700">âœ“ Valid: <strong>{validCount}</strong></span>
                 {invalidCount > 0 && (
-                  <span className="text-red-600">✗ Invalid (will be skipped): <strong>{invalidCount}</strong></span>
+                  <span className="text-red-600">âœ— Invalid (will be skipped): <strong>{invalidCount}</strong></span>
                 )}
               </div>
 
@@ -386,7 +512,7 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
             </>
           )}
 
-          {/* ── Step: Summary ────────────────────────────── */}
+          {/* â”€â”€ Step: Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {step === 'summary' && summary && (
             <div className="space-y-4 py-2">
               <div className="flex items-center gap-3">
@@ -430,7 +556,7 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
                 onClick={reset}
                 className="text-sm text-gray-600 hover:text-gray-800 font-medium transition-colors"
               >
-                ← Upload different file
+                â† Upload different file
               </button>
             )}
           </div>
@@ -457,7 +583,7 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
                     className="px-5 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-60 transition-colors text-sm font-medium"
                   >
                     {importing
-                      ? 'Importing…'
+                      ? 'Importing...'
                       : `Import ${validCount} Record${validCount !== 1 ? 's' : ''}`}
                   </button>
                 )}
