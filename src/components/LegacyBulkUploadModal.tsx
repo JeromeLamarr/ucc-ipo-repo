@@ -11,6 +11,37 @@ const VALID_CATEGORIES = [
 ];
 const VALID_SOURCES = ['old_system', 'physical_archive', 'manual_entry', 'email'];
 
+// Normalize a category value: lowercase, collapse spaces/hyphens to underscores
+const CATEGORY_ALIASES: Record<string, string> = {
+  'patent': 'patent',
+  'trademark': 'trademark',
+  'trade mark': 'trademark',
+  'trade-mark': 'trademark',
+  'copyright': 'copyright',
+  'copy right': 'copyright',
+  'copy-right': 'copyright',
+  'utilitymodel': 'utility_model',
+  'utility model': 'utility_model',
+  'utility-model': 'utility_model',
+  'utility_model': 'utility_model',
+  'industrialdesign': 'industrial_design',
+  'industrial design': 'industrial_design',
+  'industrial-design': 'industrial_design',
+  'industrial_design': 'industrial_design',
+  'tradesecret': 'trade_secret',
+  'trade secret': 'trade_secret',
+  'trade-secret': 'trade_secret',
+  'trade_secret': 'trade_secret',
+};
+function normalizeCategory(raw: string): string {
+  const lower = raw.trim().toLowerCase();
+  // Try direct alias lookup first
+  if (CATEGORY_ALIASES[lower]) return CATEGORY_ALIASES[lower];
+  // Fallback: collapse all whitespace/hyphens to underscore and try again
+  const collapsed = lower.replace(/[\s\-]+/g, '_');
+  return CATEGORY_ALIASES[collapsed] ?? collapsed;
+}
+
 // Alias map: normalized header string -> canonical field name
 const HEADER_ALIASES: Record<string, string> = {
   'inventor_author': 'inventor_author',
@@ -158,7 +189,7 @@ function validateRow(raw: Record<string, string>, rowNum: number): ParsedRow {
 
   const title = (raw['title'] || '').trim();
   const inventor_author = (raw['inventor_author'] || '').trim();
-  const category = (raw['category'] || '').trim().toLowerCase();
+  const category = normalizeCategory(raw['category'] || '');
   // Source defaults to 'old_system' when not supplied -- all legacy records are implicitly from the old system
   const source = (raw['source'] || '').trim().toLowerCase() || 'old_system';
   const original_filing_date = normalizeDate((raw['original_filing_date'] || '').trim());
