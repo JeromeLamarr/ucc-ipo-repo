@@ -147,6 +147,45 @@ export function CertificateVerifyPage() {
           return;
         }
 
+        // Legacy certificate fallback — trackingId format: LEGACY-YYYY-XXXXXXXX
+        if (trackingId && trackingId.startsWith('LEGACY-')) {
+          const parts = trackingId.split('-'); // ['LEGACY','YYYY','XXXXXXXX']
+          const idPrefix = parts.slice(2).join('-').toLowerCase(); // first 8 hex chars of UUID
+          const { data: legacyRecord } = await supabase
+            .from('legacy_ip_records')
+            .select('*')
+            .ilike('id', `${idPrefix}%`)
+            .maybeSingle();
+
+          if (legacyRecord) {
+            setCertificate({
+              id: legacyRecord.id,
+              certificate_number: trackingId,
+              pdf_url: '',
+              created_at: legacyRecord.created_at,
+              ip_record_id: legacyRecord.id,
+            });
+            setIpRecord({
+              id: legacyRecord.id,
+              title: legacyRecord.title,
+              abstract: legacyRecord.abstract || null,
+              category: legacyRecord.category,
+              status: 'legacy',
+              created_at: legacyRecord.created_at,
+              reference_number: trackingId,
+              tracking_id: trackingId,
+              details: legacyRecord.details,
+            });
+            setCreator({
+              full_name: legacyRecord.details?.creator_name || 'Unknown',
+              email: legacyRecord.details?.creator_email || 'legacy@archived',
+            });
+            setIsAuthentic(true);
+            setLoading(false);
+            return;
+          }
+        }
+
         setError('Certificate not found. This may be an invalid or forged certificate.');
         setLoading(false);
       } catch (err) {

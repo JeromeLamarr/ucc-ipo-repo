@@ -65,6 +65,37 @@ export function DisclosureVerifyPage() {
         }
 
         if (!discData) {
+          // Legacy disclosure fallback — trackingId is the legacy record's UUID
+          const { data: legacyRecord } = await supabase
+            .from('legacy_ip_records')
+            .select('*')
+            .eq('id', trackingId)
+            .maybeSingle();
+
+          if (legacyRecord) {
+            setDisclosure({
+              id: legacyRecord.id,
+              tracking_id: trackingId,
+              pdf_url: '',
+              generated_at: legacyRecord.created_at,
+              ip_record_id: legacyRecord.id,
+            });
+            setIpRecord({
+              id: legacyRecord.id,
+              title: legacyRecord.title,
+              category: legacyRecord.category,
+              status: 'legacy',
+              created_at: legacyRecord.created_at,
+            });
+            setCreator({
+              full_name: legacyRecord.details?.creator_name || 'Unknown',
+              email: legacyRecord.details?.creator_email || 'N/A (Legacy Record)',
+            });
+            setIsAuthentic(true);
+            setLoading(false);
+            return;
+          }
+
           setError('Disclosure document not found. This may be an invalid or forged document.');
           setLoading(false);
           return;
