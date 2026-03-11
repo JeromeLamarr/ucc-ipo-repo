@@ -6,7 +6,8 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { PDFDocument, PDFPage, rgb } from "npm:pdf-lib@1.17.1";
+import { PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
+import QRCode from "npm:qrcode@1.5.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -175,242 +176,325 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.create();
-  let page = pdfDoc.addPage([612, 792]); // Letter size
-  const { width, height } = page.getSize();
-  const details = record.details || {};
-
-  let yPosition = height - 40;
-  const margin = 40;
-  const contentWidth = width - 2 * margin;
-
-  // Helper function to draw text
-  const drawText = (
-    currentPage: any,
-    text: string,
-    x: number,
-    y: number,
-    size: number,
-    bold = false
-  ) => {
-    const fontName = bold ? "Helvetica-Bold" : "Helvetica";
-    try {
-      currentPage.drawText(text, {
-        x,
-        y,
-        size,
-        color: rgb(0, 0, 0),
-      });
-    } catch (err) {
-      console.warn(`Font issue with ${fontName}:`, err);
-      // Fall back to Helvetica if bold fails
-      currentPage.drawText(text, {
-        x,
-        y,
-        size,
-        color: rgb(0, 0, 0),
-      });
-    }
-  };
-
-  // Header
-  drawText(page, "University Confidential Consortium", margin, yPosition, 11, true);
-  yPosition -= 14;
-  drawText(page, "Intellectual Property Office", margin, yPosition, 11, true);
-  yPosition -= 18;
-  drawText(page, "INTELLECTUAL PROPERTY DISCLOSURE FORM - LEGACY RECORD", margin, yPosition, 11, true);
-  yPosition -= 16;
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - 15,
-    width: contentWidth,
-    height: 1,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 1,
-  });
-  yPosition -= 20;
-
-  // Legacy Badge
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - 12,
-    width: 60,
-    height: 14,
-    color: rgb(1, 0.804, 0.333), // #FCD34D
-  });
-  drawText(page, "LEGACY RECORD", margin + 5, yPosition - 10, 9, true);
-  yPosition -= 20;
-
-  // Record Info
-  drawText(page, `Record ID: ${record.id}`, margin, yPosition, 9);
-  yPosition -= 12;
-  drawText(page,
-    `Date: ${new Date(record.created_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`,
-    margin,
-    yPosition,
-    9
-  );
-  yPosition -= 16;
-
-  // Section I: Creator Information
-  drawText(page, "I. INVENTOR/CREATOR INFORMATION", margin, yPosition, 10, true);
-  yPosition -= 12;
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - 1,
-    width: contentWidth,
-    height: 1,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 0.5,
-  });
-  yPosition -= 10;
-
-  drawText(page, "Name of Creator/Applicant:", margin, yPosition, 9, true);
-  yPosition -= 11;
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - 15,
-    width: contentWidth,
-    height: 15,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 0.5,
-  });
-  drawText(page, details.creator_name || "N/A", margin + 3, yPosition - 8, 9);
-  yPosition -= 20;
-
-  if (details.creator_email) {
-    drawText(page, "Email:", margin, yPosition, 9, true);
-    yPosition -= 11;
-    page.drawRectangle({
-      x: margin,
-      y: yPosition - 15,
-      width: contentWidth,
-      height: 15,
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 0.5,
-    });
-    drawText(page, details.creator_email, margin + 3, yPosition - 8, 9);
-    yPosition -= 20;
+// ─── PDF Helpers (mirrors generate-full-disclosure) ────────────────────────
+function formatDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch {
+    return dateStr;
   }
-
-  if (details.creator_affiliation) {
-    drawText(page, "Department/Affiliation:", margin, yPosition, 9, true);
-    yPosition -= 11;
-    page.drawRectangle({
-      x: margin,
-      y: yPosition - 15,
-      width: contentWidth,
-      height: 15,
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 0.5,
-    });
-    drawText(page, details.creator_affiliation, margin + 3, yPosition - 8, 9);
-    yPosition -= 20;
-  }
-
-  // Check if we need a new page
-  if (yPosition < 100) {
-    page = pdfDoc.addPage([612, 792]);
-    yPosition = height - 40;
-  }
-
-  // Section II: Invention/IP Description
-  drawText(page, "II. INVENTION/IP DESCRIPTION", margin, yPosition, 10, true);
-  yPosition -= 12;
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - 1,
-    width: contentWidth,
-    height: 1,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 0.5,
-  });
-  yPosition -= 10;
-
-  drawText(page, "Title of Invention:", margin, yPosition, 9, true);
-  yPosition -= 11;
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - 15,
-    width: contentWidth,
-    height: 15,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 0.5,
-  });
-  drawText(page, record.title || "N/A", margin + 3, yPosition - 8, 9);
-  yPosition -= 20;
-
-  drawText(page, "Category of IP:", margin, yPosition, 9, true);
-  yPosition -= 11;
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - 15,
-    width: contentWidth,
-    height: 15,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 0.5,
-  });
-  drawText(page, (record.category || "N/A").toUpperCase(), margin + 3, yPosition - 8, 9);
-  yPosition -= 20;
-
-  drawText(page, "Abstract/Summary:", margin, yPosition, 9, true);
-  yPosition -= 11;
-  const abstractLines = wrapText(record.abstract || "N/A", 80);
-  const abstractHeight = abstractLines.length * 11 + 10;
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - abstractHeight,
-    width: contentWidth,
-    height: abstractHeight,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 0.5,
-  });
-  let abstractY = yPosition - 6;
-  for (const line of abstractLines) {
-    drawText(page, line, margin + 3, abstractY, 8);
-    abstractY -= 11;
-  }
-  yPosition -= abstractHeight + 10;
-
-  // Confidential Banner
-  page.drawRectangle({
-    x: margin,
-    y: yPosition - 12,
-    width: contentWidth,
-    height: 12,
-    color: rgb(0, 0, 0),
-  });
-  drawText(page, "CONFIDENTIAL - FOR UNIVERSITY USE ONLY", margin + 5, yPosition - 10, 9, true);
-  yPosition -= 18;
-
-  // Footer
-  drawText(page, "University Confidential Consortium | Intellectual Property Office", margin, yPosition, 8);
-  yPosition -= 10;
-  drawText(page,
-    `Record ID: ${record.id} | Generated: ${new Date().toLocaleString('en-US', { month: 'short', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}`,
-    margin,
-    yPosition,
-    8
-  );
-
-  return await pdfDoc.save();
 }
 
-function wrapText(text: string, maxCharsPerLine: number): string[] {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let currentLine = "";
+function capitalize(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
 
+function moveDown(currentY: number, amount: number): number {
+  return currentY - amount;
+}
+
+function wrapText(text: string, maxWidth: number, fontSize: number): string[] {
+  if (!text) return [''];
+  const avgCharWidth = fontSize * 0.52;
+  const maxCharsPerLine = Math.floor(maxWidth / avgCharWidth);
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
   for (const word of words) {
-    if ((currentLine + word).length <= maxCharsPerLine) {
-      currentLine += (currentLine ? " " : "") + word;
+    if ((currentLine + (currentLine ? ' ' : '') + word).length <= maxCharsPerLine) {
+      currentLine += (currentLine ? ' ' : '') + word;
     } else {
       if (currentLine) lines.push(currentLine);
       currentLine = word;
     }
   }
   if (currentLine) lines.push(currentLine);
+  return lines.length > 0 ? lines : [text];
+}
 
-  return lines;
+async function generateQRCodeImage(data: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    QRCode.toDataURL(
+      data,
+      { errorCorrectionLevel: 'M', type: 'image/png', margin: 1, width: 200 },
+      (err: Error | null | undefined, url: string) => {
+        if (err) reject(err); else resolve(url);
+      }
+    );
+  });
+}
+
+function dataUrlToUint8Array(dataUrl: string): Uint8Array {
+  const base64 = dataUrl.split(',')[1];
+  const binaryStr = atob(base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return bytes;
+}
+
+// ─── PDF Generation ─────────────────────────────────────────────────────────
+async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint8Array> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const supabase = (supabaseUrl && supabaseServiceKey)
+    ? createClient(supabaseUrl, supabaseServiceKey)
+    : null;
+
+  // Fetch Disclosure Signatory Settings
+  let supervisorTitle      = "Supervisor";
+  let researchHeadPosition = "Research Head";
+  let presidentName        = "";
+  let presidentPosition    = "President";
+
+  if (supabase) {
+    try {
+      const { data: sigSettings } = await supabase
+        .from("disclosure_signatories")
+        .select("supervisor_title, research_head_position, president_name, president_position")
+        .limit(1)
+        .maybeSingle();
+      if (sigSettings) {
+        supervisorTitle      = sigSettings.supervisor_title      || supervisorTitle;
+        researchHeadPosition = sigSettings.research_head_position || researchHeadPosition;
+        presidentName        = sigSettings.president_name         || presidentName;
+        presidentPosition    = sigSettings.president_position     || presidentPosition;
+      }
+    } catch (sigErr) {
+      console.warn("[generate-disclosure-legacy] Could not fetch signatory settings, using defaults:", sigErr);
+    }
+  }
+
+  // Map legacy record to workflow data shapes
+  const details = record.details || {};
+  const ipRecord = {
+    title:      record.title || 'Untitled',
+    category:   record.category || 'general',
+    abstract:   record.abstract,
+    created_at: record.created_at,
+  };
+  const creator = {
+    full_name:  details.creator_name        || 'N/A',
+    email:      details.creator_email       || '',
+    department: details.creator_affiliation || '',
+  };
+  const trackingId = record.id;
+
+  // ── PDF Drawing (A4, same layout as generate-full-disclosure) ──────────────
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595, 842]); // A4
+  const { width, height } = page.getSize();
+
+  const margin = 40;
+  const innerPadding = 20;
+  const contentWidth = width - 2 * margin;
+  const borderX = margin - innerPadding;
+  const borderY = innerPadding + 15;
+  const borderWidth = width - 2 * borderX;
+  const borderHeight = height - 2 * borderY;
+
+  const goldColor    = rgb(0.78, 0.58, 0.05);
+  const accentColor  = rgb(0.08, 0.32, 0.65);
+  const darkColor    = rgb(0.1,  0.1,  0.1);
+  const lightBgColor  = rgb(0.94, 0.96, 1.0);
+  const lightBoxColor = rgb(0.97, 0.99, 1.0);
+  const shadowColor   = rgb(0.88, 0.88, 0.88);
+  const warningColor  = rgb(0.92, 0.11, 0.14);
+
+  let yPosition = height - 70;
+
+  // Decorative corner ornaments
+  const cornerSize = 15;
+  const cornerThickness = 2;
+  page.drawLine({ start: { x: borderX + 10, y: height - borderY - 10 }, end: { x: borderX + 10 + cornerSize, y: height - borderY - 10 }, thickness: cornerThickness, color: goldColor });
+  page.drawLine({ start: { x: borderX + 10, y: height - borderY - 10 }, end: { x: borderX + 10, y: height - borderY - 10 - cornerSize }, thickness: cornerThickness, color: goldColor });
+  page.drawLine({ start: { x: width - borderX - 10, y: height - borderY - 10 }, end: { x: width - borderX - 10 - cornerSize, y: height - borderY - 10 }, thickness: cornerThickness, color: goldColor });
+  page.drawLine({ start: { x: width - borderX - 10, y: height - borderY - 10 }, end: { x: width - borderX - 10, y: height - borderY - 10 - cornerSize }, thickness: cornerThickness, color: goldColor });
+  page.drawLine({ start: { x: borderX + 10, y: borderY + 10 }, end: { x: borderX + 10 + cornerSize, y: borderY + 10 }, thickness: cornerThickness, color: goldColor });
+  page.drawLine({ start: { x: borderX + 10, y: borderY + 10 }, end: { x: borderX + 10, y: borderY + 10 + cornerSize }, thickness: cornerThickness, color: goldColor });
+  page.drawLine({ start: { x: width - borderX - 10, y: borderY + 10 }, end: { x: width - borderX - 10 - cornerSize, y: borderY + 10 }, thickness: cornerThickness, color: goldColor });
+  page.drawLine({ start: { x: width - borderX - 10, y: borderY + 10 }, end: { x: width - borderX - 10, y: borderY + 10 + cornerSize }, thickness: cornerThickness, color: goldColor });
+
+  // Main border
+  page.drawRectangle({ x: borderX + 2, y: borderY - 2, width: borderWidth, height: borderHeight, color: shadowColor, borderWidth: 0 });
+  page.drawRectangle({ x: borderX, y: borderY, width: borderWidth, height: borderHeight, color: rgb(1, 1, 1), borderColor: goldColor, borderWidth: 5 });
+  page.drawRectangle({ x: borderX + 5, y: borderY + 5, width: borderWidth - 10, height: borderHeight - 10, borderColor: accentColor, borderWidth: 1 });
+
+  // WATERMARK
+  if (supabase) {
+    try {
+      const { data: wmLogoData } = await supabase.storage.from("assets").download("ucc_logo.png");
+      if (wmLogoData) {
+        let buf: Uint8Array;
+        if (typeof (wmLogoData as any).arrayBuffer === "function") {
+          const ab = await (wmLogoData as any).arrayBuffer();
+          buf = new Uint8Array(ab);
+        } else {
+          buf = wmLogoData as unknown as Uint8Array;
+        }
+        const wmImage = await pdfDoc.embedPng(buf);
+        page.drawImage(wmImage, { x: width / 2 - 200, y: height / 2 - 200, width: 400, height: 400, opacity: 0.08 });
+      }
+    } catch (err) {
+      console.warn("[generate-disclosure-legacy] Could not load watermark:", err);
+    }
+  }
+
+  // HEADER WITH LOGO
+  let logoEmbedded = false;
+  if (supabase) {
+    try {
+      const { data: logoData } = await supabase.storage.from("assets").download("ucc_logo.png");
+      if (logoData) {
+        const logoBuffer = await (logoData as any).arrayBuffer();
+        const logoImage = await pdfDoc.embedPng(new Uint8Array(logoBuffer));
+        page.drawImage(logoImage, { x: margin + 10, y: yPosition - 48, width: 67, height: 67 });
+        logoEmbedded = true;
+      }
+    } catch (err) {
+      console.warn("[generate-disclosure-legacy] Could not embed logo:", err);
+    }
+  }
+
+  if (!logoEmbedded) {
+    page.drawRectangle({ x: margin + 10, y: yPosition - 48, width: 67, height: 67, borderColor: accentColor, borderWidth: 2, color: lightBoxColor });
+    page.drawText("UCC", { x: margin + 20, y: yPosition - 58, size: 15, color: accentColor });
+  }
+
+  const headerX = margin + 85;
+  page.drawText("Republic of the Philippines", { x: headerX, y: yPosition, size: 8, color: darkColor });
+  yPosition = moveDown(yPosition, 18);
+  page.drawText("UNIVERSITY OF CALOOCAN CITY", { x: headerX, y: yPosition, size: 18, color: accentColor });
+  yPosition = moveDown(yPosition, 14);
+  page.drawText("INTELLECTUAL PROPERTY OFFICE", { x: headerX, y: yPosition, size: 11, color: darkColor });
+  yPosition = moveDown(yPosition, 60);
+
+  // Title Box
+  const titleBoxY = yPosition - 25;
+  page.drawRectangle({ x: margin + 10, y: titleBoxY, width: contentWidth - 30, height: 48, color: lightBgColor, borderColor: accentColor, borderWidth: 3 });
+  const boxCenterX = (margin + 10) + (contentWidth - 30) / 2;
+  const titleLine1 = "INTELLECTUAL PROPERTY";
+  const titleLine2 = "FULL DISCLOSURE STATEMENT";
+  page.drawText(titleLine1, { x: boxCenterX - (titleLine1.length * 6.5) / 2, y: yPosition, size: 11, color: accentColor });
+  page.drawText(titleLine2, { x: boxCenterX - (titleLine2.length * 6.5) / 2, y: yPosition - 12, size: 11, color: accentColor });
+  yPosition = moveDown(yPosition, 60);
+
+  // Applicant Information
+  page.drawText("APPLICANT INFORMATION", { x: margin + 25, y: yPosition, size: 10, color: accentColor });
+  yPosition = moveDown(yPosition, 14);
+  page.drawText(`Name: ${creator.full_name}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
+  yPosition = moveDown(yPosition, 10);
+  if (creator.email) {
+    page.drawText(`Email: ${creator.email}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
+    yPosition = moveDown(yPosition, 10);
+  }
+  if (creator.department) {
+    page.drawText(`Department: ${creator.department}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
+    yPosition = moveDown(yPosition, 10);
+  }
+  yPosition = moveDown(yPosition, 10);
+
+  // IP Details
+  page.drawText("INTELLECTUAL PROPERTY DETAILS", { x: margin + 25, y: yPosition, size: 10, color: accentColor });
+  yPosition = moveDown(yPosition, 14);
+  const titleLines = wrapText(`Title: ${ipRecord.title}`, contentWidth - 50, 9);
+  for (const tLine of titleLines) {
+    page.drawText(tLine, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
+    yPosition = moveDown(yPosition, 12);
+  }
+  yPosition = moveDown(yPosition, 2);
+  page.drawText(`Category: ${capitalize(ipRecord.category)}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
+  yPosition = moveDown(yPosition, 14);
+  page.drawText(`Status: LEGACY RECORD`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
+  yPosition = moveDown(yPosition, 14);
+  page.drawText(`Reference Number: ${trackingId}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
+  yPosition = moveDown(yPosition, 14);
+  page.drawText(`Registration Date: ${formatDate(ipRecord.created_at)}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
+  yPosition = moveDown(yPosition, 30);
+
+  // Abstract
+  if (ipRecord.abstract) {
+    page.drawText("ABSTRACT", { x: margin + 25, y: yPosition, size: 10, color: accentColor });
+    yPosition = moveDown(yPosition, 16);
+    const abstractLines = wrapText(ipRecord.abstract, contentWidth - 50, 8);
+    for (const aLine of abstractLines) {
+      page.drawText(aLine, { x: margin + 25, y: yPosition, size: 8, color: darkColor });
+      yPosition = moveDown(yPosition, 12);
+    }
+    yPosition = moveDown(yPosition, 10);
+  }
+
+  // Signature Block
+  yPosition = moveDown(yPosition, 20);
+  page.drawText("AUTHORIZATION AND SIGNATURES", { x: margin + 25, y: yPosition, size: 10, color: accentColor });
+  yPosition = moveDown(yPosition, 20);
+
+  // Supervisor Signature (no name for legacy — no assigned supervisor)
+  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
+  yPosition = moveDown(yPosition, 10);
+  page.drawText(`${supervisorTitle} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
+  yPosition = moveDown(yPosition, 28);
+
+  // Research Head — creator name auto-filled
+  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
+  yPosition = moveDown(yPosition, 10);
+  page.drawText(`${researchHeadPosition} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
+  yPosition = moveDown(yPosition, 10);
+  page.drawText(creator.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
+  yPosition = moveDown(yPosition, 28);
+
+  // University President
+  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
+  yPosition = moveDown(yPosition, 10);
+  page.drawText(`${presidentPosition} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
+  if (presidentName) {
+    yPosition = moveDown(yPosition, 10);
+    page.drawText(presidentName, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
+  }
+  yPosition = moveDown(yPosition, 28);
+
+  // Confidentiality Notice
+  yPosition = moveDown(yPosition, 15);
+  page.drawRectangle({ x: margin + 10, y: yPosition - 50, width: contentWidth - 20, height: 50, color: rgb(0.99, 0.97, 0.92), borderColor: warningColor, borderWidth: 2 });
+  const confLines = [
+    "CONFIDENTIALITY NOTICE",
+    "This document contains confidential and proprietary information belonging to the University of",
+    "Caloocan City. Unauthorized access, use, or disclosure is prohibited. This disclosure statement is",
+    "intended only for authorized personnel and must be handled according to UCC policies."
+  ];
+  let confY = yPosition - 10;
+  for (const confLine of confLines) {
+    page.drawText(confLine, { x: margin + 20, y: confY, size: 7, color: darkColor, maxWidth: contentWidth - 40 });
+    confY = moveDown(confY, 10);
+  }
+  yPosition = moveDown(yPosition, 60);
+
+  // QR Code for verification
+  try {
+    const siteUrl = Deno.env.get("SITE_URL") || "https://ucc-ipo.com";
+    const cleanUrl = siteUrl.replace(/\/$/, '').replace(/^https?:\/\//, 'https://');
+    const verificationUrl = `${cleanUrl}/verify-disclosure/${trackingId}`;
+    const qrDataUrl = await generateQRCodeImage(verificationUrl);
+    const qrBytes = dataUrlToUint8Array(qrDataUrl);
+    const qrImage = await pdfDoc.embedPng(qrBytes);
+    const qrSize = 95;
+    const qrX = width - margin - qrSize - 10;
+    const qrY = margin + 12;
+    page.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+    page.drawText("Verify Disclosure", { x: qrX - 2, y: qrY - 11, size: 6.5, color: accentColor });
+  } catch (qrErr) {
+    console.warn("[generate-disclosure-legacy] Could not embed QR code:", qrErr);
+  }
+
+  // Footer
+  page.drawRectangle({ x: margin, y: margin + 8, width: contentWidth, height: 1.5, color: goldColor });
+  page.drawText(
+    `Document Generated: ${formatDate(new Date().toISOString())} | Verify at: https://ucc-ipo.com/verify-disclosure/${trackingId}`,
+    { x: margin + 25, y: margin + 2, size: 6.5, color: accentColor }
+  );
+
+  return await pdfDoc.save();
 }
