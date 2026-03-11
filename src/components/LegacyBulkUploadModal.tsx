@@ -47,36 +47,55 @@ function normalizeHeader(raw: string): string {
 
 // Robust CSV parser -- handles quoted fields, embedded commas, CRLF/LF, BOM
 function parseCSVToRows(rawText: string): string[][] {
+  // Strip BOM (UTF-8 and UTF-16 LE)
   const text = rawText.startsWith('\uFEFF') ? rawText.slice(1) : rawText;
+  // Split on CRLF, CR-only (old Mac), or LF -- covers all Excel save-as-CSV variants
+  const lines = text.split(/\r\n|\r|\n/);
   const rows: string[][] = [];
-  let i = 0;
-  const n = text.length;
-  while (i < n) {
-    const row: string[] = [];
-    do {
-      if (text[i] === '"') {
-        let field = '';
-        i++;
-        while (i < n) {
-          if (text[i] === '"') {
-            if (i + 1 < n && text[i + 1] === '"') { field += '"'; i += 2; }
-            else { i++; break; }
-          } else { field += text[i++]; }
-        }
-        row.push(field.trim());
-        if (i < n && text[i] === ',') i++;
-      } else {
-        let field = '';
-        while (i < n && text[i] !== ',' && text[i] !== '\n' && text[i] !== '\r') {
-          field += text[i++];
-        }
-        row.push(field.trim());
-        if (i < n && text[i] === ',') i++;
+
+  for (const line of lines) {
+    if (line.trim() === '') continue;
+    const fields: string[] = [];
+    let i = 0;
+
+    while (i <= line.length) {
+      if (i === line.length) {
+        // Trailing comma produced an empty last field
+        fields.push('');
+        break;
       }
-    } while (i < n && text[i] !== '\n' && text[i] !== '\r');
-    if (i < n && text[i] === '\r') i++;
-    if (i < n && text[i] === '\n') i++;
-    if (row.length > 0 && !(row.length === 1 && row[0] === '')) rows.push(row);
+      if (line[i] === '"') {
+        // RFC 4180 quoted field
+        let field = '';
+        i++; // skip opening quote
+        while (i < line.length) {
+          if (line[i] === '"') {
+            if (i + 1 < line.length && line[i + 1] === '"') {
+              field += '"'; i += 2; // escaped double-quote
+            } else {
+              i++; break; // closing quote
+            }
+          } else {
+            field += line[i++];
+          }
+        }
+        fields.push(field.trim());
+        if (i < line.length && line[i] === ',') i++; // skip separator
+        else break; // end of line
+      } else {
+        // Unquoted field: read until comma or end of line
+        const commaIdx = line.indexOf(',', i);
+        if (commaIdx === -1) {
+          fields.push(line.slice(i).trim());
+          break;
+        } else {
+          fields.push(line.slice(i, commaIdx).trim());
+          i = commaIdx + 1;
+        }
+      }
+    }
+
+    if (fields.length > 0) rows.push(fields);
   }
   return rows;
 }
@@ -192,7 +211,19 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
         return;
       }
 
-      const normalizedHeaders = allRows[0].map(normalizeHeader);
+      const rawHeaders = allRows[0];
+      const normalizedHeaders = rawHeaders.map(normalizeHeader);
+
+      // Warn if none of the required headers were recognised (wrong delimiter, wrong format, etc.)
+      const requiredFound = ['title', 'inventor_author', 'category', 'source']
+        .every((h) => normalizedHeaders.includes(h));
+      if (!requiredFound) {
+        setParseError(
+          `Required columns not found. Detected headers: ${rawHeaders.join(', ')}. ` +
+          'Make sure you saved the file as "CSV UTF-8 (Comma delimited)" from Excel.'
+        );
+        return;
+      }
 
       const parsed: ParsedRow[] = allRows.slice(1)
         .map((cols, i) => {
@@ -203,7 +234,7 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
         .filter((row) => !(row.title === '' && row.inventor_author === '' && row.category === '' && row.source === ''));
 
       if (parsed.length === 0) {
-        setParseError('No data rows found after parsing. Please check your file content.');
+        setParseError('No data rows found. All rows appear to have empty required fields (title, inventor_author, category, source).');
         return;
       }
 
