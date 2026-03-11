@@ -319,10 +319,17 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
         remarks: row.remarks || null,
         details: {
           creator_name: row.inventor_author,
+          creator_email: '',
           description: row.abstract || '',
           keywords: row.keywords
             ? row.keywords.split(',').map((k) => k.trim()).filter(Boolean)
             : [],
+          technical_field: '',
+          prior_art: '',
+          problem: '',
+          solution: '',
+          advantages: '',
+          remarks: row.remarks || '',
           bulk_import: true,
           import_batch_id: batchId,
           imported_at: new Date().toISOString(),
