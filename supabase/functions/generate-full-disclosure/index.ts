@@ -114,6 +114,34 @@ function moveDown(currentY: number, amount: number): number {
   return currentY - amount;
 }
 
+/**
+ * Splits text into lines that fit within maxWidth using approximate character width.
+ * Avoids overlapping text for long fields in pdf-lib (which has no built-in splitTextToSize).
+ */
+function wrapText(text: string, maxWidth: number, fontSize: number): string[] {
+  const avgCharWidth = fontSize * 0.52; // approximate for standard PDF fonts at this size
+  const maxChars = Math.floor(maxWidth / avgCharWidth);
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (testLine.length > maxChars && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines.length > 0 ? lines : [text];
+}
+
 async function generateFullDisclosurePDF(
   ipRecord: IPRecord,
   creator: UserData,
@@ -354,24 +382,34 @@ async function generateFullDisclosurePDF(
   page.drawText("INTELLECTUAL PROPERTY DETAILS", { x: margin + 25, y: yPosition, size: 10, color: accentColor, fontStyle: "bold" });
   yPosition = moveDown(yPosition, 14);
 
-  page.drawText(`Title: ${ipRecord.title}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor, maxWidth: contentWidth - 50 });
-  yPosition = moveDown(yPosition, 12);
+  // Title: wrap long titles to prevent overlap with Category line
+  const titleLines = wrapText(`Title: ${ipRecord.title}`, contentWidth - 50, 9);
+  for (const line of titleLines) {
+    page.drawText(line, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
+    yPosition = moveDown(yPosition, 12);
+  }
+  yPosition = moveDown(yPosition, 2); // small extra gap after title
+
   page.drawText(`Category: ${capitalize(ipRecord.category)}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
-  yPosition = moveDown(yPosition, 12);
+  yPosition = moveDown(yPosition, 14);
   page.drawText(`Status: ${ipRecord.status.replace(/_/g, ' ').toUpperCase()}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
-  yPosition = moveDown(yPosition, 12);
+  yPosition = moveDown(yPosition, 14);
   page.drawText(`Reference Number: ${trackingId}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
-  yPosition = moveDown(yPosition, 12);
+  yPosition = moveDown(yPosition, 14);
   page.drawText(`Registration Date: ${formatDate(ipRecord.created_at)}`, { x: margin + 25, y: yPosition, size: 9, color: darkColor });
 
-  yPosition = moveDown(yPosition, 25);
+  yPosition = moveDown(yPosition, 30);
 
   // Abstract
   if (ipRecord.abstract) {
     page.drawText("ABSTRACT", { x: margin + 25, y: yPosition, size: 10, color: accentColor, fontStyle: "bold" });
-    yPosition = moveDown(yPosition, 14);
-    page.drawText(ipRecord.abstract, { x: margin + 25, y: yPosition, size: 8, color: darkColor, maxWidth: contentWidth - 200, lineHeight: 12 });
-    yPosition = moveDown(yPosition, 78);
+    yPosition = moveDown(yPosition, 16);
+    const abstractLines = wrapText(ipRecord.abstract, contentWidth - 50, 8);
+    for (const line of abstractLines) {
+      page.drawText(line, { x: margin + 25, y: yPosition, size: 8, color: darkColor });
+      yPosition = moveDown(yPosition, 12);
+    }
+    yPosition = moveDown(yPosition, 10);
   }
 
   // Evaluations
@@ -403,35 +441,35 @@ async function generateFullDisclosurePDF(
   // SIGNATURE BLOCK
   yPosition = moveDown(yPosition, 20);
   page.drawText("AUTHORIZATION AND SIGNATURES", { x: margin + 25, y: yPosition, size: 10, color: accentColor, fontStyle: "bold" });
-  yPosition = moveDown(yPosition, 16);
-
-  // Employee Signature
-  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 150, y: yPosition }, thickness: 1, color: darkColor });
-  yPosition = moveDown(yPosition, 8);
-  page.drawText("Employee/Applicant Signature & Date", { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  yPosition = moveDown(yPosition, 9);
-  page.drawText(creator.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
   yPosition = moveDown(yPosition, 20);
+
+  // Employee/Applicant Signature
+  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
+  yPosition = moveDown(yPosition, 10);
+  page.drawText("Employee/Applicant Signature & Date", { x: margin + 25, y: yPosition, size: 7, color: darkColor });
+  yPosition = moveDown(yPosition, 10);
+  page.drawText(creator.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
+  yPosition = moveDown(yPosition, 28);
 
   // Supervisor Signature
-  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 150, y: yPosition }, thickness: 1, color: darkColor });
-  yPosition = moveDown(yPosition, 8);
+  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
+  yPosition = moveDown(yPosition, 10);
   page.drawText("Supervisor/Advisor Signature & Date", { x: margin + 25, y: yPosition, size: 7, color: darkColor });
   if (supervisor?.full_name) {
-    yPosition = moveDown(yPosition, 9);
+    yPosition = moveDown(yPosition, 10);
     page.drawText(supervisor.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
   }
-  yPosition = moveDown(yPosition, 20);
+  yPosition = moveDown(yPosition, 28);
 
   // Department Head Signature
-  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 150, y: yPosition }, thickness: 1, color: darkColor });
-  yPosition = moveDown(yPosition, 8);
+  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
+  yPosition = moveDown(yPosition, 10);
   page.drawText("Department Head Signature & Date", { x: margin + 25, y: yPosition, size: 7, color: darkColor });
   if (creator.department) {
-    yPosition = moveDown(yPosition, 9);
+    yPosition = moveDown(yPosition, 10);
     page.drawText(`${creator.department} Department`, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
   }
-  yPosition = moveDown(yPosition, 20);
+  yPosition = moveDown(yPosition, 28);
 
   // Confidentiality Notice
   yPosition = moveDown(yPosition, 15);
