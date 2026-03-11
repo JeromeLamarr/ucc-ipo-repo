@@ -6,11 +6,9 @@ import { Footer } from '../components/Footer';
 import { IPRecordSummaryCard, type IPRecordSummaryData } from '../components/IPRecordSummaryCard';
 import { useBranding } from '../hooks/useBranding';
 
-// Create a public Supabase client for certificate verification
-// This uses the anon key to allow public access to verified data
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://mqfftubqlwiemtxpagps.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmZ0dWJxbHdpZW10eHBhZ3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyMTM4NTksImV4cCI6MjA3ODc4OTg1OX0.Rii5NfSVySQKsd3-u2qyCGRAIqS8AreBfXQAFJ3sbhE';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 interface Certificate {
   id: string;
@@ -147,15 +145,29 @@ export function CertificateVerifyPage() {
           return;
         }
 
-        // Legacy certificate fallback — trackingId format: LEGACY-YYYY-XXXXXXXX
+        // Legacy certificate fallback — trackingId format: LEGACY-YYYY-{uuid}
         if (trackingId && trackingId.startsWith('LEGACY-')) {
-          const parts = trackingId.split('-'); // ['LEGACY','YYYY','XXXXXXXX']
-          const idPrefix = parts.slice(2).join('-').toLowerCase(); // first 8 hex chars of UUID
-          const { data: legacyRecord } = await supabase
-            .from('legacy_ip_records')
-            .select('*')
-            .ilike('id', `${idPrefix}%`)
-            .maybeSingle();
+          const parts = trackingId.split('-');
+          // parts: ['LEGACY', 'YYYY', ...uuid segments]
+          // Reassemble: if full UUID present (8-4-4-4-12), join all uuid segments
+          const uuidPart = parts.slice(2).join('-').toLowerCase();
+          // Try exact match first (full UUID case), then prefix match (short 8-char case)
+          let legacyRecord = null;
+          if (uuidPart.length === 36) {
+            const { data } = await supabase
+              .from('legacy_ip_records')
+              .select('*')
+              .eq('id', uuidPart)
+              .maybeSingle();
+            legacyRecord = data;
+          } else {
+            const { data } = await supabase
+              .from('legacy_ip_records')
+              .select('*')
+              .ilike('id', `${uuidPart}%`)
+              .maybeSingle();
+            legacyRecord = data;
+          }
 
           if (legacyRecord) {
             setCertificate({
