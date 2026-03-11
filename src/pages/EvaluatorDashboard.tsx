@@ -431,7 +431,10 @@ export function EvaluatorDashboard() {
               submissionTitle: selectedRecord.title,
               submissionCategory: selectedRecord.category,
               applicantName: applicantName,
-              ...(newStatus === 'evaluator_revision' && { remarks: evaluationForm.remarks || 'Please review your submission details and resubmit the corrected information.', remarksLabel: `Evaluator: ${profile.full_name}` }),
+              remarksLabel: `Evaluator: ${profile.full_name}`,
+              remarks: (newStatus === 'evaluator_revision' || newStatus === 'rejected')
+                ? (evaluationForm.remarks || 'Please review your submission details and resubmit the corrected information.')
+                : (evaluationForm.remarks || ''),
             }),
           });
 
