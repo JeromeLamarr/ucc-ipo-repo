@@ -614,9 +614,8 @@ async function generateCertificatePDF(
   // QR CODE FOR VERIFICATION
   // ============================================================
   try {
-    const siteUrl = Deno.env.get("SITE_URL") || "https://ucc-ipo.com";
-    const cleanUrl = siteUrl.replace(/\/$/, '').replace(/^https?:\/\//, 'https://');
-    const verificationUrl = `${cleanUrl}/verify/${trackingId}`;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://mqfftubqlwiemtxpagps.supabase.co";
+    const verificationUrl = `${supabaseUrl}/functions/v1/verify-legacy?id=${record.id}&type=certificate`;
     
     const qrCodeDataUrl = await generateQRCodeImage(verificationUrl);
     const qrBytes = dataUrlToUint8Array(qrCodeDataUrl);

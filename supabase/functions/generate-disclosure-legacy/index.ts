@@ -474,9 +474,8 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
 
   // QR Code for verification
   try {
-    const siteUrl = Deno.env.get("SITE_URL") || "https://ucc-ipo.com";
-    const cleanUrl = siteUrl.replace(/\/$/, '').replace(/^https?:\/\//, 'https://');
-    const verificationUrl = `${cleanUrl}/verify-disclosure/${trackingId}`;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://mqfftubqlwiemtxpagps.supabase.co";
+    const verificationUrl = `${supabaseUrl}/functions/v1/verify-legacy?id=${trackingId}&type=disclosure`;
     const qrDataUrl = await generateQRCodeImage(verificationUrl);
     const qrBytes = dataUrlToUint8Array(qrDataUrl);
     const qrImage = await pdfDoc.embedPng(qrBytes);
