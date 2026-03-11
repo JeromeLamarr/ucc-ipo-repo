@@ -46,58 +46,54 @@ function normalizeHeader(raw: string): string {
 }
 
 // Robust CSV parser -- handles quoted fields, embedded commas, CRLF/LF, BOM
-function parseCSVToRows(rawText: string): string[][] {
-  // Strip BOM (UTF-8 and UTF-16 LE)
-  const text = rawText.startsWith('\uFEFF') ? rawText.slice(1) : rawText;
-  // Split on CRLF, CR-only (old Mac), or LF -- covers all Excel save-as-CSV variants
-  const lines = text.split(/\r\n|\r|\n/);
-  const rows: string[][] = [];
-
-  for (const line of lines) {
-    if (line.trim() === '') continue;
-    const fields: string[] = [];
-    let i = 0;
-
-    while (i <= line.length) {
-      if (i === line.length) {
-        // Trailing comma produced an empty last field
-        fields.push('');
-        break;
+// Parse one CSV/TSV/SSV line respecting quoted fields
+function parseDelimitedLine(line: string, delim: string): string[] {
+  const fields: string[] = [];
+  let i = 0;
+  while (i <= line.length) {
+    if (i === line.length) { fields.push(''); break; }
+    if (line[i] === '"') {
+      let field = '';
+      i++; // skip opening quote
+      while (i < line.length) {
+        if (line[i] === '"') {
+          if (i + 1 < line.length && line[i + 1] === '"') { field += '"'; i += 2; }
+          else { i++; break; } // closing quote
+        } else { field += line[i++]; }
       }
-      if (line[i] === '"') {
-        // RFC 4180 quoted field
-        let field = '';
-        i++; // skip opening quote
-        while (i < line.length) {
-          if (line[i] === '"') {
-            if (i + 1 < line.length && line[i + 1] === '"') {
-              field += '"'; i += 2; // escaped double-quote
-            } else {
-              i++; break; // closing quote
-            }
-          } else {
-            field += line[i++];
-          }
-        }
-        fields.push(field.trim());
-        if (i < line.length && line[i] === ',') i++; // skip separator
-        else break; // end of line
-      } else {
-        // Unquoted field: read until comma or end of line
-        const commaIdx = line.indexOf(',', i);
-        if (commaIdx === -1) {
-          fields.push(line.slice(i).trim());
-          break;
-        } else {
-          fields.push(line.slice(i, commaIdx).trim());
-          i = commaIdx + 1;
-        }
-      }
+      fields.push(field.trim());
+      if (i < line.length && line[i] === delim) i++;
+      else break;
+    } else {
+      const delimIdx = line.indexOf(delim, i);
+      if (delimIdx === -1) { fields.push(line.slice(i).trim()); break; }
+      else { fields.push(line.slice(i, delimIdx).trim()); i = delimIdx + 1; }
     }
-
-    if (fields.length > 0) rows.push(fields);
   }
-  return rows;
+  return fields;
+}
+
+function parseCSVToRows(rawText: string): string[][] {
+  // Strip BOM (UTF-8 and UTF-16 LE/BE)
+  const text = rawText.startsWith('\uFEFF') ? rawText.slice(1)
+    : rawText.startsWith('\uFFFE') ? rawText.slice(1)
+    : rawText;
+
+  // Split on CRLF, CR, or LF -- covers all Excel save-as variants
+  const lines = text.split(/\r\n|\r|\n/);
+  const nonEmpty = lines.filter(l => l.trim() !== '');
+  if (nonEmpty.length === 0) return [];
+
+  // Auto-detect delimiter from the header line (tab wins over semicolon wins over comma)
+  const headerLine = nonEmpty[0];
+  const tabCount = (headerLine.match(/\t/g) ?? []).length;
+  const semiCount = (headerLine.match(/;/g) ?? []).length;
+  const commaCount = (headerLine.match(/,/g) ?? []).length;
+  const delim = tabCount > 0 && tabCount >= commaCount && tabCount >= semiCount ? '\t'
+    : semiCount > commaCount ? ';'
+    : ',';
+
+  return nonEmpty.map(line => parseDelimitedLine(line, delim));
 }
 
 interface ParsedRow {
@@ -219,8 +215,8 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
         .every((h) => normalizedHeaders.includes(h));
       if (!requiredFound) {
         setParseError(
-          `Required columns not found. Detected headers: ${rawHeaders.join(', ')}. ` +
-          'Make sure you saved the file as "CSV UTF-8 (Comma delimited)" from Excel.'
+          `Required columns not found. Detected columns: ${normalizedHeaders.filter(h => h !== '').join(', ')}. ` +
+          'Ensure the first row contains the column headers from the template and save as "CSV UTF-8 (Comma delimited)" from Excel.'
         );
         return;
       }
