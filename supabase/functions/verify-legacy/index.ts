@@ -164,10 +164,17 @@ Deno.serve(async (req: Request) => {
   const id = url.searchParams.get("id")?.trim();
   const type = url.searchParams.get("type") || "certificate";
 
+  const htmlHeaders = new Headers({
+    "Content-Type": "text/html; charset=utf-8",
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "no-store",
+    "Access-Control-Allow-Origin": "*",
+  });
+
   if (!id) {
     return new Response(
       renderPage("Invalid Request", `<div class="status"><div class="status-icon err">✕</div><div><div class="status-title err">Missing ID</div><div class="status-sub">No record ID was provided in this verification link.</div></div></div><div class="body"></div>`),
-      { status: 400, headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders } }
+      { status: 400, headers: htmlHeaders }
     );
   }
 
@@ -190,19 +197,19 @@ Deno.serve(async (req: Request) => {
     console.error("[verify-legacy] DB error:", error.message);
     return new Response(
       renderNotFound(id, type),
-      { status: 404, headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders } }
+      { status: 404, headers: htmlHeaders }
     );
   }
 
   if (!record) {
     return new Response(
       renderNotFound(id, type),
-      { status: 404, headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders } }
+      { status: 404, headers: htmlHeaders }
     );
   }
 
   return new Response(
     renderVerified(record, type),
-    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders } }
+    { status: 200, headers: htmlHeaders }
   );
 });
