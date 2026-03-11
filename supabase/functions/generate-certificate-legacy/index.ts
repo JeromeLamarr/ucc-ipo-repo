@@ -149,7 +149,12 @@ function getOrdinalDay(date: Date): string {
 async function generateCertificatePDF(
   record: LegacyIPRecord,
   creator: UserData,
-  trackingId: string
+  trackingId: string,
+  supervisorTitle: string,
+  researchHeadName: string,
+  researchHeadPosition: string,
+  presidentName: string,
+  presidentPosition: string
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4 size (210mm x 297mm)
@@ -382,7 +387,7 @@ async function generateCertificatePDF(
   });
 
   // Center title text in box using box center calculation
-  const boxX = margin + 5;
+  const boxX = margin + 15;
   const boxWidth = contentWidth - 30;
   const boxCenterX = boxX + boxWidth / 2;
   const fontSize = 14;
@@ -452,16 +457,17 @@ async function generateCertificatePDF(
   // Center IP title text in box
   const ipTitle = `"${record.title}"`;
   const ipTitleFontSize = 16;
-  const ipTitleCharWidth = (ipTitle.length * 5.0) / 2;
+  const ipTitleHalfWidth = (ipTitle.length * ipTitleFontSize * 0.55) / 2;
 
   page.drawText(ipTitle, {
-    x: ipBoxCenterX - ipTitleCharWidth,
+    x: ipBoxCenterX - ipTitleHalfWidth,
     y: yPosition - 6,
     size: ipTitleFontSize,
     color: accentColor,
+    maxWidth: ipBoxWidth,
   });
 
-  yPosition = moveDown(yPosition, 30);
+  yPosition = moveDown(yPosition, 40);
 
   // ============================================================
   // ABSTRACT SECTION
@@ -584,17 +590,23 @@ async function generateCertificatePDF(
   page.drawLine({ start: { x: sig2X, y: sigLineY }, end: { x: sig2X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
   page.drawLine({ start: { x: sig3X, y: sigLineY }, end: { x: sig3X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
 
-  // Signature titles
-  page.drawText("Director", { x: sig1X + 53, y: sigLineY - 13, size: 8, color: darkColor });
-  page.drawText("Dean", { x: sig2X + 58, y: sigLineY - 13, size: 8, color: darkColor });
-  page.drawText("President", { x: sig3X + 50, y: sigLineY - 13, size: 8, color: darkColor });
+  const sig1Center = sig1X + sigLineLength / 2;
+  const sig2Center = sig2X + sigLineLength / 2;
+  const sig3Center = sig3X + sigLineLength / 2;
 
-  yPosition = moveDown(yPosition, 20);
+  const drawCenteredSigText = (text: string, centerX: number, y: number, size: number) => {
+    const approxHalfWidth = (text.length * size * 0.55) / 2;
+    page.drawText(text, { x: centerX - approxHalfWidth, y, size, color: darkColor });
+  };
 
-  // Department/office info
-  page.drawText("IP Office", { x: sig1X + 53, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("College of Computer Studies", { x: sig2X + 25, y: yPosition - 5, size: 6.5, color: darkColor });
-  page.drawText("Office of the President", { x: sig3X + 35, y: yPosition - 5, size: 6.5, color: darkColor });
+  // Row 1: Names just below signature line (no supervisor name for legacy records)
+  drawCenteredSigText(researchHeadName, sig2Center, sigLineY - 13, 7.5);
+  drawCenteredSigText(presidentName, sig3Center, sigLineY - 13, 7.5);
+
+  // Row 2: Position / title labels
+  drawCenteredSigText(supervisorTitle, sig1Center, sigLineY - 26, 8);
+  drawCenteredSigText(researchHeadPosition, sig2Center, sigLineY - 26, 8);
+  drawCenteredSigText(presidentPosition, sig3Center, sigLineY - 26, 8);
 
   yPosition = moveDown(yPosition, spaceAfterMainText);
 
@@ -775,9 +787,32 @@ Deno.serve(async (req: Request) => {
     const year = new Date(record.created_at).getFullYear();
     const trackingId = `LEGACY-${year}-${String(record.id).substring(0, 8).toUpperCase()}`;
 
+    // Fetch certificate signatory settings
+    let supervisorTitle      = 'Supervisor';
+    let researchHeadName     = 'Research Head';
+    let researchHeadPosition = 'Research Department Head';
+    let presidentName        = '';
+    let presidentPosition    = 'President';
+    try {
+      const { data: sigSettings } = await supabase
+        .from('certificate_signatories')
+        .select('supervisor_title, research_head_name, research_head_position, president_name, president_position')
+        .limit(1)
+        .maybeSingle();
+      if (sigSettings) {
+        supervisorTitle      = sigSettings.supervisor_title      || supervisorTitle;
+        researchHeadName     = sigSettings.research_head_name     || researchHeadName;
+        researchHeadPosition = sigSettings.research_head_position || researchHeadPosition;
+        presidentName        = sigSettings.president_name         || presidentName;
+        presidentPosition    = sigSettings.president_position     || presidentPosition;
+      }
+    } catch (sigErr) {
+      console.warn('[generate-certificate-legacy] Could not fetch signatory settings, using defaults:', sigErr);
+    }
+
     // Generate PDF
     console.log('[generate-certificate-legacy] Starting PDF generation');
-    const pdfBuffer = await generateCertificatePDF(record, creator, trackingId);
+    const pdfBuffer = await generateCertificatePDF(record, creator, trackingId, supervisorTitle, researchHeadName, researchHeadPosition, presidentName, presidentPosition);
     console.log('[generate-certificate-legacy] PDF generated, size:', pdfBuffer.length);
     
     const checksum = await generateChecksum(pdfBuffer);
