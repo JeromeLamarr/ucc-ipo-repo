@@ -6,6 +6,7 @@ import { User, Lock, Bell, Shield, Save, AlertCircle, CheckCircle, Palette, PenL
 import { useSearchParams } from 'react-router-dom';
 import { AdminBrandingSettingsPage } from './AdminBrandingSettingsPage';
 import { CertificateSignatoriesSettings } from '../components/CertificateSignatoriesSettings';
+import { DisclosureSignatoriesSettings } from '../components/DisclosureSignatoriesSettings';
 
 export function SettingsPage() {
   const { profile, refreshProfile } = useAuth();
@@ -13,8 +14,8 @@ export function SettingsPage() {
   const [searchParams] = useSearchParams();
   
   // Read ?tab query param, default to profile
-  const tabFromUrl = (searchParams.get('tab') as 'profile' | 'password' | 'notifications' | 'branding' | 'signatories') || 'profile';
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'branding' | 'signatories'>(tabFromUrl);
+  const tabFromUrl = (searchParams.get('tab') as 'profile' | 'password' | 'notifications' | 'branding' | 'signatories' | 'disclosure_signatories') || 'profile';
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'branding' | 'signatories' | 'disclosure_signatories'>(tabFromUrl);
   
   // Update activeTab when URL query param changes
   useEffect(() => {
@@ -98,6 +99,7 @@ export function SettingsPage() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     ...(profile?.role === 'admin' ? [{ id: 'branding', label: 'Branding', icon: Palette }] : []),
     ...(profile?.role === 'admin' ? [{ id: 'signatories', label: 'Certificate Signatories', icon: PenLine }] : []),
+    ...(profile?.role === 'admin' ? [{ id: 'disclosure_signatories', label: 'Disclosure Signatories', icon: PenLine }] : []),
   ];
 
   return (
@@ -343,6 +345,12 @@ export function SettingsPage() {
           {activeTab === 'signatories' && profile?.role === 'admin' && (
             <div className="space-y-8">
               <CertificateSignatoriesSettings />
+            </div>
+          )}
+
+          {activeTab === 'disclosure_signatories' && profile?.role === 'admin' && (
+            <div className="space-y-8">
+              <DisclosureSignatoriesSettings />
             </div>
           )}
         </div>

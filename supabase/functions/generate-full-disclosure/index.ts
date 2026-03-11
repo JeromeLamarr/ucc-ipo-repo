@@ -147,7 +147,12 @@ async function generateFullDisclosurePDF(
   creator: UserData,
   supervisor: UserData | null,
   evaluations: any[],
-  trackingId: string
+  trackingId: string,
+  supervisorTitle: string,
+  researchHeadName: string,
+  researchHeadPosition: string,
+  presidentName: string,
+  presidentPosition: string
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4 size
@@ -451,23 +456,33 @@ async function generateFullDisclosurePDF(
   page.drawText(creator.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
   yPosition = moveDown(yPosition, 28);
 
-  // Supervisor Signature
+  // Supervisor Signature (title from disclosure_signatories, name from assigned supervisor)
   page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
   yPosition = moveDown(yPosition, 10);
-  page.drawText("Supervisor/Advisor Signature & Date", { x: margin + 25, y: yPosition, size: 7, color: darkColor });
+  page.drawText(`${supervisorTitle} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
   if (supervisor?.full_name) {
     yPosition = moveDown(yPosition, 10);
     page.drawText(supervisor.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
   }
   yPosition = moveDown(yPosition, 28);
 
-  // Department Head Signature
+  // Research Head Signature
   page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
   yPosition = moveDown(yPosition, 10);
-  page.drawText("Department Head Signature & Date", { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  if (creator.department) {
+  page.drawText(`${researchHeadPosition} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
+  if (researchHeadName) {
     yPosition = moveDown(yPosition, 10);
-    page.drawText(`${creator.department} Department`, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
+    page.drawText(researchHeadName, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
+  }
+  yPosition = moveDown(yPosition, 28);
+
+  // President Signature
+  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
+  yPosition = moveDown(yPosition, 10);
+  page.drawText(`${presidentPosition} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
+  if (presidentName) {
+    yPosition = moveDown(yPosition, 10);
+    page.drawText(presidentName, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
   }
   yPosition = moveDown(yPosition, 28);
 
@@ -630,6 +645,31 @@ Deno.serve(async (req: Request) => {
         .eq("id", record_id);
     }
 
+    // Fetch Disclosure Signatory Settings (fallback to defaults if not configured)
+    let supervisorTitle      = "Supervisor";
+    let researchHeadName     = "";
+    let researchHeadPosition = "Research Head";
+    let presidentName        = "";
+    let presidentPosition    = "President";
+
+    try {
+      const { data: sigSettings } = await supabase
+        .from("disclosure_signatories")
+        .select("supervisor_title, research_head_name, research_head_position, president_name, president_position")
+        .limit(1)
+        .maybeSingle();
+
+      if (sigSettings) {
+        supervisorTitle      = sigSettings.supervisor_title      || supervisorTitle;
+        researchHeadName     = sigSettings.research_head_name     || researchHeadName;
+        researchHeadPosition = sigSettings.research_head_position || researchHeadPosition;
+        presidentName        = sigSettings.president_name         || presidentName;
+        presidentPosition    = sigSettings.president_position     || presidentPosition;
+      }
+    } catch (sigErr) {
+      console.warn("[generate-full-disclosure] Could not fetch signatory settings, using defaults:", sigErr);
+    }
+
     // Generate PDF
     console.log("[Full Disclosure] Generating PDF...");
     const pdfBytes = await generateFullDisclosurePDF(
@@ -637,7 +677,12 @@ Deno.serve(async (req: Request) => {
       creator,
       supervisor,
       evaluations || [],
-      trackingId
+      trackingId,
+      supervisorTitle,
+      researchHeadName,
+      researchHeadPosition,
+      presidentName,
+      presidentPosition
     );
 
     // Store in Supabase Storage
