@@ -465,7 +465,7 @@ export function SupervisorReviewPage() {
               submissionTitle: selectedRecord.title,
               submissionCategory: selectedRecord.category,
               applicantName: applicantName,
-              ...(newStatus === 'supervisor_revision' && { remarks: remarks || 'Please review your submission details and resubmit the corrected information.' }),
+              ...(newStatus === 'supervisor_revision' && { remarks: remarks || 'Please review your submission details and resubmit the corrected information.', remarksLabel: `Supervisor: ${profile.full_name}` }),
             }),
           });
 

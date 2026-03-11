@@ -18,9 +18,10 @@ interface EmailRequest {
   applicantName?: string;
   additionalInfo?: Record<string, string>;
   remarks?: string;
+  remarksLabel?: string;
 }
 
-function generateHtmlFromMessage(title: string, message: string, additionalInfo?: Record<string, string>, remarks?: string): string {
+function generateHtmlFromMessage(title: string, message: string, additionalInfo?: Record<string, string>, remarks?: string, remarksLabel?: string): string {
   const detailsHtml = additionalInfo ? Object.entries(additionalInfo)
     .filter(([, value]) => value && value !== 'Unknown')
     .map(([key, value]) => `
@@ -34,7 +35,7 @@ function generateHtmlFromMessage(title: string, message: string, additionalInfo?
 
   const remarksHtml = remarks ? `
     <div style="background-color: #fef3c7; padding: 16px; border-radius: 6px; margin: 24px 0; border-left: 4px solid #f59e0b;">
-      <p style="color: #92400e; margin: 0 0 8px 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Supervisor / Evaluator Comment</p>
+      <p style="color: #92400e; margin: 0 0 8px 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">${remarksLabel || 'Remarks / Comments'}</p>
       <p style="color: #78350f; margin: 0; font-size: 14px; line-height: 1.6;">${remarks}</p>
     </div>
   ` : '';
@@ -101,7 +102,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: EmailRequest = await req.json();
-    const { to, subject, html, text, title, message, submissionTitle, submissionCategory, applicantName, additionalInfo, remarks } = body;
+    const { to, subject, html, text, title, message, submissionTitle, submissionCategory, applicantName, additionalInfo, remarks, remarksLabel } = body;
 
     console.log("Received email request:", {
       to,
@@ -138,7 +139,7 @@ Deno.serve(async (req: Request) => {
         if (submissionTitle) info['Submission Title'] = submissionTitle;
         if (submissionCategory) info['Category'] = submissionCategory;
       }
-      finalHtml = generateHtmlFromMessage(title, message, info, remarks);
+      finalHtml = generateHtmlFromMessage(title, message, info, remarks, remarksLabel);
       finalText = `${title}\n\n${message}`;
     }
 
