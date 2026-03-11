@@ -474,8 +474,7 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
 
   // QR Code for verification
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://mqfftubqlwiemtxpagps.supabase.co";
-    const verificationUrl = `${supabaseUrl}/functions/v1/verify-legacy?id=${trackingId}&type=disclosure`;
+    const verificationUrl = `https://university-intellect-dqt4.bolt.host/verify-disclosure/${trackingId}`;
     const qrDataUrl = await generateQRCodeImage(verificationUrl);
     const qrBytes = dataUrlToUint8Array(qrDataUrl);
     const qrImage = await pdfDoc.embedPng(qrBytes);

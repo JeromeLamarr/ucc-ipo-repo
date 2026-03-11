@@ -155,6 +155,8 @@ function renderNotFound(id: string, type: string): string {
   return renderPage("Verification Failed", body);
 }
 
+const FRONTEND_URL = "https://university-intellect-dqt4.bolt.host";
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders, status: 200 });
@@ -164,36 +166,32 @@ Deno.serve(async (req: Request) => {
   const id = url.searchParams.get("id")?.trim();
   const type = url.searchParams.get("type") || "certificate";
 
-  const html = (content: string) =>
-    new Response(content, { headers: { "Content-Type": "text/html; charset=utf-8" } });
-
   if (!id) {
-    return html(renderPage("Invalid Request", `<div class="status"><div class="status-icon err">✕</div><div><div class="status-title err">Missing ID</div><div class="status-sub">No record ID was provided in this verification link.</div></div></div><div class="body"></div>`));
+    return Response.redirect(FRONTEND_URL, 302);
   }
 
+  // Disclosure: redirect directly — CertificateVerifyPage expects LEGACY-YYYY-UUID format
+  if (type === "disclosure") {
+    return Response.redirect(`${FRONTEND_URL}/verify-disclosure/${encodeURIComponent(id)}`, 302);
+  }
+
+  // Certificate: look up creation year for the LEGACY-YYYY-UUID tracking format
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return new Response("Server configuration error", { status: 500, headers: corsHeaders });
+  let year = new Date().getFullYear();
+
+  if (supabaseUrl && supabaseServiceKey) {
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: record } = await supabase
+      .from("legacy_ip_records")
+      .select("created_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (record?.created_at) {
+      year = new Date(record.created_at).getFullYear();
+    }
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-  const { data: record, error } = await supabase
-    .from("legacy_ip_records")
-    .select("id, title, category, abstract, created_at, details")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[verify-legacy] DB error:", error.message);
-    return html(renderNotFound(id, type));
-  }
-
-  if (!record) {
-    return html(renderNotFound(id, type));
-  }
-
-  return html(renderVerified(record, type));
+  return Response.redirect(`${FRONTEND_URL}/verify/LEGACY-${year}-${id}`, 302);
 });

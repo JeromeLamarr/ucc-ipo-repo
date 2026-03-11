@@ -614,8 +614,8 @@ async function generateCertificatePDF(
   // QR CODE FOR VERIFICATION
   // ============================================================
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://mqfftubqlwiemtxpagps.supabase.co";
-    const verificationUrl = `${supabaseUrl}/functions/v1/verify-legacy?id=${record.id}&type=certificate`;
+    const certYear = new Date(record.created_at).getFullYear();
+    const verificationUrl = `https://university-intellect-dqt4.bolt.host/verify/LEGACY-${certYear}-${record.id}`;
     
     const qrCodeDataUrl = await generateQRCodeImage(verificationUrl);
     const qrBytes = dataUrlToUint8Array(qrCodeDataUrl);
