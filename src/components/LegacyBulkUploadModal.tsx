@@ -301,13 +301,13 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
 
   const handleImport = async () => {
     setImporting(true);
+    setParseError('');
     const validRows = rows.filter((r) => r.isValid);
     const batchId = crypto.randomUUID();
-    let imported = 0;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!user) throw new Error('Not authenticated. Please refresh and log in again.');
 
       const insertData: LegacyInsert[] = validRows.map((row) => ({
         title: row.title,
@@ -331,29 +331,28 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
         updated_by_admin_id: user.id,
       }));
 
-      // supabase-js 2.57 / PostgrestVersion "12" has a type-inference quirk
-      // where a pre-typed LegacyInsert[] is not assignable to the insert overload.
-      // Runtime behaviour is identical; we cast the from() result to bypass it.
       const { data, error } = await (supabase.from('legacy_ip_records') as any)
         .insert(insertData)
-        .select('id') as { data: { id: string }[] | null; error: Error | null };
+        .select('id') as { data: { id: string }[] | null; error: { message: string; code?: string } | null };
 
-      if (error) throw error;
-      imported = data?.length || 0;
+      if (error) throw new Error(error.message || 'Database insert failed.');
+
+      const imported = data?.length ?? 0;
+      setSummary({
+        total: rows.length,
+        valid: validRows.length,
+        invalid: rows.filter((r) => !r.isValid).length,
+        imported,
+      });
+      setStep('summary');
+      onImportComplete();
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'An unexpected error occurred during import.';
       console.error('Bulk import error:', err);
+      setParseError(`Import failed: ${msg}`);
     } finally {
       setImporting(false);
     }
-
-    setSummary({
-      total: rows.length,
-      valid: validRows.length,
-      invalid: rows.filter((r) => !r.isValid).length,
-      imported,
-    });
-    setStep('summary');
-    onImportComplete();
   };
 
   const reset = () => {
@@ -451,9 +450,15 @@ export function LegacyBulkUploadModal({ onClose, onImportComplete }: Props) {
             </>
           )}
 
-          {/* â”€â”€ Step: Preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* -- Step: Preview ----------------------------- */}
           {step === 'preview' && (
             <>
+              {parseError && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                  {parseError}
+                </div>
+              )}
               {/* File info panel */}
               {fileInfo && (
                 <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
