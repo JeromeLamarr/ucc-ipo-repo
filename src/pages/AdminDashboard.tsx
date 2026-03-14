@@ -1,13 +1,33 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
-import { Users, FileText, TrendingUp, Activity, BarChart2 } from 'lucide-react';
+import { Users, FileText, TrendingUp, Activity, BarChart2, Filter } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { AdminPendingApplicants } from '../components/AdminPendingApplicants';
 import type { Database } from '../lib/database.types';
 
 type User = Database['public']['Tables']['users']['Row'];
 type IpRecord = Database['public']['Tables']['ip_records']['Row'];
+
+interface VizRecord {
+  status: string;
+  category: string;
+  created_at: string;
+  department: string;
+}
+
+const VIZ_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'waiting_supervisor', label: 'Waiting Supervisor' },
+  { value: 'supervisor_revision', label: 'Supervisor Revision' },
+  { value: 'supervisor_approved', label: 'Supervisor Approved' },
+  { value: 'waiting_evaluation', label: 'Waiting Evaluation' },
+  { value: 'evaluator_revision', label: 'Evaluator Revision' },
+  { value: 'evaluator_approved', label: 'Evaluator Approved' },
+  { value: 'preparing_legal', label: 'Preparing Legal' },
+  { value: 'ready_for_filing', label: 'Ready for Filing' },
+  { value: 'rejected', label: 'Rejected' },
+];
 
 export function AdminDashboard() {
   const { primaryColor } = useBranding();
@@ -23,8 +43,15 @@ export function AdminDashboard() {
   });
   const [categoryStats, setCategoryStats] = useState<{ category: string; count: number }[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  const [departmentStats, setDepartmentStats] = useState<{ department: string; count: number }[]>([]);
+  const [allVizRecords, setAllVizRecords] = useState<VizRecord[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Data Visualization Panel filter state
+  const [vizFromDate, setVizFromDate] = useState('');
+  const [vizToDate, setVizToDate] = useState('');
+  const [vizStatus, setVizStatus] = useState('');
+  const [vizCategory, setVizCategory] = useState('');
+  const [vizDepartment, setVizDepartment] = useState('');
 
   // Pagination state for recent activity
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,7 +65,7 @@ export function AdminDashboard() {
     try {
       const [usersRes, recordsRes, activityRes] = await Promise.all([
         supabase.from('users').select('role'),
-        supabase.from('ip_records').select('status, category'),
+        supabase.from('ip_records').select('status, category, created_at, applicant_id'),
         supabase
           .from('activity_logs')
           .select('*, user:users(full_name)')
@@ -84,22 +111,31 @@ export function AdminDashboard() {
         setRecentActivity(activityRes.data);
       }
 
-      // Department stats: separate query to avoid breaking Supabase type inference
-      const { data: deptRaw } = await supabase.from('users').select('affiliation, role');
+      // Dept user lookup + viz records: fetch with id to enable record→dept join
+      const { data: deptRaw } = await supabase.from('users').select('id, affiliation, role');
       if (deptRaw) {
-        const applicants = (deptRaw as unknown as { affiliation: string | null; role: string }[])
-          .filter((u) => u.role === 'applicant');
-        const deptMap: Record<string, number> = {};
-        applicants.forEach((u) => {
-          const dept = u.affiliation?.trim() || 'Unaffiliated';
-          deptMap[dept] = (deptMap[dept] || 0) + 1;
+        type UserRaw = { id: string; affiliation: string | null; role: string };
+        const allUsers = deptRaw as unknown as UserRaw[];
+
+        // user-id → department lookup (used to annotate viz records)
+        const userDeptMap: Record<string, string> = {};
+        allUsers.forEach((u) => {
+          userDeptMap[u.id] = u.affiliation?.trim() || 'Unaffiliated';
         });
-        setDepartmentStats(
-          Object.entries(deptMap)
-            .map(([department, count]) => ({ department, count }))
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 6)
-        );
+
+        // Build allVizRecords annotated with department
+        if (recordsRes.data) {
+          type RecRaw = { status: string; category: string; created_at: string; applicant_id: string };
+          const rawRecs = recordsRes.data as unknown as RecRaw[];
+          setAllVizRecords(
+            rawRecs.map((r) => ({
+              status: r.status,
+              category: r.category,
+              created_at: r.created_at,
+              department: userDeptMap[r.applicant_id] || 'Unaffiliated',
+            }))
+          );
+        }
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -124,31 +160,74 @@ export function AdminDashboard() {
       .join(' ');
   };
 
-  // --- Data Visualization Panel: computed chart values ---
-  const totalForViz = stats.pending + stats.approved + stats.rejected;
+  // --- Data Visualization Panel: filter logic + reactive chart values ---
+  const dateInvalid = !!(vizFromDate && vizToDate && vizFromDate > vizToDate);
+  const hasActiveVizFilters = !!(vizFromDate || vizToDate || vizStatus || vizCategory || vizDepartment);
+
+  const filteredVizRecords: VizRecord[] = dateInvalid
+    ? allVizRecords
+    : allVizRecords.filter((r) => {
+        const recDate = r.created_at.substring(0, 10);
+        if (vizFromDate && recDate < vizFromDate) return false;
+        if (vizToDate && recDate > vizToDate) return false;
+        if (vizStatus && r.status !== vizStatus) return false;
+        if (vizCategory && r.category !== vizCategory) return false;
+        if (vizDepartment && r.department !== vizDepartment) return false;
+        return true;
+      });
+
+  // Filtered status counts
+  const fPending = filteredVizRecords.filter((r) =>
+    ['submitted', 'waiting_supervisor', 'waiting_evaluation'].includes(r.status)
+  ).length;
+  const fApproved = filteredVizRecords.filter((r) =>
+    ['supervisor_approved', 'evaluator_approved', 'ready_for_filing'].includes(r.status)
+  ).length;
+  const fRejected = filteredVizRecords.filter((r) => r.status === 'rejected').length;
+  const fTotal = fPending + fApproved + fRejected;
+
+  // Filtered category stats
+  const fCatMap: Record<string, number> = {};
+  filteredVizRecords.forEach((r) => { fCatMap[r.category] = (fCatMap[r.category] || 0) + 1; });
+  const fCategoryStats = Object.entries(fCatMap).map(([category, count]) => ({ category, count }));
+  const fCatTotal = fCategoryStats.reduce((s, c) => s + c.count, 0);
+
+  // Filtered department stats
+  const fDeptMap: Record<string, number> = {};
+  filteredVizRecords.forEach((r) => { fDeptMap[r.department] = (fDeptMap[r.department] || 0) + 1; });
+  const fDeptStats = Object.entries(fDeptMap)
+    .map(([department, count]) => ({ department, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
+
+  // Dropdown options derived from ALL (unfiltered) records
+  const allVizCategories = [...new Set(allVizRecords.map((r) => r.category))].sort();
+  const allVizDepartments = [...new Set(allVizRecords.map((r) => r.department))].sort();
+
+  // Conic gradient helpers
+  const catPieColors = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#f472b6'];
   const vizStatusSegments = [
-    { label: 'Pending', value: stats.pending, color: '#f59e0b' },
-    { label: 'Approved', value: stats.approved, color: '#22c55e' },
-    { label: 'Rejected', value: stats.rejected, color: '#ef4444' },
+    { label: 'Pending', value: fPending, color: '#f59e0b' },
+    { label: 'Approved', value: fApproved, color: '#22c55e' },
+    { label: 'Rejected', value: fRejected, color: '#ef4444' },
   ];
   const statusDonutGradient = (() => {
-    if (totalForViz === 0) return 'conic-gradient(#e5e7eb 0deg 360deg)';
+    if (fTotal === 0) return 'conic-gradient(#e5e7eb 0deg 360deg)';
     let deg = 0;
     const parts = vizStatusSegments.map((s) => {
-      const span = (s.value / totalForViz) * 360;
+      const span = (s.value / fTotal) * 360;
       const part = `${s.color} ${deg}deg ${deg + span}deg`;
       deg += span;
       return part;
     });
     return `conic-gradient(${parts.join(', ')})`;
   })();
-  const catPieColors = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#f472b6'];
   const categoryPieGradient = (() => {
-    if (stats.totalSubmissions === 0 || categoryStats.length === 0)
-      return 'conic-gradient(#e5e7eb 0deg 360deg)';
+    if (fCategoryStats.length === 0) return 'conic-gradient(#e5e7eb 0deg 360deg)';
+    if (fCatTotal === 0) return 'conic-gradient(#e5e7eb 0deg 360deg)';
     let deg = 0;
-    const parts = categoryStats.map((cat, i) => {
-      const span = (cat.count / stats.totalSubmissions) * 360;
+    const parts = fCategoryStats.map((cat, i) => {
+      const span = (cat.count / fCatTotal) * 360;
       const color = catPieColors[i % catPieColors.length];
       const part = `${color} ${deg}deg ${deg + span}deg`;
       deg += span;
@@ -190,6 +269,7 @@ export function AdminDashboard() {
           borderColor: `${primaryColor}40`,
         }}
       >
+        {/* Panel Header */}
         <div
           className="p-6 border-b"
           style={{
@@ -205,11 +285,104 @@ export function AdminDashboard() {
             <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }}></div>
           </div>
         </div>
+
+        {/* Filter Toolbar */}
+        <div className="px-6 py-4 border-b bg-white/40" style={{ borderBottomColor: `${primaryColor}20` }}>
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-500">From</label>
+              <input
+                type="date"
+                value={vizFromDate}
+                onChange={(e) => setVizFromDate(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-500">To</label>
+              <input
+                type="date"
+                value={vizToDate}
+                onChange={(e) => setVizToDate(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-500">Status</label>
+              <select
+                value={vizStatus}
+                onChange={(e) => setVizStatus(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="">All Statuses</option>
+                {VIZ_STATUS_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-500">Category</label>
+              <select
+                value={vizCategory}
+                onChange={(e) => setVizCategory(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="">All Categories</option>
+                {allVizCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, ' ')}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-gray-500">Department</label>
+              <select
+                value={vizDepartment}
+                onChange={(e) => setVizDepartment(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="">All Departments</option>
+                {allVizDepartments.map((dept) => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+            </div>
+            {hasActiveVizFilters && (
+              <button
+                onClick={() => {
+                  setVizFromDate('');
+                  setVizToDate('');
+                  setVizStatus('');
+                  setVizCategory('');
+                  setVizDepartment('');
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors self-end"
+              >
+                <Filter className="h-3.5 w-3.5" />
+                Reset Filters
+              </button>
+            )}
+          </div>
+          {dateInvalid && (
+            <p className="text-xs text-red-500 mt-2 font-medium">
+              "From" date cannot be later than "To" date — showing all data until corrected.
+            </p>
+          )}
+        </div>
+
+        {/* Charts Body */}
         <div className="p-6">
-          {stats.totalSubmissions === 0 ? (
+          {allVizRecords.length === 0 ? (
             <div className="text-center py-16">
               <BarChart2 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 font-medium">Not enough data to visualize yet.</p>
+            </div>
+          ) : filteredVizRecords.length === 0 ? (
+            <div className="text-center py-16">
+              <Filter className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No records found for the selected filters.</p>
+              <p className="text-sm text-gray-400 mt-1">Try adjusting or resetting the filters above.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -230,7 +403,7 @@ export function AdminDashboard() {
                       className="absolute rounded-full bg-white flex flex-col items-center justify-center"
                       style={{ top: '25%', left: '25%', width: '50%', height: '50%' }}
                     >
-                      <span className="text-base font-black text-gray-900">{totalForViz}</span>
+                      <span className="text-base font-black text-gray-900">{fTotal}</span>
                       <span className="text-xs text-gray-400">Total</span>
                     </div>
                   </div>
@@ -257,7 +430,7 @@ export function AdminDashboard() {
                 style={{ borderColor: `${primaryColor}20` }}
               >
                 <h3 className="text-sm font-bold text-gray-800 mb-4">Records by Category</h3>
-                {categoryStats.length === 0 ? (
+                {fCategoryStats.length === 0 ? (
                   <p className="text-center text-gray-400 text-sm py-8">Not enough data to visualize yet.</p>
                 ) : (
                   <div className="flex flex-col items-center gap-4">
@@ -270,12 +443,12 @@ export function AdminDashboard() {
                         className="absolute rounded-full bg-white flex flex-col items-center justify-center"
                         style={{ top: '25%', left: '25%', width: '50%', height: '50%' }}
                       >
-                        <span className="text-base font-black text-gray-900">{stats.totalSubmissions}</span>
+                        <span className="text-base font-black text-gray-900">{fCatTotal}</span>
                         <span className="text-xs text-gray-400">Records</span>
                       </div>
                     </div>
                     <div className="space-y-2 w-full">
-                      {categoryStats.map((cat, i) => (
+                      {fCategoryStats.map((cat, i) => (
                         <div key={cat.category} className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
                             <div
@@ -292,18 +465,18 @@ export function AdminDashboard() {
                 )}
               </div>
 
-              {/* Applicants by Department Bar Chart */}
+              {/* Records by Department Bar Chart */}
               <div
                 className="bg-white/60 rounded-xl p-5 border"
                 style={{ borderColor: `${primaryColor}20` }}
               >
-                <h3 className="text-sm font-bold text-gray-800 mb-4">Applicants by Department</h3>
-                {departmentStats.length === 0 ? (
+                <h3 className="text-sm font-bold text-gray-800 mb-4">Records by Department</h3>
+                {fDeptStats.length === 0 ? (
                   <p className="text-center text-gray-400 text-sm py-8">Not enough data to visualize yet.</p>
                 ) : (
                   <div className="space-y-3">
-                    {departmentStats.map(({ department, count }) => {
-                      const maxCount = departmentStats[0].count;
+                    {fDeptStats.map(({ department, count }) => {
+                      const maxCount = fDeptStats[0].count;
                       return (
                         <div key={department}>
                           <div className="flex justify-between items-center mb-1">
