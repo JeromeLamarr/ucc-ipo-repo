@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
-import { Users, FileText, TrendingUp, Activity, BarChart2, Filter } from 'lucide-react';
+import { Users, FileText, TrendingUp, Activity, BarChart2, Filter, Download } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { AdminPendingApplicants } from '../components/AdminPendingApplicants';
 import type { Database } from '../lib/database.types';
@@ -242,6 +242,178 @@ export function AdminDashboard() {
   const paginatedActivity = recentActivity.slice(startIndex, endIndex);
   const totalPages = Math.ceil(recentActivity.length / itemsPerPage);
 
+  // --- Data Visualization Report download ---
+  const handleDownloadVizReport = () => {
+    const now = new Date();
+    const generatedAt = now.toLocaleString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+
+    const fmt = (s: string) => s ? s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
+    const fmtDate = (d: string) => d
+      ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+      : '—';
+
+    // Active filter summary
+    const filterRows = [
+      ['From Date', vizFromDate ? fmtDate(vizFromDate) : 'Not set'],
+      ['To Date',   vizToDate   ? fmtDate(vizToDate)   : 'Not set'],
+      ['Status',    vizStatus   ? fmt(vizStatus)        : 'All Statuses'],
+      ['Category',  vizCategory ? fmt(vizCategory)      : 'All Categories'],
+      ['Department',vizDepartment || 'All Departments'],
+    ];
+
+    // Status distribution for ALL statuses present in filtered set
+    const allStatusMap: Record<string, number> = {};
+    filteredVizRecords.forEach((r) => { allStatusMap[r.status] = (allStatusMap[r.status] || 0) + 1; });
+    const allStatusRows = Object.entries(allStatusMap).sort((a, b) => b[1] - a[1]);
+
+    // Category distribution
+    const catRows = fCategoryStats.slice().sort((a, b) => b.count - a.count);
+
+    // Department distribution (all, not just top-6)
+    const fullDeptMap: Record<string, number> = {};
+    filteredVizRecords.forEach((r) => { fullDeptMap[r.department] = (fullDeptMap[r.department] || 0) + 1; });
+    const deptRows = Object.entries(fullDeptMap).sort((a, b) => b[1] - a[1]);
+
+    // Build filename
+    const dateStr = now.toISOString().substring(0, 10);
+    const suffix = [vizStatus, vizCategory].filter(Boolean).map((s) => s!.replace(/_/g, '-')).join('-');
+    const filename = `data-visualization-report${suffix ? '-' + suffix : ''}-${dateStr}.html`;
+
+    const tableRows = filteredVizRecords
+      .slice()
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map((r, i) => `
+        <tr class="${i % 2 === 0 ? 'even' : 'odd'}">
+          <td>${i + 1}</td>
+          <td>${fmt(r.category)}</td>
+          <td>${fmt(r.status)}</td>
+          <td>${r.department}</td>
+          <td>${fmtDate(r.created_at)}</td>
+        </tr>`)
+      .join('');
+
+    const filterTableRows = filterRows.map(([k, v]) =>
+      `<tr><th>${k}</th><td>${v}</td></tr>`).join('');
+
+    const statusTableRows = allStatusRows.map(([s, c]) =>
+      `<tr><td>${fmt(s)}</td><td class="num">${c}</td><td class="num">${filteredVizRecords.length > 0 ? ((c / filteredVizRecords.length) * 100).toFixed(1) + '%' : '0%'}</td></tr>`).join('');
+
+    const catTableRows = catRows.map((c) =>
+      `<tr><td>${fmt(c.category)}</td><td class="num">${c.count}</td><td class="num">${fCatTotal > 0 ? ((c.count / fCatTotal) * 100).toFixed(1) + '%' : '0%'}</td></tr>`).join('');
+
+    const deptTableRows = deptRows.map(([d, c]) =>
+      `<tr><td>${d}</td><td class="num">${c}</td><td class="num">${filteredVizRecords.length > 0 ? ((c / filteredVizRecords.length) * 100).toFixed(1) + '%' : '0%'}</td></tr>`).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Data Visualization Report — ${dateStr}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; background: #f9fafb; padding: 40px; }
+    .page { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,.08); overflow: hidden; }
+    header { background: linear-gradient(135deg, #166534, #16a34a); color: #fff; padding: 32px 40px; }
+    header h1 { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+    header p { font-size: 13px; opacity: .85; }
+    header .meta { margin-top: 14px; font-size: 12px; opacity: .75; }
+    section { padding: 28px 40px; border-bottom: 1px solid #e5e7eb; }
+    section:last-child { border-bottom: none; }
+    h2 { font-size: 15px; font-weight: 700; color: #166534; margin-bottom: 14px; text-transform: uppercase; letter-spacing: .04em; }
+    .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
+    .filter-grid th { text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; padding: 3px 0; width: 110px; }
+    .filter-grid td { font-size: 13px; color: #111827; padding: 3px 0; }
+    .summary-cards { display: flex; gap: 16px; flex-wrap: wrap; }
+    .card { flex: 1 1 120px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; }
+    .card .num { font-size: 28px; font-weight: 900; color: #166534; }
+    .card .lbl { font-size: 11px; color: #6b7280; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: #166534; color: #fff; }
+    thead th { padding: 10px 12px; text-align: left; font-weight: 600; font-size: 12px; }
+    tbody tr.even { background: #f9fafb; }
+    tbody tr.odd  { background: #fff; }
+    tbody tr:hover { background: #f0fdf4; }
+    tbody td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; }
+    .num { text-align: right; }
+    @media print {
+      body { background: none; padding: 0; }
+      .page { box-shadow: none; border-radius: 0; }
+      .no-print { display: none; }
+    }
+    .print-btn { display:inline-flex;align-items:center;gap:6px;margin:16px 0 0;padding:9px 20px;background:#166534;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer; }
+    .print-btn:hover { background:#14532d; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Data Visualization Report</h1>
+    <p>Generated from Admin Dashboard filtered data</p>
+    <div class="meta">Generated: ${generatedAt}</div>
+  </header>
+
+  <section>
+    <h2>Active Filters</h2>
+    <table class="filter-grid"><tbody>${filterTableRows}</tbody></table>
+  </section>
+
+  <section>
+    <h2>Summary Metrics</h2>
+    <div class="summary-cards">
+      <div class="card"><div class="num">${filteredVizRecords.length}</div><div class="lbl">Total Records</div></div>
+      <div class="card"><div class="num">${fPending}</div><div class="lbl">Pending</div></div>
+      <div class="card"><div class="num">${fApproved}</div><div class="lbl">Approved</div></div>
+      <div class="card"><div class="num">${fRejected}</div><div class="lbl">Rejected</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Status Distribution</h2>
+    ${allStatusRows.length === 0
+      ? '<p style="color:#9ca3af;font-size:13px">No data.</p>'
+      : `<table><thead><tr><th>Status</th><th>Count</th><th>% of Total</th></tr></thead><tbody>${statusTableRows}</tbody></table>`}
+  </section>
+
+  <section>
+    <h2>Category Distribution</h2>
+    ${catRows.length === 0
+      ? '<p style="color:#9ca3af;font-size:13px">No data.</p>'
+      : `<table><thead><tr><th>Category</th><th>Count</th><th>% of Total</th></tr></thead><tbody>${catTableRows}</tbody></table>`}
+  </section>
+
+  <section>
+    <h2>Department Distribution</h2>
+    ${deptRows.length === 0
+      ? '<p style="color:#9ca3af;font-size:13px">No data.</p>'
+      : `<table><thead><tr><th>Department</th><th>Count</th><th>% of Total</th></tr></thead><tbody>${deptTableRows}</tbody></table>`}
+  </section>
+
+  <section>
+    <h2>Filtered Records (${filteredVizRecords.length})</h2>
+    ${filteredVizRecords.length === 0
+      ? '<p style="color:#9ca3af;font-size:13px">No records match the selected filters.</p>'
+      : `<table><thead><tr><th>#</th><th>Category</th><th>Status</th><th>Department</th><th>Submitted</th></tr></thead><tbody>${tableRows}</tbody></table>`}
+  </section>
+
+  <section class="no-print" style="background:#f9fafb;">
+    <button class="print-btn" onclick="window.print()">&#128438; Save as PDF / Print</button>
+  </section>
+</div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -363,6 +535,16 @@ export function AdminDashboard() {
                 Reset Filters
               </button>
             )}
+            <button
+              onClick={handleDownloadVizReport}
+              disabled={allVizRecords.length === 0}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg text-white transition-colors self-end disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: allVizRecords.length === 0 ? '#9ca3af' : `linear-gradient(135deg, ${primaryColor}, #16a34a)` }}
+              title={filteredVizRecords.length === 0 ? 'No records match current filters' : 'Download filtered report'}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download Report
+            </button>
           </div>
           {dateInvalid && (
             <p className="text-xs text-red-500 mt-2 font-medium">
