@@ -255,16 +255,6 @@ export function AdminDashboard() {
     const fmtDate = (d: string) =>
       d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 
-    const now = new Date();
-    const generatedAt = now.toLocaleString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
-    const fmt = (s: string) =>
-      s ? s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
-    const fmtDate = (d: string) =>
-      d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
-
     // ── SVG pie/donut helper ──────────────────────────────────────────────
     const makePieSegments = (
       segs: { value: number; color: string }[],
