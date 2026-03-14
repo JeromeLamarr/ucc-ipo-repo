@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import jsPDF from 'jspdf';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
 import { Users, FileText, TrendingUp, Activity, BarChart2, Filter, Download } from 'lucide-react';
@@ -242,7 +243,7 @@ export function AdminDashboard() {
   const paginatedActivity = recentActivity.slice(startIndex, endIndex);
   const totalPages = Math.ceil(recentActivity.length / itemsPerPage);
 
-  // --- Data Visualization Report download ---
+  // --- Data Visualization Report download (PDF with embedded charts) ---
   const handleDownloadVizReport = () => {
     const now = new Date();
     const generatedAt = now.toLocaleString('en-US', {
@@ -250,168 +251,376 @@ export function AdminDashboard() {
       hour: '2-digit', minute: '2-digit',
     });
 
-    const fmt = (s: string) => s ? s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
-    const fmtDate = (d: string) => d
-      ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-      : '—';
+    const fmt = (s: string) =>
+      s ? s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : '—';
+    const fmtDate = (d: string) =>
+      d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 
-    // Active filter summary
-    const filterRows = [
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const PW = 210; // A4 width mm
+    const MARGIN = 14;
+    const CONTENT_W = PW - MARGIN * 2;
+    let y = 0; // current y cursor
+
+    // ── helpers ──────────────────────────────────────────────────────────
+    const checkPageBreak = (needed: number) => {
+      if (y + needed > 272) { doc.addPage(); y = MARGIN; }
+    };
+
+    const sectionHeader = (title: string) => {
+      checkPageBreak(10);
+      doc.setFillColor(22, 101, 52);
+      doc.rect(MARGIN, y, CONTENT_W, 7, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(title.toUpperCase(), MARGIN + 3, y + 4.8);
+      doc.setTextColor(31, 41, 55);
+      y += 10;
+    };
+
+    const tableRow = (
+      cols: string[],
+      widths: number[],
+      isHeader: boolean,
+      rowIndex: number
+    ) => {
+      const ROW_H = 7;
+      checkPageBreak(ROW_H + 1);
+      if (isHeader) {
+        doc.setFillColor(22, 101, 52);
+        doc.rect(MARGIN, y, CONTENT_W, ROW_H, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+      } else {
+        doc.setFillColor(rowIndex % 2 === 0 ? 249 : 255, rowIndex % 2 === 0 ? 250 : 255, rowIndex % 2 === 0 ? 251 : 255);
+        doc.rect(MARGIN, y, CONTENT_W, ROW_H, 'F');
+        doc.setTextColor(31, 41, 55);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+      }
+      let cx = MARGIN + 2;
+      cols.forEach((col, i) => {
+        const maxW = widths[i] - 3;
+        const truncated = doc.getStringUnitWidth(col) * 8 / doc.internal.scaleFactor > maxW
+          ? col.substring(0, Math.floor(maxW / (doc.getStringUnitWidth('a') * 8 / doc.internal.scaleFactor))) + '…'
+          : col;
+        doc.text(truncated, cx, y + 4.8);
+        cx += widths[i];
+      });
+      doc.setDrawColor(229, 231, 235);
+      doc.line(MARGIN, y + ROW_H, MARGIN + CONTENT_W, y + ROW_H);
+      y += ROW_H;
+    };
+
+    // Draw a donut/pie chart using arc approximation (polyline segments)
+    const drawPieChart = (
+      cx: number, cy: number, r: number,
+      segments: { value: number; color: string }[],
+      innerRatio = 0 // 0 = full pie, 0.5 = donut
+    ) => {
+      const total = segments.reduce((s, seg) => s + seg.value, 0);
+      if (total === 0) {
+        doc.setFillColor(229, 231, 235);
+        doc.circle(cx, cy, r, 'F');
+        return;
+      }
+      let startAngle = -Math.PI / 2;
+      const STEPS = 60;
+      segments.forEach((seg) => {
+        const sweep = (seg.value / total) * 2 * Math.PI;
+        const endAngle = startAngle + sweep;
+        const hex = seg.color.replace('#', '');
+        const rr = parseInt(hex.slice(0, 2), 16);
+        const gg = parseInt(hex.slice(2, 4), 16);
+        const bb = parseInt(hex.slice(4, 6), 16);
+        doc.setFillColor(rr, gg, bb);
+
+        // Build polygon points for pie slice
+        const pts: number[] = [];
+        if (innerRatio === 0) {
+          pts.push(cx, cy); // center for full pie
+        } else {
+          // start at inner arc start
+          pts.push(
+            cx + Math.cos(startAngle) * r * innerRatio,
+            cy + Math.sin(startAngle) * r * innerRatio
+          );
+        }
+        for (let i = 0; i <= STEPS; i++) {
+          const a = startAngle + (sweep * i) / STEPS;
+          pts.push(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        }
+        if (innerRatio > 0) {
+          for (let i = STEPS; i >= 0; i--) {
+            const a = startAngle + (sweep * i) / STEPS;
+            pts.push(cx + Math.cos(a) * r * innerRatio, cy + Math.sin(a) * r * innerRatio);
+          }
+        }
+        // jsPDF lines() takes array of [x,y] pairs relative to start; use triangle instead via moveTo trick
+        // Simplest: draw as filled polygon via lines()
+        const pairsArr: number[][] = [];
+        for (let i = 2; i < pts.length; i += 2) {
+          pairsArr.push([pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1]]);
+        }
+        doc.lines(pairsArr, pts[0], pts[1], [1, 1], 'F');
+
+        startAngle = endAngle;
+      });
+    };
+
+    const drawLegend = (
+      startX: number, startY: number,
+      items: { label: string; value: number; color: string }[],
+      total: number
+    ) => {
+      items.forEach((item, i) => {
+        const iy = startY + i * 6;
+        checkPageBreak(6);
+        const hex = item.color.replace('#', '');
+        doc.setFillColor(parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16));
+        doc.rect(startX, iy - 2.5, 3, 3, 'F');
+        doc.setTextColor(55, 65, 81);
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        const pct = total > 0 ? ` (${((item.value / total) * 100).toFixed(0)}%)` : '';
+        doc.text(`${item.label}: ${item.value}${pct}`, startX + 4.5, iy);
+      });
+    };
+
+    // ── PAGE 1: Header ───────────────────────────────────────────────────
+    doc.setFillColor(22, 101, 52);
+    doc.rect(0, 0, PW, 36, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Data Visualization Report', MARGIN, 15);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Generated from Admin Dashboard filtered data', MARGIN, 22);
+    doc.setFontSize(8);
+    doc.setTextColor(187, 247, 208);
+    doc.text(`Generated: ${generatedAt}`, MARGIN, 29);
+    doc.setTextColor(31, 41, 55);
+    y = 42;
+
+    // ── Active Filters ───────────────────────────────────────────────────
+    sectionHeader('Active Filters');
+    const filterPairs: [string, string][] = [
       ['From Date', vizFromDate ? fmtDate(vizFromDate) : 'Not set'],
       ['To Date',   vizToDate   ? fmtDate(vizToDate)   : 'Not set'],
       ['Status',    vizStatus   ? fmt(vizStatus)        : 'All Statuses'],
       ['Category',  vizCategory ? fmt(vizCategory)      : 'All Categories'],
-      ['Department',vizDepartment || 'All Departments'],
+      ['Department', vizDepartment || 'All Departments'],
     ];
+    const fColW = [50, CONTENT_W - 50];
+    tableRow(['Filter', 'Value'], fColW, true, 0);
+    filterPairs.forEach(([k, v], i) => tableRow([k, v], fColW, false, i));
+    y += 6;
 
-    // Status distribution for ALL statuses present in filtered set
+    // ── Summary Metrics ──────────────────────────────────────────────────
+    checkPageBreak(30);
+    sectionHeader('Summary Metrics');
+    const metrics = [
+      { label: 'Total Records', value: filteredVizRecords.length, color: [22, 101, 52] as [number,number,number] },
+      { label: 'Pending',       value: fPending,                   color: [245, 158, 11] as [number,number,number] },
+      { label: 'Approved',      value: fApproved,                  color: [34, 197, 94] as [number,number,number] },
+      { label: 'Rejected',      value: fRejected,                  color: [239, 68, 68] as [number,number,number] },
+    ];
+    const cardW = CONTENT_W / metrics.length;
+    metrics.forEach((m, i) => {
+      const cx2 = MARGIN + i * cardW;
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(cx2, y, cardW - 3, 22, 2, 2, 'F');
+      doc.setFillColor(...m.color);
+      doc.roundedRect(cx2, y, cardW - 3, 4, 1, 1, 'F');
+      doc.setTextColor(...m.color);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(m.value), cx2 + (cardW - 3) / 2, y + 14, { align: 'center' });
+      doc.setTextColor(107, 114, 128);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(m.label, cx2 + (cardW - 3) / 2, y + 19, { align: 'center' });
+    });
+    y += 28;
+
+    // ── Charts ───────────────────────────────────────────────────────────
+    checkPageBreak(80);
+    sectionHeader('Charts');
+
+    const chartRowY = y;
+    const CHART_R = 22;
+    const CHART_INNER = 0.48; // donut hole ratio
+
+    // --- Status Donut ---
+    const statusCx = MARGIN + CHART_R + 2;
+    const statusCy = chartRowY + CHART_R + 6;
+    const statusSegments = [
+      { label: 'Pending',  value: fPending,  color: '#f59e0b' },
+      { label: 'Approved', value: fApproved, color: '#22c55e' },
+      { label: 'Rejected', value: fRejected, color: '#ef4444' },
+    ];
+    doc.setTextColor(31, 41, 55);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Submission Status', statusCx, chartRowY + 2, { align: 'center' });
+    drawPieChart(statusCx, statusCy, CHART_R, statusSegments, CHART_INNER);
+    // center label
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(31, 41, 55);
+    doc.text(String(fTotal), statusCx, statusCy + 3, { align: 'center' });
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(107, 114, 128);
+    doc.text('Total', statusCx, statusCy + 7, { align: 'center' });
+    drawLegend(MARGIN + CHART_R * 2 + 6, chartRowY + 6, statusSegments, fTotal);
+
+    // --- Category Pie ---
+    const catPieX = MARGIN + 78;
+    const catCx = catPieX + CHART_R + 2;
+    const catCy = chartRowY + CHART_R + 6;
+    const catSegments = fCategoryStats.map((c, i) => ({
+      label: fmt(c.category),
+      value: c.count,
+      color: catPieColors[i % catPieColors.length],
+    }));
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(31, 41, 55);
+    doc.text('Records by Category', catCx, chartRowY + 2, { align: 'center' });
+    drawPieChart(catCx, catCy, CHART_R, catSegments.map(({ value, color }) => ({ value, color })), 0);
+    drawLegend(catPieX + CHART_R * 2 + 6, chartRowY + 6, catSegments, fCatTotal);
+
+    y = chartRowY + CHART_R * 2 + 14;
+
+    // --- Department Bar Chart ---
+    checkPageBreak(60);
+    sectionHeader('Records by Department');
+    const maxDeptCount = fDeptStats.length > 0 ? fDeptStats[0].count : 1;
+    const BAR_H = 6;
+    const BAR_MAX_W = CONTENT_W * 0.55;
+    const LABEL_W = CONTENT_W * 0.35;
+    fDeptStats.forEach(({ department, count }, i) => {
+      checkPageBreak(BAR_H + 2);
+      const barWidth = maxDeptCount > 0 ? (count / maxDeptCount) * BAR_MAX_W : 0;
+      // label
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(55, 65, 81);
+      const labelText = department.length > 28 ? department.substring(0, 27) + '…' : department;
+      doc.text(labelText, MARGIN, y + BAR_H - 1.5);
+      // bar background
+      doc.setFillColor(229, 231, 235);
+      doc.roundedRect(MARGIN + LABEL_W, y, BAR_MAX_W, BAR_H, 1, 1, 'F');
+      // bar fill — gradient approximation using two overlapping rects
+      if (barWidth > 0) {
+        doc.setFillColor(22, 101, 52);
+        doc.roundedRect(MARGIN + LABEL_W, y, barWidth * 0.5, BAR_H, 1, 1, 'F');
+        doc.setFillColor(99, 102, 241);
+        doc.roundedRect(MARGIN + LABEL_W + barWidth * 0.5, y, barWidth * 0.5, BAR_H, 1, 1, 'F');
+      }
+      // count label
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(31, 41, 55);
+      doc.text(String(count), MARGIN + LABEL_W + BAR_MAX_W + 3, y + BAR_H - 1.5);
+      y += BAR_H + 3;
+      if (i < fDeptStats.length - 1) {
+        doc.setDrawColor(243, 244, 246);
+        doc.line(MARGIN, y - 1, MARGIN + CONTENT_W, y - 1);
+      }
+    });
+    y += 6;
+
+    // ── Status Distribution Table ────────────────────────────────────────
     const allStatusMap: Record<string, number> = {};
     filteredVizRecords.forEach((r) => { allStatusMap[r.status] = (allStatusMap[r.status] || 0) + 1; });
     const allStatusRows = Object.entries(allStatusMap).sort((a, b) => b[1] - a[1]);
 
-    // Category distribution
-    const catRows = fCategoryStats.slice().sort((a, b) => b.count - a.count);
+    checkPageBreak(16);
+    sectionHeader('Status Distribution');
+    const sCols = [CONTENT_W * 0.55, CONTENT_W * 0.2, CONTENT_W * 0.25];
+    tableRow(['Status', 'Count', '% of Total'], sCols, true, 0);
+    allStatusRows.forEach(([s, c], i) => {
+      const pct = filteredVizRecords.length > 0 ? ((c / filteredVizRecords.length) * 100).toFixed(1) + '%' : '0%';
+      tableRow([fmt(s), String(c), pct], sCols, false, i);
+    });
+    if (allStatusRows.length === 0) {
+      doc.setFontSize(8); doc.setTextColor(156, 163, 175);
+      doc.text('No data.', MARGIN, y + 5); y += 10;
+    }
+    y += 6;
 
-    // Department distribution (all, not just top-6)
+    // ── Category Distribution Table ──────────────────────────────────────
+    const catRows = fCategoryStats.slice().sort((a, b) => b.count - a.count);
+    checkPageBreak(16);
+    sectionHeader('Category Distribution');
+    const cCols = [CONTENT_W * 0.55, CONTENT_W * 0.2, CONTENT_W * 0.25];
+    tableRow(['Category', 'Count', '% of Total'], cCols, true, 0);
+    catRows.forEach((c, i) => {
+      const pct = fCatTotal > 0 ? ((c.count / fCatTotal) * 100).toFixed(1) + '%' : '0%';
+      tableRow([fmt(c.category), String(c.count), pct], cCols, false, i);
+    });
+    if (catRows.length === 0) {
+      doc.setFontSize(8); doc.setTextColor(156, 163, 175);
+      doc.text('No data.', MARGIN, y + 5); y += 10;
+    }
+    y += 6;
+
+    // ── Full Department Distribution Table ───────────────────────────────
     const fullDeptMap: Record<string, number> = {};
     filteredVizRecords.forEach((r) => { fullDeptMap[r.department] = (fullDeptMap[r.department] || 0) + 1; });
     const deptRows = Object.entries(fullDeptMap).sort((a, b) => b[1] - a[1]);
+    checkPageBreak(16);
+    sectionHeader('Department Distribution');
+    const dCols = [CONTENT_W * 0.55, CONTENT_W * 0.2, CONTENT_W * 0.25];
+    tableRow(['Department', 'Count', '% of Total'], dCols, true, 0);
+    deptRows.forEach(([d, c], i) => {
+      const pct = filteredVizRecords.length > 0 ? ((c / filteredVizRecords.length) * 100).toFixed(1) + '%' : '0%';
+      tableRow([d, String(c), pct], dCols, false, i);
+    });
+    if (deptRows.length === 0) {
+      doc.setFontSize(8); doc.setTextColor(156, 163, 175);
+      doc.text('No data.', MARGIN, y + 5); y += 10;
+    }
+    y += 6;
 
-    // Build filename
+    // ── Filtered Records Table ───────────────────────────────────────────
+    checkPageBreak(16);
+    sectionHeader(`Filtered Records (${filteredVizRecords.length})`);
+    if (filteredVizRecords.length === 0) {
+      doc.setFontSize(8); doc.setTextColor(156, 163, 175);
+      doc.text('No records match the selected filters.', MARGIN, y + 5);
+      y += 10;
+    } else {
+      const rCols = [CONTENT_W * 0.07, CONTENT_W * 0.23, CONTENT_W * 0.28, CONTENT_W * 0.25, CONTENT_W * 0.17];
+      tableRow(['#', 'Category', 'Status', 'Department', 'Submitted'], rCols, true, 0);
+      const sortedRecs = filteredVizRecords.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+      sortedRecs.forEach((r, i) => {
+        tableRow([String(i + 1), fmt(r.category), fmt(r.status), r.department, fmtDate(r.created_at)], rCols, false, i);
+      });
+    }
+
+    // ── Footer on every page ─────────────────────────────────────────────
+    const totalPages = (doc.internal as unknown as { getNumberOfPages: () => number }).getNumberOfPages();
+    for (let pg = 1; pg <= totalPages; pg++) {
+      doc.setPage(pg);
+      doc.setFillColor(243, 244, 246);
+      doc.rect(0, 285, PW, 12, 'F');
+      doc.setTextColor(107, 114, 128);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text('UCC IPO — Data Visualization Report', MARGIN, 291);
+      doc.text(`Page ${pg} of ${totalPages}`, PW - MARGIN, 291, { align: 'right' });
+    }
+
+    // ── Save ─────────────────────────────────────────────────────────────
     const dateStr = now.toISOString().substring(0, 10);
     const suffix = [vizStatus, vizCategory].filter(Boolean).map((s) => s!.replace(/_/g, '-')).join('-');
-    const filename = `data-visualization-report${suffix ? '-' + suffix : ''}-${dateStr}.html`;
-
-    const tableRows = filteredVizRecords
-      .slice()
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .map((r, i) => `
-        <tr class="${i % 2 === 0 ? 'even' : 'odd'}">
-          <td>${i + 1}</td>
-          <td>${fmt(r.category)}</td>
-          <td>${fmt(r.status)}</td>
-          <td>${r.department}</td>
-          <td>${fmtDate(r.created_at)}</td>
-        </tr>`)
-      .join('');
-
-    const filterTableRows = filterRows.map(([k, v]) =>
-      `<tr><th>${k}</th><td>${v}</td></tr>`).join('');
-
-    const statusTableRows = allStatusRows.map(([s, c]) =>
-      `<tr><td>${fmt(s)}</td><td class="num">${c}</td><td class="num">${filteredVizRecords.length > 0 ? ((c / filteredVizRecords.length) * 100).toFixed(1) + '%' : '0%'}</td></tr>`).join('');
-
-    const catTableRows = catRows.map((c) =>
-      `<tr><td>${fmt(c.category)}</td><td class="num">${c.count}</td><td class="num">${fCatTotal > 0 ? ((c.count / fCatTotal) * 100).toFixed(1) + '%' : '0%'}</td></tr>`).join('');
-
-    const deptTableRows = deptRows.map(([d, c]) =>
-      `<tr><td>${d}</td><td class="num">${c}</td><td class="num">${filteredVizRecords.length > 0 ? ((c / filteredVizRecords.length) * 100).toFixed(1) + '%' : '0%'}</td></tr>`).join('');
-
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Data Visualization Report — ${dateStr}</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; background: #f9fafb; padding: 40px; }
-    .page { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,.08); overflow: hidden; }
-    header { background: linear-gradient(135deg, #166534, #16a34a); color: #fff; padding: 32px 40px; }
-    header h1 { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
-    header p { font-size: 13px; opacity: .85; }
-    header .meta { margin-top: 14px; font-size: 12px; opacity: .75; }
-    section { padding: 28px 40px; border-bottom: 1px solid #e5e7eb; }
-    section:last-child { border-bottom: none; }
-    h2 { font-size: 15px; font-weight: 700; color: #166534; margin-bottom: 14px; text-transform: uppercase; letter-spacing: .04em; }
-    .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
-    .filter-grid th { text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; padding: 3px 0; width: 110px; }
-    .filter-grid td { font-size: 13px; color: #111827; padding: 3px 0; }
-    .summary-cards { display: flex; gap: 16px; flex-wrap: wrap; }
-    .card { flex: 1 1 120px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; }
-    .card .num { font-size: 28px; font-weight: 900; color: #166534; }
-    .card .lbl { font-size: 11px; color: #6b7280; margin-top: 2px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    thead tr { background: #166534; color: #fff; }
-    thead th { padding: 10px 12px; text-align: left; font-weight: 600; font-size: 12px; }
-    tbody tr.even { background: #f9fafb; }
-    tbody tr.odd  { background: #fff; }
-    tbody tr:hover { background: #f0fdf4; }
-    tbody td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; }
-    .num { text-align: right; }
-    @media print {
-      body { background: none; padding: 0; }
-      .page { box-shadow: none; border-radius: 0; }
-      .no-print { display: none; }
-    }
-    .print-btn { display:inline-flex;align-items:center;gap:6px;margin:16px 0 0;padding:9px 20px;background:#166534;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer; }
-    .print-btn:hover { background:#14532d; }
-  </style>
-</head>
-<body>
-<div class="page">
-  <header>
-    <h1>Data Visualization Report</h1>
-    <p>Generated from Admin Dashboard filtered data</p>
-    <div class="meta">Generated: ${generatedAt}</div>
-  </header>
-
-  <section>
-    <h2>Active Filters</h2>
-    <table class="filter-grid"><tbody>${filterTableRows}</tbody></table>
-  </section>
-
-  <section>
-    <h2>Summary Metrics</h2>
-    <div class="summary-cards">
-      <div class="card"><div class="num">${filteredVizRecords.length}</div><div class="lbl">Total Records</div></div>
-      <div class="card"><div class="num">${fPending}</div><div class="lbl">Pending</div></div>
-      <div class="card"><div class="num">${fApproved}</div><div class="lbl">Approved</div></div>
-      <div class="card"><div class="num">${fRejected}</div><div class="lbl">Rejected</div></div>
-    </div>
-  </section>
-
-  <section>
-    <h2>Status Distribution</h2>
-    ${allStatusRows.length === 0
-      ? '<p style="color:#9ca3af;font-size:13px">No data.</p>'
-      : `<table><thead><tr><th>Status</th><th>Count</th><th>% of Total</th></tr></thead><tbody>${statusTableRows}</tbody></table>`}
-  </section>
-
-  <section>
-    <h2>Category Distribution</h2>
-    ${catRows.length === 0
-      ? '<p style="color:#9ca3af;font-size:13px">No data.</p>'
-      : `<table><thead><tr><th>Category</th><th>Count</th><th>% of Total</th></tr></thead><tbody>${catTableRows}</tbody></table>`}
-  </section>
-
-  <section>
-    <h2>Department Distribution</h2>
-    ${deptRows.length === 0
-      ? '<p style="color:#9ca3af;font-size:13px">No data.</p>'
-      : `<table><thead><tr><th>Department</th><th>Count</th><th>% of Total</th></tr></thead><tbody>${deptTableRows}</tbody></table>`}
-  </section>
-
-  <section>
-    <h2>Filtered Records (${filteredVizRecords.length})</h2>
-    ${filteredVizRecords.length === 0
-      ? '<p style="color:#9ca3af;font-size:13px">No records match the selected filters.</p>'
-      : `<table><thead><tr><th>#</th><th>Category</th><th>Status</th><th>Department</th><th>Submitted</th></tr></thead><tbody>${tableRows}</tbody></table>`}
-  </section>
-
-  <section class="no-print" style="background:#f9fafb;">
-    <button class="print-btn" onclick="window.print()">&#128438; Save as PDF / Print</button>
-  </section>
-</div>
-</body>
-</html>`;
-
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+    doc.save(`data-visualization-report${suffix ? '-' + suffix : ''}-${dateStr}.pdf`);
   };
 
   if (loading) {
