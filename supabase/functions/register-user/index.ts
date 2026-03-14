@@ -94,6 +94,79 @@ interface RegisterUserRequest {
   resend?: boolean;
 }
 
+function generatePendingApplicantEmailHtml(
+  applicantName: string,
+  applicantEmail: string,
+  departmentName: string,
+  submittedAt: string,
+  dashboardUrl: string
+): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Pending Applicant for Review</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; border-radius: 8px 8px 0 0; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">UCC IP Office</h1>
+      <p style="color: #e0e7ff; margin: 8px 0 0 0; font-size: 14px; font-weight: 500;">Intellectual Property Management System</p>
+    </div>
+    <div style="background-color: #ffffff; padding: 40px 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.07);">
+      <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+        <p style="color: #1d4ed8; margin: 0; font-size: 14px; font-weight: 600;">&#128276; Action Required</p>
+      </div>
+      <h2 style="color: #1f2937; margin: 0 0 8px 0; font-size: 22px; font-weight: 700;">New Pending Applicant for Review</h2>
+      <p style="color: #7c3aed; margin: 0 0 24px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Admin Action Required</p>
+      <p style="color: #4b5563; margin: 0 0 28px 0; font-size: 15px; line-height: 1.6;">A new applicant has registered and is awaiting your approval before they can access the system.</p>
+      <div style="background-color: #f9fafb; padding: 20px; border-radius: 6px; margin: 30px 0;">
+        <h3 style="color: #1f2937; margin: 0 0 16px 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Applicant Details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tbody>
+            <tr>
+              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                <strong style="color: #374151;">Full Name:</strong> <span style="color: #4b5563;">${applicantName}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                <strong style="color: #374151;">Email:</strong> <span style="color: #4b5563;">${applicantEmail}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb;">
+                <strong style="color: #374151;">Department:</strong> <span style="color: #4b5563;">${departmentName}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 0;">
+                <strong style="color: #374151;">Submitted:</strong> <span style="color: #4b5563;">${submittedAt}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 15px; line-height: 1.6;">Please review this applicant and approve or reject their account via the admin dashboard.</p>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-size: 15px; font-weight: 600;">Review in Admin Dashboard</a>
+      </div>
+      <div style="margin-top: 32px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
+        <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px 0; font-weight: 500;">University Intellectual Property Management System</p>
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">&copy; 2025 University Central. All rights reserved.</p>
+      </div>
+    </div>
+    <div style="text-align: center; padding: 20px; color: #9ca3af; font-size: 12px;">
+      <p style="margin: 0;">This is an automated message. Please do not reply to this email.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin") || undefined;
   const corsHeaders = getCorsHeaders(origin);
@@ -501,6 +574,71 @@ Deno.serve(async (req: Request) => {
     if (tempRegError) {
       console.error("[register-user] Warning: Could not store temp registration data:", tempRegError);
       // Don't fail - user is created, just tracking is missing
+    }
+
+    // Notify admin(s) of new pending applicant — best-effort, never blocks registration
+    try {
+      const { data: adminUsers, error: adminQueryError } = await supabase
+        .from("users")
+        .select("email")
+        .eq("role", "admin");
+
+      if (adminQueryError) {
+        console.error("[register-user] Warning: Could not fetch admin emails for notification:", adminQueryError);
+      } else if (adminUsers && adminUsers.length > 0) {
+        let departmentName = "Not specified";
+        if (departmentId) {
+          const { data: deptData } = await supabase
+            .from("departments")
+            .select("name")
+            .eq("id", departmentId)
+            .maybeSingle();
+          if (deptData?.name) departmentName = deptData.name;
+        }
+
+        const submittedAt = new Date().toLocaleString("en-US", {
+          timeZone: "Asia/Manila",
+          dateStyle: "long",
+          timeStyle: "short",
+        });
+        const adminDashboardUrl = `${appUrl}/admin`;
+        const adminEmails = adminUsers.map((a: { email: string }) => a.email);
+
+        const adminEmailPayload = {
+          from: `UCC IP Office <${resendFromEmail}>`,
+          to: adminEmails,
+          subject: "New Pending Applicant for Review - UCC IP System",
+          html: generatePendingApplicantEmailHtml(
+            fullName,
+            email,
+            departmentName,
+            submittedAt,
+            adminDashboardUrl
+          ),
+        };
+
+        const adminEmailResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(adminEmailPayload),
+        });
+
+        if (!adminEmailResponse.ok) {
+          const errText = await adminEmailResponse.text();
+          console.error("[register-user] Warning: Admin notification email failed:", errText);
+        } else {
+          const adminEmailResult = await adminEmailResponse.json();
+          console.log("[register-user] \u2713 Admin notification email sent. ID:", adminEmailResult.id);
+        }
+      } else {
+        console.log("[register-user] No admin users found, skipping admin notification");
+      }
+    } catch (adminEmailError: unknown) {
+      const msg = adminEmailError instanceof Error ? adminEmailError.message : String(adminEmailError);
+      console.error("[register-user] Warning: Admin notification failed (non-blocking):", msg);
     }
 
     // Generate email confirmation link using signup type
