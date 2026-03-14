@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
-import { Users, FileText, TrendingUp, Activity } from 'lucide-react';
+import { Users, FileText, TrendingUp, Activity, BarChart2 } from 'lucide-react';
 import { Pagination } from '../components/Pagination';
 import { AdminPendingApplicants } from '../components/AdminPendingApplicants';
 import type { Database } from '../lib/database.types';
@@ -23,6 +23,7 @@ export function AdminDashboard() {
   });
   const [categoryStats, setCategoryStats] = useState<{ category: string; count: number }[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [departmentStats, setDepartmentStats] = useState<{ department: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Pagination state for recent activity
@@ -82,6 +83,24 @@ export function AdminDashboard() {
       if (activityRes.data) {
         setRecentActivity(activityRes.data);
       }
+
+      // Department stats: separate query to avoid breaking Supabase type inference
+      const { data: deptRaw } = await supabase.from('users').select('affiliation, role');
+      if (deptRaw) {
+        const applicants = (deptRaw as unknown as { affiliation: string | null; role: string }[])
+          .filter((u) => u.role === 'applicant');
+        const deptMap: Record<string, number> = {};
+        applicants.forEach((u) => {
+          const dept = u.affiliation?.trim() || 'Unaffiliated';
+          deptMap[dept] = (deptMap[dept] || 0) + 1;
+        });
+        setDepartmentStats(
+          Object.entries(deptMap)
+            .map(([department, count]) => ({ department, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 6)
+        );
+      }
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
@@ -104,6 +123,39 @@ export function AdminDashboard() {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   };
+
+  // --- Data Visualization Panel: computed chart values ---
+  const totalForViz = stats.pending + stats.approved + stats.rejected;
+  const vizStatusSegments = [
+    { label: 'Pending', value: stats.pending, color: '#f59e0b' },
+    { label: 'Approved', value: stats.approved, color: '#22c55e' },
+    { label: 'Rejected', value: stats.rejected, color: '#ef4444' },
+  ];
+  const statusDonutGradient = (() => {
+    if (totalForViz === 0) return 'conic-gradient(#e5e7eb 0deg 360deg)';
+    let deg = 0;
+    const parts = vizStatusSegments.map((s) => {
+      const span = (s.value / totalForViz) * 360;
+      const part = `${s.color} ${deg}deg ${deg + span}deg`;
+      deg += span;
+      return part;
+    });
+    return `conic-gradient(${parts.join(', ')})`;
+  })();
+  const catPieColors = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#f472b6'];
+  const categoryPieGradient = (() => {
+    if (stats.totalSubmissions === 0 || categoryStats.length === 0)
+      return 'conic-gradient(#e5e7eb 0deg 360deg)';
+    let deg = 0;
+    const parts = categoryStats.map((cat, i) => {
+      const span = (cat.count / stats.totalSubmissions) * 360;
+      const color = catPieColors[i % catPieColors.length];
+      const part = `${color} ${deg}deg ${deg + span}deg`;
+      deg += span;
+      return part;
+    });
+    return `conic-gradient(${parts.join(', ')})`;
+  })();
 
   // Pagination calculation for recent activity
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -129,6 +181,160 @@ export function AdminDashboard() {
 
       {/* Pending Applicants Section - HIGH PRIORITY */}
       <AdminPendingApplicants />
+
+      {/* Data Visualization Panel */}
+      <div
+        className="rounded-2xl border shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+        style={{
+          background: `linear-gradient(135deg, ${primaryColor}08, #6366f108)`,
+          borderColor: `${primaryColor}40`,
+        }}
+      >
+        <div
+          className="p-6 border-b"
+          style={{
+            borderBottomColor: `${primaryColor}40`,
+            background: `linear-gradient(to right, ${primaryColor}08, #6366f108)`,
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Data Visualization Panel</h2>
+              <p className="text-sm text-gray-600 mt-1">Overview of records and user-managed data</p>
+            </div>
+            <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }}></div>
+          </div>
+        </div>
+        <div className="p-6">
+          {stats.totalSubmissions === 0 ? (
+            <div className="text-center py-16">
+              <BarChart2 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">Not enough data to visualize yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+              {/* Status Distribution Donut */}
+              <div
+                className="bg-white/60 rounded-xl p-5 border"
+                style={{ borderColor: `${primaryColor}20` }}
+              >
+                <h3 className="text-sm font-bold text-gray-800 mb-4">Submission Status</h3>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative flex-shrink-0" style={{ width: 128, height: 128 }}>
+                    <div
+                      className="w-full h-full rounded-full"
+                      style={{ background: statusDonutGradient }}
+                    />
+                    <div
+                      className="absolute rounded-full bg-white flex flex-col items-center justify-center"
+                      style={{ top: '25%', left: '25%', width: '50%', height: '50%' }}
+                    >
+                      <span className="text-base font-black text-gray-900">{totalForViz}</span>
+                      <span className="text-xs text-gray-400">Total</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2 w-full">
+                    {vizStatusSegments.map(({ label, value, color }) => (
+                      <div key={label} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: color }}
+                          />
+                          <span className="text-gray-600 font-medium">{label}</span>
+                        </div>
+                        <span className="font-bold text-gray-800">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Records by Category Pie */}
+              <div
+                className="bg-white/60 rounded-xl p-5 border"
+                style={{ borderColor: `${primaryColor}20` }}
+              >
+                <h3 className="text-sm font-bold text-gray-800 mb-4">Records by Category</h3>
+                {categoryStats.length === 0 ? (
+                  <p className="text-center text-gray-400 text-sm py-8">Not enough data to visualize yet.</p>
+                ) : (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="relative flex-shrink-0" style={{ width: 128, height: 128 }}>
+                      <div
+                        className="w-full h-full rounded-full"
+                        style={{ background: categoryPieGradient }}
+                      />
+                      <div
+                        className="absolute rounded-full bg-white flex flex-col items-center justify-center"
+                        style={{ top: '25%', left: '25%', width: '50%', height: '50%' }}
+                      >
+                        <span className="text-base font-black text-gray-900">{stats.totalSubmissions}</span>
+                        <span className="text-xs text-gray-400">Records</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2 w-full">
+                      {categoryStats.map((cat, i) => (
+                        <div key={cat.category} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: catPieColors[i % catPieColors.length] }}
+                            />
+                            <span className="text-gray-600 font-medium capitalize">{cat.category}</span>
+                          </div>
+                          <span className="font-bold text-gray-800">{cat.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Applicants by Department Bar Chart */}
+              <div
+                className="bg-white/60 rounded-xl p-5 border"
+                style={{ borderColor: `${primaryColor}20` }}
+              >
+                <h3 className="text-sm font-bold text-gray-800 mb-4">Applicants by Department</h3>
+                {departmentStats.length === 0 ? (
+                  <p className="text-center text-gray-400 text-sm py-8">Not enough data to visualize yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {departmentStats.map(({ department, count }) => {
+                      const maxCount = departmentStats[0].count;
+                      return (
+                        <div key={department}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span
+                              className="text-xs text-gray-600 font-medium truncate max-w-[70%]"
+                              title={department}
+                            >
+                              {department}
+                            </span>
+                            <span className="text-xs font-bold text-gray-800">{count}</span>
+                          </div>
+                          <div className="w-full bg-gray-200/60 rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-2 rounded-full transition-all duration-500"
+                              style={{
+                                width: `${(count / maxCount) * 100}%`,
+                                background: `linear-gradient(to right, ${primaryColor}, #6366f1)`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

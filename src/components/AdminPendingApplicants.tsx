@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useBranding } from '../hooks/useBranding';
-import { Check, X, AlertCircle } from 'lucide-react';
+import { Check, X, AlertCircle, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import type { Database } from '../lib/database.types';
 
 interface PendingApplicant {
@@ -23,6 +23,8 @@ export function AdminPendingApplicants() {
   const [showRejectReason, setShowRejectReason] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Authorization check: only admins can approve applicants
   if (profile?.role !== 'admin') {
@@ -218,12 +220,47 @@ export function AdminPendingApplicants() {
     );
   }
 
+  const filteredApplicants =
+    searchQuery.trim() === ''
+      ? pendingApplicants
+      : pendingApplicants.filter(
+          (a) =>
+            a.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            a.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (a.department_name || '').toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
       {/* Header */}
       <div className="mb-4 lg:mb-6">
-        <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Pending Applicants ({pendingApplicants.length})</h2>
-        <p className="text-gray-600 text-xs lg:text-sm mt-1">Applications awaiting administrator review</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900">
+              Pending Applicants ({pendingApplicants.length})
+            </h2>
+            <p className="text-gray-600 text-xs lg:text-sm mt-1">Applications awaiting administrator review</p>
+          </div>
+          <button
+            onClick={() => setIsCollapsed((prev) => !prev)}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700 flex-shrink-0"
+            title={isCollapsed ? 'Expand section' : 'Collapse section'}
+          >
+            {isCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+          </button>
+        </div>
+        {!isCollapsed && pendingApplicants.length > 0 && (
+          <div className="mt-3 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, email, or department…"
+              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-gray-50 transition-colors"
+            />
+          </div>
+        )}
       </div>
 
       {/* Messages */}
@@ -246,17 +283,24 @@ export function AdminPendingApplicants() {
         </div>
       )}
 
-      {/* Empty State */}
-      {pendingApplicants.length === 0 ? (
-        <div className="text-center py-12">
-          <Check className="h-12 w-12 mx-auto text-green-500 mb-4 text-gray-300" />
-          <p className="text-gray-500 font-medium">No pending applicants</p>
-          <p className="text-sm text-gray-500">All applicants have been reviewed</p>
-        </div>
-      ) : (
-        // Applicants List
-        <div className="space-y-4">
-          {pendingApplicants.map((applicant) => (
+      {/* Collapsible content */}
+      {!isCollapsed && (
+        <>
+          {pendingApplicants.length === 0 ? (
+            <div className="text-center py-12">
+              <Check className="h-12 w-12 mx-auto text-green-500 mb-4 text-gray-300" />
+              <p className="text-gray-500 font-medium">No pending applicants</p>
+              <p className="text-sm text-gray-500">All applicants have been reviewed</p>
+            </div>
+          ) : filteredApplicants.length === 0 ? (
+            <div className="text-center py-12">
+              <Search className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500 font-medium">No pending applicants match your search.</p>
+            </div>
+          ) : (
+            // Applicants List
+            <div className="space-y-4">
+              {filteredApplicants.map((applicant) => (
             <div
               key={applicant.id}
               className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -336,7 +380,9 @@ export function AdminPendingApplicants() {
               )}
             </div>
           ))}
-        </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   );
