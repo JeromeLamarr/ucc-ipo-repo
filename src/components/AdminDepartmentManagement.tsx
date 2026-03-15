@@ -16,6 +16,7 @@ export function AdminDepartmentManagement() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -30,13 +31,22 @@ export function AdminDepartmentManagement() {
     fetchDepartments();
   }, []);
 
+  // Reset to page 1 whenever the search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   // Auto-adjust current page if it goes out of range (e.g. after a delete)
   useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(departments.length / PAGE_SIZE));
+    const filtered = departments.filter((d) =>
+      d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
-  }, [departments.length]);
+  }, [departments.length, searchQuery]);
 
   async function fetchDepartments() {
     try {
@@ -179,9 +189,13 @@ export function AdminDepartmentManagement() {
     setError('');
   }
 
-  const totalPages = Math.max(1, Math.ceil(departments.length / PAGE_SIZE));
+  const filteredDepartments = departments.filter((d) =>
+    d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    d.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredDepartments.length / PAGE_SIZE));
   const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const paginatedDepartments = departments.slice(startIndex, startIndex + PAGE_SIZE);
+  const paginatedDepartments = filteredDepartments.slice(startIndex, startIndex + PAGE_SIZE);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
@@ -266,6 +280,19 @@ export function AdminDepartmentManagement() {
         </div>
       )}
 
+      {/* Search box */}
+      {!showNewForm && !editingId && (
+        <div className="mb-4">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search departments..."
+            className="w-full sm:w-80 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
+          />
+        </div>
+      )}
+
       {/* Departments Table */}
       <div className="hidden lg:block overflow-x-auto">
         <table className="w-full border-collapse">
@@ -284,10 +311,10 @@ export function AdminDepartmentManagement() {
                   Loading departments...
                 </td>
               </tr>
-            ) : departments.length === 0 ? (
+            ) : filteredDepartments.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                  No departments found. Create one to get started.
+                  {searchQuery ? 'No departments found.' : 'No departments found. Create one to get started.'}
                 </td>
               </tr>
             ) : (
@@ -335,10 +362,10 @@ export function AdminDepartmentManagement() {
       <div className="lg:hidden space-y-4">
         {loading && departments.length === 0 ? (
           <div className="py-12 text-center text-gray-500">Loading departments...</div>
-        ) : departments.length === 0 ? (
+        ) : filteredDepartments.length === 0 ? (
           <div className="py-12 text-center text-gray-500">
-            <p className="font-medium">No departments found</p>
-            <p className="text-sm mt-1">Create one to get started.</p>
+            <p className="font-medium">No departments found.</p>
+            {!searchQuery && <p className="text-sm mt-1">Create one to get started.</p>}
           </div>
         ) : (
           paginatedDepartments.map((dept) => (
@@ -380,10 +407,10 @@ export function AdminDepartmentManagement() {
       </div>
 
       {/* Pagination controls */}
-      {departments.length > 0 && (
+      {filteredDepartments.length > 0 && (
         <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-200">
           <p className="text-sm text-gray-600">
-            Showing {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, departments.length)} of {departments.length} department{departments.length !== 1 ? 's' : ''}
+            Showing {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, filteredDepartments.length)} of {filteredDepartments.length} department{filteredDepartments.length !== 1 ? 's' : ''}
           </p>
 
           {totalPages > 1 && (
