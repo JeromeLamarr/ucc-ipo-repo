@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Edit2, Trash2, Save, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const PAGE_SIZE = 10;
 
 interface Department {
   id: string;
@@ -14,6 +16,7 @@ export function AdminDepartmentManagement() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
 
@@ -26,6 +29,14 @@ export function AdminDepartmentManagement() {
   useEffect(() => {
     fetchDepartments();
   }, []);
+
+  // Auto-adjust current page if it goes out of range (e.g. after a delete)
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(departments.length / PAGE_SIZE));
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [departments.length]);
 
   async function fetchDepartments() {
     try {
@@ -106,6 +117,8 @@ export function AdminDepartmentManagement() {
       setFormData({ name: '', description: '', active: true });
       setEditingId(null);
       setShowNewForm(false);
+      // Reset to page 1 only when creating a new department
+      if (!editingId) setCurrentPage(1);
       await fetchDepartments();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save department');
@@ -165,6 +178,10 @@ export function AdminDepartmentManagement() {
     setFormData({ name: '', description: '', active: true });
     setError('');
   }
+
+  const totalPages = Math.max(1, Math.ceil(departments.length / PAGE_SIZE));
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const paginatedDepartments = departments.slice(startIndex, startIndex + PAGE_SIZE);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
@@ -274,7 +291,7 @@ export function AdminDepartmentManagement() {
                 </td>
               </tr>
             ) : (
-              departments.map((dept) => (
+              paginatedDepartments.map((dept) => (
                 <tr key={dept.id} className="border-b border-gray-200 hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{dept.name}</td>
                   <td className="px-4 py-3 text-gray-600">{dept.description}</td>
@@ -324,7 +341,7 @@ export function AdminDepartmentManagement() {
             <p className="text-sm mt-1">Create one to get started.</p>
           </div>
         ) : (
-          departments.map((dept) => (
+          paginatedDepartments.map((dept) => (
             <div key={dept.id} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="font-medium text-gray-900">{dept.name}</div>
@@ -361,6 +378,51 @@ export function AdminDepartmentManagement() {
           ))
         )}
       </div>
+
+      {/* Pagination controls */}
+      {departments.length > 0 && (
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-200">
+          <p className="text-sm text-gray-600">
+            Showing {startIndex + 1}–{Math.min(startIndex + PAGE_SIZE, departments.length)} of {departments.length} department{departments.length !== 1 ? 's' : ''}
+          </p>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                <ChevronLeft size={16} />
+                Previous
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1.5 text-sm border rounded-lg transition ${
+                    page === currentPage
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                Next
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
