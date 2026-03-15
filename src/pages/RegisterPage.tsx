@@ -208,16 +208,16 @@ export function RegisterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <PublicNavigation />
-      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-64px)]">
-        <div className="max-w-md w-full">
+      <div className="flex items-start justify-center p-4 pt-8 min-h-[calc(100vh-64px)]">
+        <div className="max-w-lg w-full">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
             <p className="text-gray-600 mt-2">Register to submit and manage your IP</p>
           </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-8">
+        <div className="bg-white rounded-xl shadow-lg p-8 pb-10">
           {step === 'form' && (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start gap-2">
                   <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
