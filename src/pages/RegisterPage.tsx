@@ -208,14 +208,14 @@ export function RegisterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <PublicNavigation />
-      <div className="flex items-start justify-center p-4 pt-8 min-h-[calc(100vh-64px)]">
-        <div className="max-w-lg w-full">
+      <div className="flex items-start justify-center px-4 py-10 min-h-[calc(100vh-64px)]">
+        <div className="max-w-xl w-full">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
             <p className="text-gray-600 mt-2">Register to submit and manage your IP</p>
           </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-8 pb-10">
+          <div className="bg-white rounded-2xl shadow-lg p-8 sm:p-10">
           {step === 'form' && (
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
@@ -419,8 +419,7 @@ export function RegisterPage() {
               </Link>
             </div>
           )}
-        </div>
-
+          </div>
         </div>
       </div>
     </div>
