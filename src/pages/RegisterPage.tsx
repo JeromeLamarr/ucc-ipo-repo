@@ -208,7 +208,7 @@ export function RegisterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       <PublicNavigation />
-      <div className="flex items-start justify-center px-4 py-10 min-h-[calc(100vh-64px)]">
+      <div className="flex items-start justify-center px-4 pt-16 pb-10 min-h-[calc(100vh-64px)]">
         <div className="max-w-xl w-full">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
