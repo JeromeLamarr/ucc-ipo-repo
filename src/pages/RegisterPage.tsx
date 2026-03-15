@@ -1,7 +1,8 @@
-import { useState, FormEvent, useEffect, useRef } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, Building, AlertCircle, CheckCircle, Mail as MailIcon, Search, ChevronDown, X } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, CheckCircle, Mail as MailIcon } from 'lucide-react';
 import { supabase } from '@lib/supabase';
+import { SearchableDepartmentDropdown } from '../components/SearchableDepartmentDropdown';
 import { PublicNavigation } from '../components/PublicNavigation';
 
 interface Department {
@@ -19,9 +20,6 @@ export function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [deptSearch, setDeptSearch] = useState('');
-  const [deptOpen, setDeptOpen] = useState(false);
-  const deptRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
   const [loading, setLoading] = useState(false);
@@ -78,16 +76,6 @@ export function RegisterPage() {
 
   useEffect(() => {
     fetchDepartments();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (deptRef.current && !deptRef.current.contains(e.target as Node)) {
-        setDeptOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchDepartments = async () => {
@@ -275,74 +263,12 @@ export function RegisterPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Department <span className="text-red-500">*</span>
                 </label>
-                <div className="relative" ref={deptRef}>
-                  {/* Hidden native input keeps required/form-submit validation intact */}
-                  <input type="hidden" value={departmentId} required />
-                  {/* Trigger button */}
-                  <button
-                    type="button"
-                    onClick={() => setDeptOpen((o) => !o)}
-                    className={`w-full flex items-center pl-10 pr-4 py-2.5 border rounded-lg bg-white text-left focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      departmentId ? 'border-gray-300 text-gray-900' : 'border-gray-300 text-gray-400'
-                    }`}
-                  >
-                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-                    <span className="flex-1 truncate text-sm">
-                      {departmentId
-                        ? departments.find((d) => d.id === departmentId)?.name
-                        : 'Select a department...'}
-                    </span>
-                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${deptOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {/* Dropdown panel */}
-                  {deptOpen && (
-                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                      {/* Search input */}
-                      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
-                        <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <input
-                          type="text"
-                          autoFocus
-                          value={deptSearch}
-                          onChange={(e) => setDeptSearch(e.target.value)}
-                          placeholder="Search departments..."
-                          className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
-                        />
-                        {deptSearch && (
-                          <button type="button" onClick={() => setDeptSearch('')} className="text-gray-400 hover:text-gray-600">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                      {/* Filtered list */}
-                      <ul className="max-h-48 overflow-y-auto">
-                        {departments
-                          .filter((d) => d.name.toLowerCase().includes(deptSearch.toLowerCase()))
-                          .map((dept) => (
-                            <li key={dept.id}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setDepartmentId(dept.id);
-                                  setDeptOpen(false);
-                                  setDeptSearch('');
-                                }}
-                                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 hover:text-blue-700 transition-colors ${
-                                  departmentId === dept.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
-                                }`}
-                              >
-                                {dept.name}
-                              </button>
-                            </li>
-                          ))}
-                        {departments.filter((d) => d.name.toLowerCase().includes(deptSearch.toLowerCase())).length === 0 && (
-                          <li className="px-4 py-3 text-sm text-gray-400 text-center">No departments found</li>
-                        )}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                <SearchableDepartmentDropdown
+                  departments={departments}
+                  value={departmentId}
+                  onChange={setDepartmentId}
+                  required
+                />
               </div>
 
               <div>
