@@ -154,7 +154,11 @@ async function generateCertificatePDF(
   researchHeadName: string,
   researchHeadPosition: string,
   presidentName: string,
-  presidentPosition: string
+  presidentPosition: string,
+  supervisorSignatureUrl: string | null,
+  researchHeadSignatureUrl: string | null,
+  presidentSignatureUrl: string | null,
+  pdfDoc_ref?: PDFDocument
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4 size (210mm x 297mm)
@@ -578,17 +582,13 @@ async function generateCertificatePDF(
   // SIGNATURE BLOCK
   // ============================================================
   const sigLineLength = 130;
-  const sigLineY = yPosition;
+  const sigImgHeight = 36;
+  const sigImgWidth = 90;
 
   // Align signature blocks with content margins
   const sig1X = margin + 15;
   const sig2X = margin + contentWidth / 3;
   const sig3X = margin + contentWidth * 2 / 3 - 15;
-
-  // Signature lines
-  page.drawLine({ start: { x: sig1X, y: sigLineY }, end: { x: sig1X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
-  page.drawLine({ start: { x: sig2X, y: sigLineY }, end: { x: sig2X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
-  page.drawLine({ start: { x: sig3X, y: sigLineY }, end: { x: sig3X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
 
   const sig1Center = sig1X + sigLineLength / 2;
   const sig2Center = sig2X + sigLineLength / 2;
@@ -598,6 +598,65 @@ async function generateCertificatePDF(
     const approxHalfWidth = (text.length * size * 0.55) / 2;
     page.drawText(text, { x: centerX - approxHalfWidth, y, size, color: darkColor });
   };
+
+  // Helper to fetch and embed a signature image from a URL
+  const embedSigImage = async (url: string | null): Promise<any | null> => {
+    if (!url) return null;
+    try {
+      const cleanUrl = url.split('?')[0];
+      const res = await fetch(cleanUrl);
+      if (!res.ok) return null;
+      const buf = new Uint8Array(await res.arrayBuffer());
+      if (cleanUrl.toLowerCase().endsWith('.png') || buf[0] === 0x89) {
+        return await pdfDoc.embedPng(buf);
+      }
+      return await pdfDoc.embedJpg(buf);
+    } catch {
+      return null;
+    }
+  };
+
+  const [sigImg1, sigImg2, sigImg3] = await Promise.all([
+    embedSigImage(supervisorSignatureUrl),
+    embedSigImage(researchHeadSignatureUrl),
+    embedSigImage(presidentSignatureUrl),
+  ]);
+
+  // Draw signature images above the lines
+  if (sigImg1) {
+    page.drawImage(sigImg1, {
+      x: sig1Center - sigImgWidth / 2,
+      y: yPosition - sigImgHeight + 4,
+      width: sigImgWidth,
+      height: sigImgHeight,
+      opacity: 0.9,
+    });
+  }
+  if (sigImg2) {
+    page.drawImage(sigImg2, {
+      x: sig2Center - sigImgWidth / 2,
+      y: yPosition - sigImgHeight + 4,
+      width: sigImgWidth,
+      height: sigImgHeight,
+      opacity: 0.9,
+    });
+  }
+  if (sigImg3) {
+    page.drawImage(sigImg3, {
+      x: sig3Center - sigImgWidth / 2,
+      y: yPosition - sigImgHeight + 4,
+      width: sigImgWidth,
+      height: sigImgHeight,
+      opacity: 0.9,
+    });
+  }
+
+  const sigLineY = yPosition;
+
+  // Signature lines
+  page.drawLine({ start: { x: sig1X, y: sigLineY }, end: { x: sig1X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
+  page.drawLine({ start: { x: sig2X, y: sigLineY }, end: { x: sig2X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
+  page.drawLine({ start: { x: sig3X, y: sigLineY }, end: { x: sig3X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
 
   // Row 1: Names just below signature line (no supervisor name for legacy records)
   drawCenteredSigText(researchHeadName, sig2Center, sigLineY - 13, 7.5);
@@ -787,23 +846,29 @@ Deno.serve(async (req: Request) => {
     const trackingId = `LEGACY-${year}-${String(record.id).substring(0, 8).toUpperCase()}`;
 
     // Fetch certificate signatory settings
-    let supervisorTitle      = 'Supervisor';
-    let researchHeadName     = 'Research Head';
-    let researchHeadPosition = 'Research Department Head';
-    let presidentName        = '';
-    let presidentPosition    = 'President';
+    let supervisorTitle          = 'Supervisor';
+    let researchHeadName         = 'Research Head';
+    let researchHeadPosition     = 'Research Department Head';
+    let presidentName            = '';
+    let presidentPosition        = 'President';
+    let supervisorSignatureUrl: string | null   = null;
+    let researchHeadSignatureUrl: string | null = null;
+    let presidentSignatureUrl: string | null    = null;
     try {
       const { data: sigSettings } = await supabase
         .from('certificate_signatories')
-        .select('supervisor_title, research_head_name, research_head_position, president_name, president_position')
+        .select('supervisor_title, research_head_name, research_head_position, president_name, president_position, supervisor_signature_url, research_head_signature_url, president_signature_url')
         .limit(1)
         .maybeSingle();
       if (sigSettings) {
-        supervisorTitle      = sigSettings.supervisor_title      || supervisorTitle;
-        researchHeadName     = sigSettings.research_head_name     || researchHeadName;
-        researchHeadPosition = sigSettings.research_head_position || researchHeadPosition;
-        presidentName        = sigSettings.president_name         || presidentName;
-        presidentPosition    = sigSettings.president_position     || presidentPosition;
+        supervisorTitle          = sigSettings.supervisor_title          || supervisorTitle;
+        researchHeadName         = sigSettings.research_head_name         || researchHeadName;
+        researchHeadPosition     = sigSettings.research_head_position     || researchHeadPosition;
+        presidentName            = sigSettings.president_name             || presidentName;
+        presidentPosition        = sigSettings.president_position         || presidentPosition;
+        supervisorSignatureUrl   = sigSettings.supervisor_signature_url   || null;
+        researchHeadSignatureUrl = sigSettings.research_head_signature_url || null;
+        presidentSignatureUrl    = sigSettings.president_signature_url    || null;
       }
     } catch (sigErr) {
       console.warn('[generate-certificate-legacy] Could not fetch signatory settings, using defaults:', sigErr);
@@ -811,7 +876,7 @@ Deno.serve(async (req: Request) => {
 
     // Generate PDF
     console.log('[generate-certificate-legacy] Starting PDF generation');
-    const pdfBuffer = await generateCertificatePDF(record, creator, trackingId, supervisorTitle, researchHeadName, researchHeadPosition, presidentName, presidentPosition);
+    const pdfBuffer = await generateCertificatePDF(record, creator, trackingId, supervisorTitle, researchHeadName, researchHeadPosition, presidentName, presidentPosition, supervisorSignatureUrl, researchHeadSignatureUrl, presidentSignatureUrl);
     console.log('[generate-certificate-legacy] PDF generated, size:', pdfBuffer.length);
     
     const checksum = await generateChecksum(pdfBuffer);

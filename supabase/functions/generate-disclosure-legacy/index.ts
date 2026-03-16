@@ -245,28 +245,57 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
     : null;
 
   // Fetch Disclosure Signatory Settings
-  let supervisorTitle      = "Supervisor";
-  let researchHeadPosition = "Research Head";
-  let presidentName        = "";
-  let presidentPosition    = "President";
+  let supervisorTitle          = "Supervisor";
+  let researchHeadPosition     = "Research Head";
+  let presidentName            = "";
+  let presidentPosition        = "President";
+  let supervisorSignatureUrl: string | null   = null;
+  let researchHeadSignatureUrl: string | null = null;
+  let presidentSignatureUrl: string | null    = null;
 
   if (supabase) {
     try {
       const { data: sigSettings } = await supabase
         .from("disclosure_signatories")
-        .select("supervisor_title, research_head_position, president_name, president_position")
+        .select("supervisor_title, research_head_position, president_name, president_position, supervisor_signature_url, research_head_signature_url, president_signature_url")
         .limit(1)
         .maybeSingle();
       if (sigSettings) {
-        supervisorTitle      = sigSettings.supervisor_title      || supervisorTitle;
-        researchHeadPosition = sigSettings.research_head_position || researchHeadPosition;
-        presidentName        = sigSettings.president_name         || presidentName;
-        presidentPosition    = sigSettings.president_position     || presidentPosition;
+        supervisorTitle          = sigSettings.supervisor_title          || supervisorTitle;
+        researchHeadPosition     = sigSettings.research_head_position    || researchHeadPosition;
+        presidentName            = sigSettings.president_name            || presidentName;
+        presidentPosition        = sigSettings.president_position        || presidentPosition;
+        supervisorSignatureUrl   = sigSettings.supervisor_signature_url  || null;
+        researchHeadSignatureUrl = sigSettings.research_head_signature_url || null;
+        presidentSignatureUrl    = sigSettings.president_signature_url   || null;
       }
     } catch (sigErr) {
       console.warn("[generate-disclosure-legacy] Could not fetch signatory settings, using defaults:", sigErr);
     }
   }
+
+  // Helper to fetch and embed a signature image from a public URL
+  const embedSigImage = async (url: string | null): Promise<any | null> => {
+    if (!url) return null;
+    try {
+      const cleanUrl = url.split('?')[0];
+      const res = await fetch(cleanUrl);
+      if (!res.ok) return null;
+      const buf = new Uint8Array(await res.arrayBuffer());
+      if (cleanUrl.toLowerCase().endsWith('.png') || buf[0] === 0x89) {
+        return await pdfDoc.embedPng(buf);
+      }
+      return await pdfDoc.embedJpg(buf);
+    } catch {
+      return null;
+    }
+  };
+
+  const [sigImg1, sigImg2, sigImg3] = await Promise.all([
+    embedSigImage(supervisorSignatureUrl),
+    embedSigImage(researchHeadSignatureUrl),
+    embedSigImage(presidentSignatureUrl),
+  ]);
 
   // Map legacy record to workflow data shapes
   const details = record.details || {};
@@ -432,29 +461,40 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
   page.drawText("AUTHORIZATION AND SIGNATURES", { x: margin + 25, y: yPosition, size: 10, color: accentColor });
   yPosition = moveDown(yPosition, 20);
 
-  // Supervisor Signature (no name for legacy — no assigned supervisor)
-  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
-  page.drawText(`${supervisorTitle} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  yPosition = moveDown(yPosition, 28);
+  const sigLineLength = 175;
+  const sigImgH = 36;
+  const sigImgW = 90;
+  const sigStartX = margin + 25;
 
-  // Research Head — creator name auto-filled
-  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
-  page.drawText(`${researchHeadPosition} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
-  page.drawText(creator.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  yPosition = moveDown(yPosition, 28);
+  const drawSigBlock = (
+    sigImg: any | null,
+    label: string,
+    nameLine: string | null,
+    startX: number,
+    currentY: number
+  ): number => {
+    if (sigImg) {
+      page.drawImage(sigImg, {
+        x: startX,
+        y: currentY - sigImgH + 4,
+        width: sigImgW,
+        height: sigImgH,
+        opacity: 0.9,
+      });
+    }
+    page.drawLine({ start: { x: startX, y: currentY }, end: { x: startX + sigLineLength, y: currentY }, thickness: 1, color: darkColor });
+    currentY = moveDown(currentY, 10);
+    page.drawText(label, { x: startX, y: currentY, size: 7, color: darkColor });
+    if (nameLine) {
+      currentY = moveDown(currentY, 10);
+      page.drawText(nameLine, { x: startX, y: currentY, size: 7, color: darkColor });
+    }
+    return moveDown(currentY, 28);
+  };
 
-  // University President
-  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
-  page.drawText(`${presidentPosition} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  if (presidentName) {
-    yPosition = moveDown(yPosition, 10);
-    page.drawText(presidentName, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  }
-  yPosition = moveDown(yPosition, 28);
+  yPosition = drawSigBlock(sigImg1, `${supervisorTitle} Signature & Date`, null, sigStartX, yPosition);
+  yPosition = drawSigBlock(sigImg2, `${researchHeadPosition} Signature & Date`, creator.full_name, sigStartX, yPosition);
+  yPosition = drawSigBlock(sigImg3, `${presidentPosition} Signature & Date`, presidentName || null, sigStartX, yPosition);
 
   // Confidentiality Notice
   yPosition = moveDown(yPosition, 15);
