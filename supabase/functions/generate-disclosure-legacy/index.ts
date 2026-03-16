@@ -274,27 +274,25 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
     }
   }
 
-  // Helper to fetch and embed a signature image from a public URL
-  const embedSigImage = async (url: string | null): Promise<any | null> => {
+  // Helper to fetch signature bytes from a public URL (embed after pdfDoc is created)
+  const fetchSigBytes = async (url: string | null): Promise<{ bytes: Uint8Array; isPng: boolean } | null> => {
     if (!url) return null;
     try {
       const cleanUrl = url.split('?')[0];
       const res = await fetch(cleanUrl);
       if (!res.ok) return null;
       const buf = new Uint8Array(await res.arrayBuffer());
-      if (cleanUrl.toLowerCase().endsWith('.png') || buf[0] === 0x89) {
-        return await pdfDoc.embedPng(buf);
-      }
-      return await pdfDoc.embedJpg(buf);
+      const isPng = cleanUrl.toLowerCase().endsWith('.png') || buf[0] === 0x89;
+      return { bytes: buf, isPng };
     } catch {
       return null;
     }
   };
 
-  const [sigImg1, sigImg2, sigImg3] = await Promise.all([
-    embedSigImage(supervisorSignatureUrl),
-    embedSigImage(researchHeadSignatureUrl),
-    embedSigImage(presidentSignatureUrl),
+  const [sigRaw1, sigRaw2, sigRaw3] = await Promise.all([
+    fetchSigBytes(supervisorSignatureUrl),
+    fetchSigBytes(researchHeadSignatureUrl),
+    fetchSigBytes(presidentSignatureUrl),
   ]);
 
   // Map legacy record to workflow data shapes
@@ -315,6 +313,19 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
   // ── PDF Drawing (A4, same layout as generate-full-disclosure) ──────────────
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4
+
+  // Embed signature images now that pdfDoc exists
+  const embedRaw = async (raw: { bytes: Uint8Array; isPng: boolean } | null): Promise<any | null> => {
+    if (!raw) return null;
+    try {
+      return raw.isPng ? await pdfDoc.embedPng(raw.bytes) : await pdfDoc.embedJpg(raw.bytes);
+    } catch { return null; }
+  };
+  const [sigImg1, sigImg2, sigImg3] = await Promise.all([
+    embedRaw(sigRaw1),
+    embedRaw(sigRaw2),
+    embedRaw(sigRaw3),
+  ]);
   const { width, height } = page.getSize();
 
   const margin = 40;
@@ -476,7 +487,7 @@ async function generateLegacyDisclosurePDF(record: LegacyIPRecord): Promise<Uint
     if (sigImg) {
       page.drawImage(sigImg, {
         x: startX,
-        y: currentY - sigImgH + 4,
+        y: currentY + 4,
         width: sigImgW,
         height: sigImgH,
         opacity: 0.9,
