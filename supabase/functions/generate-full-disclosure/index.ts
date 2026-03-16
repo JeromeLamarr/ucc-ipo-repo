@@ -152,7 +152,10 @@ async function generateFullDisclosurePDF(
   researchHeadName: string,
   researchHeadPosition: string,
   presidentName: string,
-  presidentPosition: string
+  presidentPosition: string,
+  supervisorSignatureUrl: string | null,
+  researchHeadSignatureUrl: string | null,
+  presidentSignatureUrl: string | null
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4 size
@@ -448,33 +451,63 @@ async function generateFullDisclosurePDF(
   page.drawText("AUTHORIZATION AND SIGNATURES", { x: margin + 25, y: yPosition, size: 10, color: accentColor, fontStyle: "bold" });
   yPosition = moveDown(yPosition, 20);
 
-  // Supervisor Signature (title from disclosure_signatories, name from assigned supervisor)
-  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
-  page.drawText(`${supervisorTitle} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  if (supervisor?.full_name) {
-    yPosition = moveDown(yPosition, 10);
-    page.drawText(supervisor.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
-  }
-  yPosition = moveDown(yPosition, 28);
+  const sigLineLength = 175;
+  const sigImgH = 36;
+  const sigImgW = 90;
+  const sigStartX = margin + 25;
 
-  // Research Head Signature — name auto-filled from Employee/Applicant record
-  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
-  page.drawText(`${researchHeadPosition} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
-  page.drawText(creator.full_name, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
-  yPosition = moveDown(yPosition, 28);
+  // Helper to fetch and embed a signature image from a public URL
+  const embedSigImage = async (url: string | null): Promise<any | null> => {
+    if (!url) return null;
+    try {
+      const cleanUrl = url.split('?')[0];
+      const res = await fetch(cleanUrl);
+      if (!res.ok) return null;
+      const buf = new Uint8Array(await res.arrayBuffer());
+      if (cleanUrl.toLowerCase().endsWith('.png') || buf[0] === 0x89) {
+        return await pdfDoc.embedPng(buf);
+      }
+      return await pdfDoc.embedJpg(buf);
+    } catch {
+      return null;
+    }
+  };
 
-  // President Signature
-  page.drawLine({ start: { x: margin + 25, y: yPosition }, end: { x: margin + 200, y: yPosition }, thickness: 1, color: darkColor });
-  yPosition = moveDown(yPosition, 10);
-  page.drawText(`${presidentPosition} Signature & Date`, { x: margin + 25, y: yPosition, size: 7, color: darkColor });
-  if (presidentName) {
-    yPosition = moveDown(yPosition, 10);
-    page.drawText(presidentName, { x: margin + 25, y: yPosition, size: 7, color: darkColor, fontStyle: "italic" });
-  }
-  yPosition = moveDown(yPosition, 28);
+  const [sigImg1, sigImg2, sigImg3] = await Promise.all([
+    embedSigImage(supervisorSignatureUrl),
+    embedSigImage(researchHeadSignatureUrl),
+    embedSigImage(presidentSignatureUrl),
+  ]);
+
+  const drawSigBlock = (
+    sigImg: any | null,
+    label: string,
+    nameLine: string | null,
+    startX: number,
+    currentY: number
+  ): number => {
+    if (sigImg) {
+      page.drawImage(sigImg, {
+        x: startX,
+        y: currentY - sigImgH + 4,
+        width: sigImgW,
+        height: sigImgH,
+        opacity: 0.9,
+      });
+    }
+    page.drawLine({ start: { x: startX, y: currentY }, end: { x: startX + sigLineLength, y: currentY }, thickness: 1, color: darkColor });
+    currentY = moveDown(currentY, 10);
+    page.drawText(label, { x: startX, y: currentY, size: 7, color: darkColor });
+    if (nameLine) {
+      currentY = moveDown(currentY, 10);
+      page.drawText(nameLine, { x: startX, y: currentY, size: 7, color: darkColor, fontStyle: "italic" });
+    }
+    return moveDown(currentY, 28);
+  };
+
+  yPosition = drawSigBlock(sigImg1, `${supervisorTitle} Signature & Date`, supervisor?.full_name || null, sigStartX, yPosition);
+  yPosition = drawSigBlock(sigImg2, `${researchHeadPosition} Signature & Date`, creator.full_name, sigStartX, yPosition);
+  yPosition = drawSigBlock(sigImg3, `${presidentPosition} Signature & Date`, presidentName || null, sigStartX, yPosition);
 
   // Confidentiality Notice
   yPosition = moveDown(yPosition, 15);
@@ -636,25 +669,31 @@ Deno.serve(async (req: Request) => {
     }
 
     // Fetch Disclosure Signatory Settings (fallback to defaults if not configured)
-    let supervisorTitle      = "Supervisor";
-    let researchHeadName     = "";
-    let researchHeadPosition = "Research Head";
-    let presidentName        = "";
-    let presidentPosition    = "President";
+    let supervisorTitle          = "Supervisor";
+    let researchHeadName         = "";
+    let researchHeadPosition     = "Research Head";
+    let presidentName            = "";
+    let presidentPosition        = "President";
+    let supervisorSignatureUrl: string | null   = null;
+    let researchHeadSignatureUrl: string | null = null;
+    let presidentSignatureUrl: string | null    = null;
 
     try {
       const { data: sigSettings } = await supabase
         .from("disclosure_signatories")
-        .select("supervisor_title, research_head_name, research_head_position, president_name, president_position")
+        .select("supervisor_title, research_head_name, research_head_position, president_name, president_position, supervisor_signature_url, research_head_signature_url, president_signature_url")
         .limit(1)
         .maybeSingle();
 
       if (sigSettings) {
-        supervisorTitle      = sigSettings.supervisor_title      || supervisorTitle;
-        researchHeadName     = sigSettings.research_head_name     || researchHeadName;
-        researchHeadPosition = sigSettings.research_head_position || researchHeadPosition;
-        presidentName        = sigSettings.president_name         || presidentName;
-        presidentPosition    = sigSettings.president_position     || presidentPosition;
+        supervisorTitle          = sigSettings.supervisor_title          || supervisorTitle;
+        researchHeadName         = sigSettings.research_head_name        || researchHeadName;
+        researchHeadPosition     = sigSettings.research_head_position    || researchHeadPosition;
+        presidentName            = sigSettings.president_name            || presidentName;
+        presidentPosition        = sigSettings.president_position        || presidentPosition;
+        supervisorSignatureUrl   = sigSettings.supervisor_signature_url  || null;
+        researchHeadSignatureUrl = sigSettings.research_head_signature_url || null;
+        presidentSignatureUrl    = sigSettings.president_signature_url   || null;
       }
     } catch (sigErr) {
       console.warn("[generate-full-disclosure] Could not fetch signatory settings, using defaults:", sigErr);
@@ -672,7 +711,10 @@ Deno.serve(async (req: Request) => {
       researchHeadName,
       researchHeadPosition,
       presidentName,
-      presidentPosition
+      presidentPosition,
+      supervisorSignatureUrl,
+      researchHeadSignatureUrl,
+      presidentSignatureUrl
     );
 
     // Store in Supabase Storage
