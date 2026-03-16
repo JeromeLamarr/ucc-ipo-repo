@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
-import { Plus, CreditCard as Edit, Trash2, Search, Eye, EyeOff, AlertCircle, Navigation, RefreshCw, ExternalLink } from 'lucide-react';
+import { Plus, CreditCard as Edit, Trash2, Search, Eye, EyeOff, AlertCircle, Navigation, RefreshCw, ExternalLink, ArrowUp, ArrowDown } from 'lucide-react';
 import { PAGE_TEMPLATES, getTemplate } from '../lib/pageTemplates';
 import { canPublishPage } from '../lib/sectionValidation';
 import { getDefaultContent, supportedSectionTypes } from '../components/cms/sectionRegistry';
@@ -34,6 +34,9 @@ export function PublicPagesManagement() {
   const [showUnpublishConfirm, setShowUnpublishConfirm] = useState<string | null>(null);
   const [showReplaceHomeConfirm, setShowReplaceHomeConfirm] = useState(false);
   const [replacingHome, setReplacingHome] = useState(false);
+  const [showNavOrganizer, setShowNavOrganizer] = useState(false);
+  const [navOrderList, setNavOrderList] = useState<CMSPage[]>([]);
+  const [savingNavOrder, setSavingNavOrder] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -338,6 +341,54 @@ export function PublicPagesManagement() {
     });
   };
 
+  const openNavOrganizer = () => {
+    const navPages = pages
+      .filter((p) => p.show_in_nav !== false && p.slug !== 'home')
+      .sort((a, b) => (a.nav_order ?? 0) - (b.nav_order ?? 0) || a.title.localeCompare(b.title));
+    setNavOrderList(navPages);
+    setShowNavOrganizer(true);
+  };
+
+  const moveNavItem = (index: number, direction: 'up' | 'down') => {
+    const updated = [...navOrderList];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= updated.length) return;
+    [updated[index], updated[swapIndex]] = [updated[swapIndex], updated[index]];
+    setNavOrderList(updated);
+  };
+
+  const handleSaveNavOrder = async () => {
+    setSavingNavOrder(true);
+    setError(null);
+    try {
+      await Promise.all(
+        navOrderList.map((page, index) =>
+          (supabase
+            .from('cms_pages')
+            .update({ nav_order: index + 1 } as any)
+            .eq('id', page.id) as any)
+        )
+      );
+      setPages(
+        pages.map((p) => {
+          const idx = navOrderList.findIndex((n) => n.id === p.id);
+          return idx !== -1 ? { ...p, nav_order: idx + 1 } : p;
+        })
+      );
+      setShowNavOrganizer(false);
+      setSuccess('Navbar order saved successfully');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save navbar order');
+    } finally {
+      setSavingNavOrder(false);
+    }
+  };
+
+  const handleResetNavOrder = () => {
+    setNavOrderList([...navOrderList].sort((a, b) => a.title.localeCompare(b.title)));
+  };
+
   const handleToggleNavVisibility = async (pageId: string, currentVisible: boolean) => {
     try {
       const { error: err } = await (supabase
@@ -399,6 +450,13 @@ export function PublicPagesManagement() {
           >
             <Plus className="h-5 w-5" />
             Create Page
+          </button>
+          <button
+            onClick={openNavOrganizer}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+          >
+            <Navigation className="h-5 w-5" />
+            Organize Navbar
           </button>
         </div>
 
@@ -589,6 +647,83 @@ export function PublicPagesManagement() {
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navbar Organizer Modal */}
+      {showNavOrganizer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Organize Navbar</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Use the arrows to set the order of pages in the public navigation bar.
+            </p>
+
+            {navOrderList.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center py-6">
+                No pages are currently shown in the navbar.
+              </p>
+            ) : (
+              <ul className="space-y-2 mb-6">
+                {navOrderList.map((page, index) => (
+                  <li
+                    key={page.id}
+                    className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg"
+                  >
+                    <span className="w-5 text-center text-xs font-semibold text-gray-400">{index + 1}</span>
+                    <span className="flex-1 text-sm font-medium text-gray-800 truncate">{page.title}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moveNavItem(index, 'up')}
+                        disabled={index === 0}
+                        title="Move up"
+                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ArrowUp className="h-4 w-4 text-gray-600" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveNavItem(index, 'down')}
+                        disabled={index === navOrderList.length - 1}
+                        title="Move down"
+                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ArrowDown className="h-4 w-4 text-gray-600" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveNavOrder}
+                  disabled={savingNavOrder}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50"
+                >
+                  {savingNavOrder ? 'Saving...' : 'Save Order'}
+                </button>
+                <button
+                  onClick={() => setShowNavOrganizer(false)}
+                  disabled={savingNavOrder}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetNavOrder}
+                disabled={savingNavOrder}
+                className="w-full px-4 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Reset to alphabetical order
               </button>
             </div>
           </div>
