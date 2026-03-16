@@ -677,7 +677,7 @@ async function generateCertificatePDF(
 
       page.drawImage(sigImg, {
         x: centerX - drawW / 2,
-        y: lineY + 5,
+        y: lineY,
         width: drawW,
         height: drawH,
       });
