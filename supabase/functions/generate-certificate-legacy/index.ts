@@ -626,7 +626,7 @@ async function generateCertificatePDF(
   if (sigImg1) {
     page.drawImage(sigImg1, {
       x: sig1Center - sigImgWidth / 2,
-      y: yPosition - sigImgHeight + 4,
+      y: yPosition + 4,
       width: sigImgWidth,
       height: sigImgHeight,
       opacity: 0.9,
@@ -635,7 +635,7 @@ async function generateCertificatePDF(
   if (sigImg2) {
     page.drawImage(sigImg2, {
       x: sig2Center - sigImgWidth / 2,
-      y: yPosition - sigImgHeight + 4,
+      y: yPosition + 4,
       width: sigImgWidth,
       height: sigImgHeight,
       opacity: 0.9,
@@ -644,7 +644,7 @@ async function generateCertificatePDF(
   if (sigImg3) {
     page.drawImage(sigImg3, {
       x: sig3Center - sigImgWidth / 2,
-      y: yPosition - sigImgHeight + 4,
+      y: yPosition + 4,
       width: sigImgWidth,
       height: sigImgHeight,
       opacity: 0.9,

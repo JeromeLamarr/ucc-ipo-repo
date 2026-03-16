@@ -489,7 +489,7 @@ async function generateFullDisclosurePDF(
     if (sigImg) {
       page.drawImage(sigImg, {
         x: startX,
-        y: currentY - sigImgH + 4,
+        y: currentY + 4,
         width: sigImgW,
         height: sigImgH,
         opacity: 0.9,
