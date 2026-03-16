@@ -65,24 +65,20 @@ export function DisclosureSignatoriesSettings() {
         updated_at:             new Date().toISOString(),
       };
 
-      let error: any;
-
-      if (form.id) {
-        ({ error } = await supabase.rpc('update_disclosure_signatories', {
-          p_id:                     form.id,
-          p_research_head_name:     payload.research_head_name,
-          p_research_head_position: payload.research_head_position,
-          p_president_name:         payload.president_name,
-          p_president_position:     payload.president_position,
-          p_supervisor_title:       payload.supervisor_title,
-        }));
-      } else {
-        ({ error } = await supabase
-          .from('disclosure_signatories')
-          .insert(payload));
-      }
+      const { data: upsertedId, error } = await supabase.rpc('upsert_disclosure_signatories', {
+        p_id:                     form.id ?? null,
+        p_research_head_name:     payload.research_head_name,
+        p_research_head_position: payload.research_head_position,
+        p_president_name:         payload.president_name,
+        p_president_position:     payload.president_position,
+        p_supervisor_title:       payload.supervisor_title,
+      });
 
       if (error) throw error;
+
+      if (upsertedId && !form.id) {
+        setForm((prev) => ({ ...prev, id: upsertedId as string }));
+      }
 
       setMessage({ type: 'success', text: 'Disclosure signatory settings saved successfully.' });
     } catch (err: any) {

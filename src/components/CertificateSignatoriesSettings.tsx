@@ -72,12 +72,12 @@ export function CertificateSignatoriesSettings() {
       const path = `signatures/${role}_signature.${ext}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('assets')
+        .from('branding')
         .upload(path, file, { upsert: true, contentType: file.type });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage.from('assets').getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from('branding').getPublicUrl(path);
       const publicUrl = urlData.publicUrl;
 
       setForm((prev) => ({ ...prev, [`${role}_signature_url`]: publicUrl }));
