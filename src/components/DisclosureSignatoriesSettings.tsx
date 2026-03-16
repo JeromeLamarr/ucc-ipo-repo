@@ -78,7 +78,7 @@ export function DisclosureSignatoriesSettings() {
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from('branding').getPublicUrl(path);
-      const publicUrl = urlData.publicUrl;
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
       setForm((prev) => ({ ...prev, [`${role}_signature_url`]: publicUrl }));
       setMessage({ type: 'success', text: 'Signature uploaded. Click "Save" to apply.' });
@@ -106,9 +106,9 @@ export function DisclosureSignatoriesSettings() {
         p_president_name:              form.president_name.trim(),
         p_president_position:          form.president_position.trim(),
         p_supervisor_title:            form.supervisor_title.trim(),
-        p_research_head_signature_url: form.research_head_signature_url || null,
-        p_president_signature_url:     form.president_signature_url || null,
-        p_supervisor_signature_url:    form.supervisor_signature_url || null,
+        p_research_head_signature_url: form.research_head_signature_url?.split('?')[0] || null,
+        p_president_signature_url:     form.president_signature_url?.split('?')[0] || null,
+        p_supervisor_signature_url:    form.supervisor_signature_url?.split('?')[0] || null,
       });
 
       if (error) throw error;
