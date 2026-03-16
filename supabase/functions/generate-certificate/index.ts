@@ -192,7 +192,9 @@ async function generateCertificatePDF(
   researchHeadPosition: string,
   presidentName: string,
   presidentPosition: string,
-  supervisorTitle: string
+  supervisorTitle: string,
+  researchHeadSignatureUrl?: string | null,
+  presidentSignatureUrl?: string | null
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4 size (210mm x 297mm)
@@ -647,6 +649,50 @@ async function generateCertificatePDF(
   const sig2X = margin + contentWidth / 3;
   const sig3X = margin + contentWidth * 2 / 3 - 15;
 
+  // Helper: embed and draw a signature image centred above a signature line
+  const drawSignatureImage = async (url: string, centerX: number, lineY: number, maxWidth: number) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const imgBuffer = await res.arrayBuffer();
+      const imgBytes = new Uint8Array(imgBuffer);
+
+      // Try PNG first, fall back to JPEG
+      let sigImg;
+      try {
+        sigImg = await pdfDoc.embedPng(imgBytes);
+      } catch {
+        sigImg = await pdfDoc.embedJpg(imgBytes);
+      }
+
+      const maxH = 40;
+      const aspect = sigImg.width / sigImg.height;
+      let drawW = Math.min(maxWidth, sigImg.width);
+      let drawH = drawW / aspect;
+      if (drawH > maxH) {
+        drawH = maxH;
+        drawW = drawH * aspect;
+      }
+
+      page.drawImage(sigImg, {
+        x: centerX - drawW / 2,
+        y: lineY + 5,
+        width: drawW,
+        height: drawH,
+      });
+    } catch {
+      // Ignore image errors — fall back to blank space above line
+    }
+  };
+
+  // Draw signature images above lines (async, before drawing lines)
+  if (researchHeadSignatureUrl) {
+    await drawSignatureImage(researchHeadSignatureUrl, sig2X + sigLineLength / 2, sigLineY, sigLineLength);
+  }
+  if (presidentSignatureUrl) {
+    await drawSignatureImage(presidentSignatureUrl, sig3X + sigLineLength / 2, sigLineY, sigLineLength);
+  }
+
   // Signature lines
   page.drawLine({ start: { x: sig1X, y: sigLineY }, end: { x: sig1X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
   page.drawLine({ start: { x: sig2X, y: sigLineY }, end: { x: sig2X + sigLineLength, y: sigLineY }, thickness: 1.2, color: darkColor });
@@ -1092,10 +1138,12 @@ Deno.serve(async (req: Request) => {
     let presidentName = 'Atty. Jared';
     let presidentPosition = 'President';
     let supervisorTitle = 'Supervisor';
+    let researchHeadSignatureUrl: string | null = null;
+    let presidentSignatureUrl: string | null = null;
     try {
       const { data: sigSettings } = await supabase
         .from('certificate_signatories')
-        .select('research_head_name, research_head_position, president_name, president_position, supervisor_title')
+        .select('research_head_name, research_head_position, president_name, president_position, supervisor_title, research_head_signature_url, president_signature_url')
         .limit(1)
         .maybeSingle();
 
@@ -1105,6 +1153,8 @@ Deno.serve(async (req: Request) => {
         presidentName = sigSettings.president_name || presidentName;
         presidentPosition = sigSettings.president_position || presidentPosition;
         supervisorTitle = sigSettings.supervisor_title || supervisorTitle;
+        researchHeadSignatureUrl = sigSettings.research_head_signature_url || null;
+        presidentSignatureUrl = sigSettings.president_signature_url || null;
       }
     } catch (sigErr) {
       console.warn('[generate-certificate] Could not fetch signatory settings, using defaults:', sigErr);
@@ -1162,7 +1212,9 @@ Deno.serve(async (req: Request) => {
       researchHeadPosition,
       presidentName,
       presidentPosition,
-      supervisorTitle
+      supervisorTitle,
+      researchHeadSignatureUrl,
+      presidentSignatureUrl
     );
 
     // Calculate checksum

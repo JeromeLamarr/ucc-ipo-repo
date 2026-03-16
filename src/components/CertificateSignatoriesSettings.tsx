@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useBranding } from '../hooks/useBranding';
-import { Save, CheckCircle, AlertCircle, PenLine } from 'lucide-react';
+import { Save, CheckCircle, AlertCircle, PenLine, Upload, X, Image } from 'lucide-react';
 
 interface SignatorySettings {
   id?: string;
@@ -10,6 +10,8 @@ interface SignatorySettings {
   president_name: string;
   president_position: string;
   supervisor_title: string;
+  research_head_signature_url: string | null;
+  president_signature_url: string | null;
 }
 
 const DEFAULTS: SignatorySettings = {
@@ -18,6 +20,8 @@ const DEFAULTS: SignatorySettings = {
   president_name: 'Atty. Jared',
   president_position: 'President',
   supervisor_title: 'Supervisor',
+  research_head_signature_url: null,
+  president_signature_url: null,
 };
 
 export function CertificateSignatoriesSettings() {
@@ -26,6 +30,9 @@ export function CertificateSignatoriesSettings() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [uploadingSignature, setUploadingSignature] = useState<'research_head' | 'president' | null>(null);
+  const researchHeadFileRef = useRef<HTMLInputElement>(null);
+  const presidentFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -44,12 +51,44 @@ export function CertificateSignatoriesSettings() {
           president_name: data.president_name ?? DEFAULTS.president_name,
           president_position: data.president_position ?? DEFAULTS.president_position,
           supervisor_title: data.supervisor_title ?? DEFAULTS.supervisor_title,
+          research_head_signature_url: data.research_head_signature_url ?? null,
+          president_signature_url: data.president_signature_url ?? null,
         });
       }
       setFetching(false);
     };
     fetchSettings();
   }, []);
+
+  const handleSignatureUpload = async (role: 'research_head' | 'president', file: File) => {
+    setUploadingSignature(role);
+    setMessage(null);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const path = `signatures/${role}_signature.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('assets')
+        .upload(path, file, { upsert: true, contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('assets').getPublicUrl(path);
+      const publicUrl = urlData.publicUrl;
+
+      setForm((prev) => ({ ...prev, [`${role}_signature_url`]: publicUrl }));
+      setMessage({ type: 'success', text: 'Signature uploaded. Click "Save" to apply.' });
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Failed to upload signature.' });
+    } finally {
+      setUploadingSignature(null);
+    }
+  };
+
+  const handleSignatureRemove = (role: 'research_head' | 'president') => {
+    setForm((prev) => ({ ...prev, [`${role}_signature_url`]: null }));
+    setMessage({ type: 'success', text: 'Signature removed. Click "Save" to apply.' });
+  };
 
   const handleSave = async () => {
     setLoading(true);
@@ -62,6 +101,8 @@ export function CertificateSignatoriesSettings() {
         president_name: form.president_name.trim(),
         president_position: form.president_position.trim(),
         supervisor_title: form.supervisor_title.trim(),
+        research_head_signature_url: form.research_head_signature_url || null,
+        president_signature_url: form.president_signature_url || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -70,12 +111,14 @@ export function CertificateSignatoriesSettings() {
       if (form.id) {
         // Use SECURITY DEFINER RPC to bypass RLS recursion issues
         ({ error } = await supabase.rpc('update_certificate_signatories', {
-          p_id:                     form.id,
-          p_research_head_name:     payload.research_head_name,
-          p_research_head_position: payload.research_head_position,
-          p_president_name:         payload.president_name,
-          p_president_position:     payload.president_position,
-          p_supervisor_title:       payload.supervisor_title,
+          p_id:                              form.id,
+          p_research_head_name:              payload.research_head_name,
+          p_research_head_position:          payload.research_head_position,
+          p_president_name:                  payload.president_name,
+          p_president_position:              payload.president_position,
+          p_supervisor_title:                payload.supervisor_title,
+          p_research_head_signature_url:     payload.research_head_signature_url,
+          p_president_signature_url:         payload.president_signature_url,
         }));
       } else {
         // No row yet — insert (fallback, should rarely happen after migration seed)
@@ -96,7 +139,7 @@ export function CertificateSignatoriesSettings() {
 
   const field = (
     label: string,
-    key: keyof Omit<SignatorySettings, 'id'>,
+    key: keyof Omit<SignatorySettings, 'id' | 'research_head_signature_url' | 'president_signature_url'>,
     hint?: string
   ) => (
     <div>
@@ -112,6 +155,86 @@ export function CertificateSignatoriesSettings() {
       {hint && <p className="text-xs text-gray-500 mt-1.5 font-medium">{hint}</p>}
     </div>
   );
+
+  const signatureField = (
+    role: 'research_head' | 'president',
+    fileRef: React.RefObject<HTMLInputElement>
+  ) => {
+    const urlKey = `${role}_signature_url` as 'research_head_signature_url' | 'president_signature_url';
+    const currentUrl = form[urlKey];
+    const isUploading = uploadingSignature === role;
+
+    return (
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">E-Signature Image</label>
+        {currentUrl ? (
+          <div className="flex items-start gap-3">
+            <div className="border rounded-xl overflow-hidden" style={{ borderColor: `${primaryColor}40` }}>
+              <img
+                src={currentUrl}
+                alt="Signature preview"
+                className="h-16 w-auto max-w-[200px] object-contain bg-white p-1"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={fetching || isUploading}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all hover:scale-105 disabled:opacity-50"
+                style={{ borderColor: `${primaryColor}60`, color: primaryColor }}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Replace
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSignatureRemove(role)}
+                disabled={fetching}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-300 text-red-600 transition-all hover:bg-red-50 disabled:opacity-50"
+              >
+                <X className="h-3.5 w-3.5" />
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={fetching || isUploading}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed text-sm font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed w-full justify-center"
+            style={{ borderColor: `${primaryColor}50`, color: primaryColor }}
+          >
+            {isUploading ? (
+              <>
+                <div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                Uploading…
+              </>
+            ) : (
+              <>
+                <Image className="h-4 w-4" />
+                Upload Signature Image
+              </>
+            )}
+          </button>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/jpg,image/webp"
+          aria-label={`Upload ${role === 'research_head' ? 'Research Head' : 'President'} signature image`}
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleSignatureUpload(role, file);
+            e.target.value = '';
+          }}
+        />
+        <p className="text-xs text-gray-500 mt-1.5 font-medium">PNG or JPG, transparent background recommended. Displayed above the signature line on the certificate.</p>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8 max-w-2xl">
@@ -172,6 +295,9 @@ export function CertificateSignatoriesSettings() {
             {field('Research Head Name', 'research_head_name')}
             {field('Research Head Position', 'research_head_position')}
           </div>
+          <div className="mt-4">
+            {signatureField('research_head', researchHeadFileRef)}
+          </div>
         </div>
 
         {/* President column */}
@@ -186,6 +312,9 @@ export function CertificateSignatoriesSettings() {
             {field('President Name', 'president_name')}
             {field('President Position / Title', 'president_position')}
           </div>
+          <div className="mt-4">
+            {signatureField('president', presidentFileRef)}
+          </div>
         </div>
       </div>
 
@@ -194,11 +323,24 @@ export function CertificateSignatoriesSettings() {
         <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">Preview — Signature Row</p>
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
           {[
-            { name: '(Assigned Supervisor)', title: form.supervisor_title },
-            { name: form.research_head_name, title: form.research_head_position },
-            { name: form.president_name, title: form.president_position },
-          ].map(({ name, title }, i) => (
+            { name: '(Assigned Supervisor)', title: form.supervisor_title, signatureUrl: null },
+            { name: form.research_head_name, title: form.research_head_position, signatureUrl: form.research_head_signature_url },
+            { name: form.president_name, title: form.president_position, signatureUrl: form.president_signature_url },
+          ].map(({ name, title, signatureUrl }, i) => (
             <div key={i} className="space-y-1">
+              {signatureUrl ? (
+                <div className="flex justify-center mb-1">
+                  <img
+                    src={signatureUrl}
+                    alt="Signature"
+                    className="h-10 w-auto max-w-[120px] object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="h-10 flex items-end justify-center mb-1">
+                  <span className="text-gray-300 text-xs italic">no signature</span>
+                </div>
+              )}
               <div className="h-px bg-gray-400 mx-4" />
               <p className="font-bold text-gray-800 break-words">{name}</p>
               <p className="text-gray-500">{title}</p>
