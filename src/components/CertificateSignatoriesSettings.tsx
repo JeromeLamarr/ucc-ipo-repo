@@ -106,28 +106,25 @@ export function CertificateSignatoriesSettings() {
         updated_at: new Date().toISOString(),
       };
 
-      let error: any;
-
-      if (form.id) {
-        // Use SECURITY DEFINER RPC to bypass RLS recursion issues
-        ({ error } = await supabase.rpc('update_certificate_signatories', {
-          p_id:                              form.id,
-          p_research_head_name:              payload.research_head_name,
-          p_research_head_position:          payload.research_head_position,
-          p_president_name:                  payload.president_name,
-          p_president_position:              payload.president_position,
-          p_supervisor_title:                payload.supervisor_title,
-          p_research_head_signature_url:     payload.research_head_signature_url,
-          p_president_signature_url:         payload.president_signature_url,
-        }));
-      } else {
-        // No row yet — insert (fallback, should rarely happen after migration seed)
-        ({ error } = await supabase
-          .from('certificate_signatories')
-          .insert(payload));
-      }
+      // Use SECURITY DEFINER upsert RPC — handles both insert and update,
+      // bypassing RLS so it works even when no row exists yet.
+      const { data: upsertedId, error } = await supabase.rpc('upsert_certificate_signatories', {
+        p_id:                              form.id ?? null,
+        p_research_head_name:              payload.research_head_name,
+        p_research_head_position:          payload.research_head_position,
+        p_president_name:                  payload.president_name,
+        p_president_position:              payload.president_position,
+        p_supervisor_title:                payload.supervisor_title,
+        p_research_head_signature_url:     payload.research_head_signature_url,
+        p_president_signature_url:         payload.president_signature_url,
+      });
 
       if (error) throw error;
+
+      // Persist the returned id so subsequent saves use UPDATE path
+      if (upsertedId && !form.id) {
+        setForm((prev) => ({ ...prev, id: upsertedId as string }));
+      }
 
       setMessage({ type: 'success', text: 'Certificate signatory settings saved successfully.' });
     } catch (err: any) {
