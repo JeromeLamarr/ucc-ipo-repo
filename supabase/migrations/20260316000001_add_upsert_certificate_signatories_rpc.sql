@@ -8,6 +8,7 @@ CREATE OR REPLACE FUNCTION public.upsert_certificate_signatories(
   p_supervisor_title                TEXT,
   p_research_head_signature_url     TEXT DEFAULT NULL,
   p_president_signature_url         TEXT DEFAULT NULL,
+  p_supervisor_signature_url        TEXT DEFAULT NULL,
   p_id                              UUID DEFAULT NULL
 )
 RETURNS UUID
@@ -28,6 +29,7 @@ BEGIN
       supervisor_title                = p_supervisor_title,
       research_head_signature_url     = p_research_head_signature_url,
       president_signature_url         = p_president_signature_url,
+      supervisor_signature_url        = p_supervisor_signature_url,
       updated_at                      = NOW()
     WHERE id = p_id
     RETURNING id INTO v_id;
@@ -42,7 +44,8 @@ BEGIN
       president_position,
       supervisor_title,
       research_head_signature_url,
-      president_signature_url
+      president_signature_url,
+      supervisor_signature_url
     ) VALUES (
       p_research_head_name,
       p_research_head_position,
@@ -50,7 +53,8 @@ BEGIN
       p_president_position,
       p_supervisor_title,
       p_research_head_signature_url,
-      p_president_signature_url
+      p_president_signature_url,
+      p_supervisor_signature_url
     )
     RETURNING id INTO v_id;
   END IF;
@@ -59,4 +63,4 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.upsert_certificate_signatories(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.upsert_certificate_signatories(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, UUID) TO authenticated;

@@ -12,6 +12,7 @@ interface SignatorySettings {
   supervisor_title: string;
   research_head_signature_url: string | null;
   president_signature_url: string | null;
+  supervisor_signature_url: string | null;
 }
 
 const DEFAULTS: SignatorySettings = {
@@ -22,6 +23,7 @@ const DEFAULTS: SignatorySettings = {
   supervisor_title: 'Supervisor',
   research_head_signature_url: null,
   president_signature_url: null,
+  supervisor_signature_url: null,
 };
 
 export function CertificateSignatoriesSettings() {
@@ -30,9 +32,10 @@ export function CertificateSignatoriesSettings() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [uploadingSignature, setUploadingSignature] = useState<'research_head' | 'president' | null>(null);
+  const [uploadingSignature, setUploadingSignature] = useState<'research_head' | 'president' | 'supervisor' | null>(null);
   const researchHeadFileRef = useRef<HTMLInputElement>(null);
   const presidentFileRef = useRef<HTMLInputElement>(null);
+  const supervisorFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -53,6 +56,7 @@ export function CertificateSignatoriesSettings() {
           supervisor_title: data.supervisor_title ?? DEFAULTS.supervisor_title,
           research_head_signature_url: data.research_head_signature_url ?? null,
           president_signature_url: data.president_signature_url ?? null,
+          supervisor_signature_url: data.supervisor_signature_url ?? null,
         });
       }
       setFetching(false);
@@ -60,7 +64,7 @@ export function CertificateSignatoriesSettings() {
     fetchSettings();
   }, []);
 
-  const handleSignatureUpload = async (role: 'research_head' | 'president', file: File) => {
+  const handleSignatureUpload = async (role: 'research_head' | 'president' | 'supervisor', file: File) => {
     setUploadingSignature(role);
     setMessage(null);
     try {
@@ -85,7 +89,7 @@ export function CertificateSignatoriesSettings() {
     }
   };
 
-  const handleSignatureRemove = (role: 'research_head' | 'president') => {
+  const handleSignatureRemove = (role: 'research_head' | 'president' | 'supervisor') => {
     setForm((prev) => ({ ...prev, [`${role}_signature_url`]: null }));
     setMessage({ type: 'success', text: 'Signature removed. Click "Save" to apply.' });
   };
@@ -103,6 +107,7 @@ export function CertificateSignatoriesSettings() {
         supervisor_title: form.supervisor_title.trim(),
         research_head_signature_url: form.research_head_signature_url || null,
         president_signature_url: form.president_signature_url || null,
+        supervisor_signature_url: form.supervisor_signature_url || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -116,8 +121,7 @@ export function CertificateSignatoriesSettings() {
         p_president_position:              payload.president_position,
         p_supervisor_title:                payload.supervisor_title,
         p_research_head_signature_url:     payload.research_head_signature_url,
-        p_president_signature_url:         payload.president_signature_url,
-      });
+        p_president_signature_url:         payload.president_signature_url,          p_supervisor_signature_url:        payload.supervisor_signature_url,      });
 
       if (error) throw error;
 
@@ -154,10 +158,10 @@ export function CertificateSignatoriesSettings() {
   );
 
   const signatureField = (
-    role: 'research_head' | 'president',
+    role: 'research_head' | 'president' | 'supervisor',
     fileRef: React.RefObject<HTMLInputElement>
   ) => {
-    const urlKey = `${role}_signature_url` as 'research_head_signature_url' | 'president_signature_url';
+    const urlKey = `${role}_signature_url` as 'research_head_signature_url' | 'president_signature_url' | 'supervisor_signature_url';
     const currentUrl = form[urlKey];
     const isUploading = uploadingSignature === role;
 
@@ -278,6 +282,9 @@ export function CertificateSignatoriesSettings() {
           <div className="grid grid-cols-1 gap-4">
             {field('Supervisor Title', 'supervisor_title', 'Displayed under the record\'s assigned supervisor name.')}
           </div>
+          <div className="mt-4">
+            {signatureField('supervisor', supervisorFileRef)}
+          </div>
         </div>
 
         {/* Research Head column */}
@@ -320,7 +327,7 @@ export function CertificateSignatoriesSettings() {
         <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">Preview — Signature Row</p>
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
           {[
-            { name: '(Assigned Supervisor)', title: form.supervisor_title, signatureUrl: null },
+            { name: '(Assigned Supervisor)', title: form.supervisor_title, signatureUrl: form.supervisor_signature_url },
             { name: form.research_head_name, title: form.research_head_position, signatureUrl: form.research_head_signature_url },
             { name: form.president_name, title: form.president_position, signatureUrl: form.president_signature_url },
           ].map(({ name, title, signatureUrl }, i) => (

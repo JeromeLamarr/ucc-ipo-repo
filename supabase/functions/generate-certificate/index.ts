@@ -194,7 +194,8 @@ async function generateCertificatePDF(
   presidentPosition: string,
   supervisorTitle: string,
   researchHeadSignatureUrl?: string | null,
-  presidentSignatureUrl?: string | null
+  presidentSignatureUrl?: string | null,
+  supervisorSignatureUrl?: string | null
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4 size (210mm x 297mm)
@@ -686,6 +687,9 @@ async function generateCertificatePDF(
   };
 
   // Draw signature images above lines (async, before drawing lines)
+  if (supervisorSignatureUrl) {
+    await drawSignatureImage(supervisorSignatureUrl, sig1X + sigLineLength / 2, sigLineY, sigLineLength);
+  }
   if (researchHeadSignatureUrl) {
     await drawSignatureImage(researchHeadSignatureUrl, sig2X + sigLineLength / 2, sigLineY, sigLineLength);
   }
@@ -1140,10 +1144,11 @@ Deno.serve(async (req: Request) => {
     let supervisorTitle = 'Supervisor';
     let researchHeadSignatureUrl: string | null = null;
     let presidentSignatureUrl: string | null = null;
+    let supervisorSignatureUrl: string | null = null;
     try {
       const { data: sigSettings } = await supabase
         .from('certificate_signatories')
-        .select('research_head_name, research_head_position, president_name, president_position, supervisor_title, research_head_signature_url, president_signature_url')
+        .select('research_head_name, research_head_position, president_name, president_position, supervisor_title, research_head_signature_url, president_signature_url, supervisor_signature_url')
         .limit(1)
         .maybeSingle();
 
@@ -1155,6 +1160,7 @@ Deno.serve(async (req: Request) => {
         supervisorTitle = sigSettings.supervisor_title || supervisorTitle;
         researchHeadSignatureUrl = sigSettings.research_head_signature_url || null;
         presidentSignatureUrl = sigSettings.president_signature_url || null;
+        supervisorSignatureUrl = sigSettings.supervisor_signature_url || null;
       }
     } catch (sigErr) {
       console.warn('[generate-certificate] Could not fetch signatory settings, using defaults:', sigErr);
@@ -1214,7 +1220,8 @@ Deno.serve(async (req: Request) => {
       presidentPosition,
       supervisorTitle,
       researchHeadSignatureUrl,
-      presidentSignatureUrl
+      presidentSignatureUrl,
+      supervisorSignatureUrl
     );
 
     // Calculate checksum

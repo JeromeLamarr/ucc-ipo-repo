@@ -3,7 +3,8 @@
 
 ALTER TABLE public.certificate_signatories
   ADD COLUMN IF NOT EXISTS research_head_signature_url TEXT,
-  ADD COLUMN IF NOT EXISTS president_signature_url TEXT;
+  ADD COLUMN IF NOT EXISTS president_signature_url TEXT,
+  ADD COLUMN IF NOT EXISTS supervisor_signature_url TEXT;
 
 -- Drop the old 6-parameter version so we can recreate with 8 parameters.
 DROP FUNCTION IF EXISTS public.update_certificate_signatories(UUID, TEXT, TEXT, TEXT, TEXT, TEXT);
