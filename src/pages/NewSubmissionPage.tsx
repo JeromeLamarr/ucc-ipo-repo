@@ -558,6 +558,17 @@ export function NewSubmissionPage() {
     setUploading(true);
 
     try {
+      // Validate all files before touching the database
+      for (const uploadedFile of uploadedFiles) {
+        const validationError = validateFile(uploadedFile.file);
+        if (validationError) {
+          setError(`File "${uploadedFile.file.name}": ${validationError.message}`);
+          setLoading(false);
+          setUploading(false);
+          return;
+        }
+      }
+
       // DELETE DRAFT IMMEDIATELY TO PREVENT DUPLICATION
       // Do this BEFORE creating the new IP record to ensure atomic operation
       if (draftId) {
