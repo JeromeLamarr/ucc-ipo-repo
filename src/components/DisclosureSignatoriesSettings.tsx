@@ -215,7 +215,14 @@ export function DisclosureSignatoriesSettings() {
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) handleSignatureUpload(role, file);
+            if (file) {
+              if (file.size > 2 * 1024 * 1024) {
+                setMessage({ type: 'error', text: 'Signature image must be 2 MB or smaller.' });
+                e.target.value = '';
+                return;
+              }
+              handleSignatureUpload(role, file);
+            }
             e.target.value = '';
           }}
         />

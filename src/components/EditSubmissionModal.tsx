@@ -440,6 +440,7 @@ export function EditSubmissionModal({
               type="text"
               value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
+              maxLength={300}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter submission title"
             />
@@ -473,6 +474,7 @@ export function EditSubmissionModal({
               value={formData.abstract}
               onChange={(e) => handleInputChange('abstract', e.target.value)}
               rows={4}
+              maxLength={450}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter abstract"
             />
@@ -487,6 +489,7 @@ export function EditSubmissionModal({
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
               rows={6}
+              maxLength={10000}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter detailed description"
             />
@@ -501,6 +504,7 @@ export function EditSubmissionModal({
               value={formData.technicalField}
               onChange={(e) => handleInputChange('technicalField', e.target.value)}
               rows={3}
+              maxLength={5000}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Technical field of the invention"
             />
@@ -515,6 +519,7 @@ export function EditSubmissionModal({
               value={formData.backgroundArt}
               onChange={(e) => handleInputChange('backgroundArt', e.target.value)}
               rows={3}
+              maxLength={5000}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Background and prior art"
             />
@@ -529,6 +534,7 @@ export function EditSubmissionModal({
               value={formData.problemStatement}
               onChange={(e) => handleInputChange('problemStatement', e.target.value)}
               rows={3}
+              maxLength={5000}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Problem being solved"
             />
@@ -543,6 +549,7 @@ export function EditSubmissionModal({
               value={formData.solution}
               onChange={(e) => handleInputChange('solution', e.target.value)}
               rows={3}
+              maxLength={5000}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Proposed solution"
             />
@@ -557,6 +564,7 @@ export function EditSubmissionModal({
               value={formData.priorArt}
               onChange={(e) => handleInputChange('priorArt', e.target.value)}
               rows={3}
+              maxLength={5000}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Prior art references"
             />
@@ -571,6 +579,7 @@ export function EditSubmissionModal({
               type="text"
               value={formData.funding}
               onChange={(e) => handleInputChange('funding', e.target.value)}
+              maxLength={500}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Source of funding"
             />
@@ -593,6 +602,7 @@ export function EditSubmissionModal({
                         type="text"
                         value={inventor.name}
                         onChange={(e) => updateInventor(index, 'name', e.target.value)}
+                        maxLength={200}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Inventor name"
                       />
@@ -622,6 +632,7 @@ export function EditSubmissionModal({
                         type="text"
                         value={inventor.contribution}
                         onChange={(e) => updateInventor(index, 'contribution', e.target.value)}
+                        maxLength={500}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="e.g., Main inventor, Co-inventor"
                       />
@@ -658,6 +669,7 @@ export function EditSubmissionModal({
                     type="text"
                     value={keyword.value}
                     onChange={(e) => updateKeyword(keyword.id, e.target.value)}
+                    maxLength={100}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter a keyword"
                   />

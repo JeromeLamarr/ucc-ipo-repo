@@ -205,6 +205,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Enter IP title"
+                  maxLength={300}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   aria-label="IP Title"
                 />
@@ -240,6 +241,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
                   onChange={(e) => setFormData({ ...formData, abstract: e.target.value })}
                   placeholder="Brief description of the IP"
                   rows={3}
+                  maxLength={450}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   aria-label="Abstract"
                 />
@@ -274,6 +276,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
                         setFormData({ ...formData, inventors: newInventors });
                       }}
                       placeholder="Inventor name"
+                      maxLength={200}
                       className="w-full px-3 py-2 border border-gray-300 rounded mb-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                       aria-label={`Inventor ${idx + 1} name`}
                     />
@@ -286,6 +289,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
                         setFormData({ ...formData, inventors: newInventors });
                       }}
                       placeholder="Affiliation"
+                      maxLength={200}
                       className="w-full px-3 py-2 border border-gray-300 rounded mb-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                       aria-label={`Inventor ${idx + 1} affiliation`}
                     />
@@ -300,6 +304,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
                 <input
                   type="file"
                   multiple
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []);
                     setUploadedFiles(
@@ -334,6 +339,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
                   value={formData.creatorName}
                   onChange={(e) => setFormData({ ...formData, creatorName: e.target.value })}
                   placeholder="Name of the original IP creator"
+                  maxLength={200}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   aria-label="Original creator name"
                 />
@@ -380,6 +386,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
                   value={formData.ipophilApplicationNo}
                   onChange={(e) => setFormData({ ...formData, ipophilApplicationNo: e.target.value })}
                   placeholder="e.g., PR-2024-00123"
+                  maxLength={100}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   aria-label="IPOPHIL application number"
                 />
@@ -394,6 +401,7 @@ export function AddLegacyRecordModal({ isOpen, onClose, onSuccess }: AddLegacyRe
                   onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
                   placeholder="Any additional notes or remarks..."
                   rows={3}
+                  maxLength={2000}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   aria-label="Remarks"
                 />

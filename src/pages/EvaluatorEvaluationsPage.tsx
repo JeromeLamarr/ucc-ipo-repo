@@ -981,6 +981,7 @@ export function EvaluatorEvaluationsPage() {
                   value={evaluationForm.remarks}
                   onChange={(e) => setEvaluationForm({ ...evaluationForm, remarks: e.target.value })}
                   rows={5}
+                  maxLength={5000}
                   required={evaluationForm.decision !== 'approved'}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   placeholder={

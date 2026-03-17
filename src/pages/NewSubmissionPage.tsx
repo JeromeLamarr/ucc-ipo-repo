@@ -226,6 +226,7 @@ export function NewSubmissionPage() {
   };
 
   const addInventor = () => {
+    if (formData.inventors.length >= 20) return;
     setFormData({
       ...formData,
       inventors: [...formData.inventors, { name: '', affiliation: '', contribution: '' }],
@@ -244,6 +245,7 @@ export function NewSubmissionPage() {
   };
 
   const addKeyword = () => {
+    if (formData.keywords.length >= 10) return;
     setFormData({
       ...formData,
       keywords: [...formData.keywords, { id: Date.now().toString(), value: '' }],
@@ -267,6 +269,7 @@ export function NewSubmissionPage() {
   };
 
   const addCollaborator = () => {
+    if (formData.collaborators.length >= 10) return;
     setFormData({
       ...formData,
       collaborators: [...formData.collaborators, { id: Date.now().toString(), name: '', role: '', affiliation: '' }],
@@ -1131,6 +1134,7 @@ export function NewSubmissionPage() {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   required
+                  maxLength={300}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter a clear, descriptive title"
                 />
@@ -1201,6 +1205,7 @@ export function NewSubmissionPage() {
                         type="text"
                         value={keyword.value}
                         onChange={(e) => updateKeyword(keyword.id, e.target.value)}
+                        maxLength={100}
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         placeholder={`Keyword ${index + 1}`}
                       />
@@ -1278,6 +1283,7 @@ export function NewSubmissionPage() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
                   rows={6}
+                  maxLength={10000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Provide a comprehensive description of your IP"
                 />
@@ -1291,6 +1297,7 @@ export function NewSubmissionPage() {
                   value={formData.technicalField}
                   onChange={(e) => setFormData({ ...formData, technicalField: e.target.value })}
                   rows={3}
+                  maxLength={5000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Describe the technical field of your invention"
                 />
@@ -1304,6 +1311,7 @@ export function NewSubmissionPage() {
                   value={formData.backgroundArt}
                   onChange={(e) => setFormData({ ...formData, backgroundArt: e.target.value })}
                   rows={4}
+                  maxLength={5000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Describe existing solutions and technologies"
                 />
@@ -1317,6 +1325,7 @@ export function NewSubmissionPage() {
                   value={formData.problemStatement}
                   onChange={(e) => setFormData({ ...formData, problemStatement: e.target.value })}
                   rows={3}
+                  maxLength={5000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="What problem does your IP solve?"
                 />
@@ -1330,6 +1339,7 @@ export function NewSubmissionPage() {
                   value={formData.solution}
                   onChange={(e) => setFormData({ ...formData, solution: e.target.value })}
                   rows={4}
+                  maxLength={5000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Describe your solution in detail"
                 />
@@ -1343,6 +1353,7 @@ export function NewSubmissionPage() {
                   value={formData.advantages}
                   onChange={(e) => setFormData({ ...formData, advantages: e.target.value })}
                   rows={3}
+                  maxLength={5000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="List the key advantages of your IP"
                 />
@@ -1356,6 +1367,7 @@ export function NewSubmissionPage() {
                   value={formData.implementation}
                   onChange={(e) => setFormData({ ...formData, implementation: e.target.value })}
                   rows={4}
+                  maxLength={5000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="How is this implemented or manufactured?"
                 />
@@ -1401,6 +1413,7 @@ export function NewSubmissionPage() {
                         value={inventor.name}
                         onChange={(e) => updateInventor(index, 'name', e.target.value)}
                         required
+                        maxLength={200}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
@@ -1431,6 +1444,7 @@ export function NewSubmissionPage() {
                         value={inventor.contribution}
                         onChange={(e) => updateInventor(index, 'contribution', e.target.value)}
                         rows={2}
+                        maxLength={500}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         placeholder="Describe their contribution to this IP"
                       />
@@ -1475,6 +1489,7 @@ export function NewSubmissionPage() {
                   type="text"
                   value={formData.funding}
                   onChange={(e) => setFormData({ ...formData, funding: e.target.value })}
+                  maxLength={500}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="E.g., University grant, research fund, etc."
                 />
@@ -1512,6 +1527,7 @@ export function NewSubmissionPage() {
                           type="text"
                           value={collaborator.name}
                           onChange={(e) => updateCollaborator(collaborator.id, 'name', e.target.value)}
+                          maxLength={200}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                           placeholder="Name"
                           title="Collaborator name"
@@ -1520,6 +1536,7 @@ export function NewSubmissionPage() {
                           type="text"
                           value={collaborator.role}
                           onChange={(e) => updateCollaborator(collaborator.id, 'role', e.target.value)}
+                          maxLength={200}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                           placeholder="Role/Position"
                           title="Collaborator role"
@@ -1528,6 +1545,7 @@ export function NewSubmissionPage() {
                           type="text"
                           value={collaborator.affiliation}
                           onChange={(e) => updateCollaborator(collaborator.id, 'affiliation', e.target.value)}
+                          maxLength={200}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                           placeholder="Institution/Organization"
                           title="Collaborator affiliation"
@@ -1546,6 +1564,7 @@ export function NewSubmissionPage() {
                   value={formData.relatedPublications}
                   onChange={(e) => setFormData({ ...formData, relatedPublications: e.target.value })}
                   rows={3}
+                  maxLength={5000}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="List any related research papers, presentations, or publications"
                 />
@@ -1566,6 +1585,7 @@ export function NewSubmissionPage() {
                   value={formData.commercialPotential}
                   onChange={(e) => setFormData({ ...formData, commercialPotential: e.target.value })}
                   rows={4}
+                  maxLength={5000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Describe the commercial potential and market opportunities"
                 />
@@ -1579,6 +1599,7 @@ export function NewSubmissionPage() {
                   value={formData.targetMarket}
                   onChange={(e) => setFormData({ ...formData, targetMarket: e.target.value })}
                   rows={3}
+                  maxLength={5000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Who are the potential users or customers?"
                 />
@@ -1592,6 +1613,7 @@ export function NewSubmissionPage() {
                   value={formData.competitiveAdvantage}
                   onChange={(e) => setFormData({ ...formData, competitiveAdvantage: e.target.value })}
                   rows={3}
+                  maxLength={5000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="What makes this IP unique compared to competitors?"
                 />
@@ -1605,6 +1627,7 @@ export function NewSubmissionPage() {
                   type="text"
                   value={formData.estimatedValue}
                   onChange={(e) => setFormData({ ...formData, estimatedValue: e.target.value })}
+                  maxLength={500}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Estimated value or market size"
                 />
